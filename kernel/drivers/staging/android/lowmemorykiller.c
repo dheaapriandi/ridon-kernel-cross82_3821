@@ -322,30 +322,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     sc->gfp_mask);
 		lowmem_deathpending = selected;
 		lowmem_deathpending_timeout = jiffies + HZ;
-
-		/* Double check current usage for adj-0 */
-		if (selected_oom_score_adj <= 0) {
-			other_free = global_page_state(NR_FREE_PAGES) - totalreserve_pages;
-#ifdef CONFIG_HIGHMEM
-			if (gfp_zone(sc->gfp_mask) == ZONE_NORMAL) {
-				int nid;
-				struct zone *z;
-				/* Go through all memory nodes & substract (free, file) from ZONE_HIGHMEM */
-				for_each_online_node(nid) {
-					z = &NODE_DATA(nid)->node_zones[ZONE_HIGHMEM];
-					other_free -= zone_page_state(z, NR_FREE_PAGES);
-				}
-				other_free *= total_low_ratio;
-			}
-#endif	
-			/* Check free */
-			if (other_free > minfree) {
-				rcu_read_unlock();
-				spin_unlock(&lowmem_shrink_lock);
-				return 0;
-			}
-		}
-
 #ifdef CONFIG_MT_ENG_BUILD
 		if (print_extra_info) {
 			lowmem_print(1, "low memory info:\n");
@@ -359,7 +335,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		defined (MTK_INTERNAL_BUILD) /* mtk internal */
 		if (selected_oom_score_adj <= 0) { // can set 16 for test
 			lowmem_print(1, "\n\n[LMK] low memory trigger kernel warning!\n\n");
-#if 0
 #ifdef CONFIG_ION
 			/* To fix deadlock */
 			spin_unlock(&lowmem_shrink_lock);
@@ -367,7 +342,6 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			ion_mm_heap_total_memory();
 			/* To fix deadlock */
 			spin_lock(&lowmem_shrink_lock);
-#endif
 #endif
 			/* To avoid too frequent aee warning! */
 			if ((next_aee_dump--) == 0) {
@@ -899,11 +873,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #if defined (CONFIG_MTK_AEE_FEATURE) && defined (CONFIG_MT_ENG_BUILD) && \
 		!defined (PARTIAL_BUILD) /* mtk internal */
 		if (selected_oom_score_adj <= 0) { // can set 16 for test 
-#if 0
+
 #ifdef CONFIG_ION
 			/* Show ION status */
 			ion_mm_heap_total_memory();
-#endif
 #endif
 			lowmem_print(1, "low memory trigger kernel warning\n");
 			aee_kernel_warning_api("LMK", 0, DB_OPT_DEFAULT|DB_OPT_DUMPSYS_ACTIVITY|DB_OPT_LOW_MEMORY_KILLER,

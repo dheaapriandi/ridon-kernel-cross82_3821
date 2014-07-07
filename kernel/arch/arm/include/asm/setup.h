@@ -97,6 +97,7 @@ struct tag_serialnr {
 
 struct tag_revision {
 	__u32 rev;
+	__u32 Vbat; //JRD added for fuel gauge issue PR679477
 };
 
 /* initial values for vesafb-type framebuffers. see struct screen_info

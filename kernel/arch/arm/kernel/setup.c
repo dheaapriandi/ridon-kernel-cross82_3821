@@ -104,6 +104,9 @@ EXPORT_SYMBOL(system_serial_high);
 unsigned int elf_hwcap __read_mostly;
 EXPORT_SYMBOL(elf_hwcap);
 
+// JRD added for fuel gauge issue PR679477 start
+unsigned int UbVbat=0;
+// JRD added for fuel gauge issue PR679477 end
 
 #ifdef MULTI_CPU
 struct processor processor __read_mostly;
@@ -721,6 +724,12 @@ __tagtable(ATAG_SERIAL, parse_tag_serialnr);
 static int __init parse_tag_revision(const struct tag *tag)
 {
 	system_rev = tag->u.revision.rev;
+
+	// JRD added for fuel gauge issue PR679477 start
+	UbVbat = tag->u.revision.Vbat;
+	printk("~~parse_tag_revision:UbVbat=%d  \n",UbVbat);
+	// JRD added for fuel gauge issue PR679477 end
+
 	return 0;
 }
 

@@ -990,9 +990,7 @@ void ion_client_destroy(struct ion_client *client)
         while ((n = rb_first(&client->handles))) {
                 struct ion_handle *handle = rb_entry(n, struct ion_handle,
                                                      node);
-		mutex_lock(&client->lock);
                 ion_handle_destroy(&handle->ref);
-		mutex_unlock(&client->lock);
         }
 
 	idr_remove_all(&client->idr);
@@ -1969,9 +1967,7 @@ void ion_client_destroy_user(struct ion_client *client)
 	while ((n = rb_first(&client->handles))) {
 		struct ion_handle *handle = rb_entry(n, struct ion_handle,
 						     node);
-		mutex_lock(&client->lock);
 		ion_handle_destroy(&handle->ref);
-		mutex_unlock(&client->lock);
 	}
 
 	idr_remove_all(&client->idr);

@@ -1608,7 +1608,8 @@ int group_leader_is_empty(struct task_struct *p){
 
 	struct task_struct *tg = p->group_leader;
 
-	if (SIGNAL_GROUP_EXIT & p->signal->flags){
+	if((SIGNAL_GROUP_EXIT & p->signal->flags) && 
+	   ((SIGKILL == p->signal->group_exit_code) || (0 == p->signal->group_exit_code))){
 	//	pr_warn("[%s] (0x%p/0x%p)(#%d/%s) leader: pid(%d) state(%d) exit_state(%d)signal_flags=%x p->signal->flags=%x group_exit_code=%x\n", __func__,
 	//	p, tg, get_nr_threads(p), thread_group_empty(p) ? "empty" : "not empty",
 	//	p->tgid, tg->state, tg->exit_state, tg->state, p->signal->flags, p->signal->group_exit_code);
@@ -3715,15 +3716,6 @@ done:
  */
 #ifdef CONFIG_MTK_SCHED_CMP_TGS_WAKEUP
 extern struct cpumask *get_domain_cpus(int cluster_id, bool exclusiveOffline);
-static void check_cpus(int id, int i, struct cpumask *cpus)
-{
-	if(0 == cpus){
-		printk(KERN_EMERG "check_cpus %d: i=%d, cpus = 0\n", id, i);
-	}else if(cpumask_empty(cpus) && (0 != id)){
-		printk(KERN_EMERG "check_cpus %d: i=%d, *cpus = 0, onlineCPU=%lu\n",
-			id, i, cpu_online_mask->bits[0]);
-	}
-}
 #endif
 static int
 select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
@@ -3791,19 +3783,16 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 	int max_idle_clid=-1;
 	int in_prev=0;
 	struct cpumask *cpus;
-	int num_cluster=cluster_nr();
-	for(i=0; i< num_cluster; i++) {
+	for(i=0; i< NUM_CLUSTER; i++) {
 		cnt = p->group_leader->thread_group_info[i].nr_running;
 		mt_sched_printf("wakeup %d %s clid=%d cnt=%d max_cnt=%d",
 			p->pid, p->comm, i, cnt, max_cnt); 
 
 		idle_cnt = 0;
 		cpus = get_domain_cpus(i, 1);
-		check_cpus(0, i, cpus);
-
 		if(cpus!=0){
 			for_each_cpu(j, cpus){
-				if (idle_cpu(j))
+				if ( 0 == cpu_rq(j)->nr_running)
 					idle_cnt++;
 			}
 		}
@@ -3853,32 +3842,18 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 
 	if (-1 != max_clid) {
 		if (!in_prev) {
-			int j;
 			struct cpumask *cpus;
 			cpus = get_domain_cpus(max_clid, 1);
-			check_cpus(1, max_clid, cpus);
 			cpu = cpumask_any(cpus);	
-			for_each_cpu(j, cpus){
-				if (idle_cpu(j)) {
-					cpu = j;
-					break;
-				}
-			}
+
 			mt_sched_printf("wakeup %d %s cpu=%d, max_clid=%d",
 				p->pid, p->comm, cpu, max_clid); 
 		}
 	}else if( -1 != max_idle_clid){
-		int j;
 		struct cpumask *cpus;
 		cpus = get_domain_cpus(max_idle_clid, 1);
-		check_cpus(2, max_idle_clid, cpus);
-		cpu = cpumask_any(cpus);
-		for_each_cpu(j, cpus){
-			if (idle_cpu(j)){
-				cpu = j;
-				break;
-			}
-		}
+		cpu = cpumask_any(cpus);	
+
 		mt_sched_printf("wakeup %d %s cpu=%d, max_idle_clid=%d",
 			p->pid, p->comm, cpu, max_idle_clid);
 	}
@@ -3893,11 +3868,6 @@ select_task_rq_fair(struct task_struct *p, int sd_flag, int wake_flags)
 		prefer_local = 1;
 		new_cpu = cpu;
 		mt_sched_printf("wakeup %d %s prefer_local=%d", p->pid, p->comm, prefer_local);
-		// debug only
-		if ( ( 8 == new_cpu ) || ( 8 == cpu )){
-			printk(KERN_EMERG "check_cpus new_cpu=%d, cpu=%d, cpus=%lu, onlineCPU=%lu, max_clid=%d, max_idle_clid=%d\n",
-				new_cpu, cpu, cpus->bits[0], cpu_online_mask->bits[0], max_clid, max_idle_clid);
-		}
 	}
 }
 #else
@@ -4152,6 +4122,17 @@ static void set_skip_buddy(struct sched_entity *se)
 		cfs_rq_of(se)->skip = se;
 }
 
+#ifdef CONFIG_MT_SCHED_DEBUG_ONLY
+static void debug_unlock_runqueue(struct task_struct *p, struct task_struct *curr)
+{
+	if(!raw_spin_is_locked(&task_rq(curr)->lock)){
+		printk(KERN_ERR "debug_unlock_runqueue in resched_task: p_rq:%d curr->rq:%d p_rq->lock:%d", 
+			task_rq(p)->cpu, task_rq(curr)->cpu, raw_spin_is_locked(&task_rq(p)->lock));
+		assert_raw_spin_locked(&task_rq(curr)->lock);	
+	}
+}
+#endif
+
 /*
  * Preempt the current task with a newly woken task if needed:
  */
@@ -4163,6 +4144,9 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 	int scale = cfs_rq->nr_running >= sched_nr_latency;
 	int next_buddy_marked = 0;
 
+#ifdef CONFIG_MT_SCHED_DEBUG_ONLY
+	debug_unlock_runqueue(p, curr);
+#endif
 	if (unlikely(se == pse))
 		return;
 
@@ -4193,6 +4177,9 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 	if (test_tsk_need_resched(curr))
 		return;
 
+#ifdef CONFIG_MT_SCHED_DEBUG_ONLY
+	debug_unlock_runqueue(p, curr);
+#endif
 	/* Idle tasks are by definition preempted by non-idle tasks. */
 	if (unlikely(curr->policy == SCHED_IDLE) &&
 	    likely(p->policy != SCHED_IDLE))
@@ -4205,6 +4192,9 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 	if (unlikely(p->policy != SCHED_NORMAL))
 		return;
 
+#ifdef CONFIG_MT_SCHED_DEBUG_ONLY
+	debug_unlock_runqueue(p, curr);
+#endif
 	find_matching_se(&se, &pse);
 	update_curr(cfs_rq_of(se));
 	BUG_ON(!pse);
@@ -4221,6 +4211,9 @@ static void check_preempt_wakeup(struct rq *rq, struct task_struct *p, int wake_
 	return;
 
 preempt:
+#ifdef CONFIG_MT_SCHED_DEBUG_ONLY
+	debug_unlock_runqueue(p, curr);
+#endif
 	resched_task(curr);
 	/*
 	 * Only set the backward buddy when the current task is still
@@ -4713,7 +4706,7 @@ static int move_tasks_tg(struct lb_env *env)
 		    	   (src_tginfo->nr_running > dst_tginfo->nr_running)){
 				mt_sched_printf("hit ruleA: bypass pid=%d comm=%s src:nr_running=%ld nr_cpus=%ld dst:nr_running=%ld", 
 				p->pid, p->comm, src_tginfo->nr_running, src_nr_cpus, dst_tginfo->nr_running);
-				goto next;
+				continue;
 			}
 #endif
 
@@ -7112,14 +7105,36 @@ void trigger_load_balance(struct rq *rq, int cpu)
 #endif
 }
 
+#ifdef CONFIG_MTK_SCHED_CMP_TGS
+static void cpu_domain_online_cpu(int cpu)
+{
+	struct	cpu_domain *cluster = get_cpu_domain(cpu);
 
+	if(cluster)
+		cpumask_set_cpu(cpu, &cluster->cpus);
+}
+
+static void cpu_domain_offline_cpu(int cpu)
+{
+	struct	cpu_domain *cluster = get_cpu_domain(cpu);
+
+	if(cluster)
+		cpumask_clear_cpu(cpu, &cluster->cpus);
+}
+#endif
 static void rq_online_fair(struct rq *rq)
 {
+#ifdef CONFIG_MTK_SCHED_CMP_TGS
+	cpu_domain_online_cpu(rq->cpu);
+#endif	
 	update_sysctl();
 }
 
 static void rq_offline_fair(struct rq *rq)
 {
+#ifdef CONFIG_MTK_SCHED_CMP_TGS
+	cpu_domain_offline_cpu(rq->cpu);
+#endif	
 	update_sysctl();
 }
 
@@ -7267,21 +7282,8 @@ static void switched_to_fair(struct rq *rq, struct task_struct *p)
 	 */
 	if (rq->curr == p)
 		resched_task(rq->curr);
-	else{
-		/*
-		When task p change priority form RT to normal priority 
-		in switch_from_rt(), it might call pull_rt_task
-		and potentially double_lock_balance will unlock rq.
-		Task p might migrate to other CPU and result in task p is NOT at rq.
-		In this case, it is not necessary to check preempt for rq. 
-		(Because task p is NOT at rq anymore)
-		and the migrate flow for task p will check preempt in enqueue flow.
-		So bypass the check_preempt_curr.
-		 */
-		if (rq == task_rq(p)) {
-			check_preempt_curr(rq, p, 0);
-		}
-	}
+	else
+		check_preempt_curr(rq, p, 0);
 }
 
 /* Account for a task changing its policy or group.

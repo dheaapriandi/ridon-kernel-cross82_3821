@@ -92,6 +92,7 @@ int ion_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
                         offset = 0;
                 }
                 len = min(len, remainder);
+
                 remap_pfn_range(vma, addr, page_to_pfn(page), len,
                                 vma->vm_page_prot);
 

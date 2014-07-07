@@ -1,32 +1,3 @@
-/*
- * cdc-acm.c
- *
- * Copyright (c) 1999 Armin Fuerst	<fuerst@in.tum.de>
- * Copyright (c) 1999 Pavel Machek	<pavel@ucw.cz>
- * Copyright (c) 1999 Johannes Erdfelt	<johannes@erdfelt.com>
- * Copyright (c) 2000 Vojtech Pavlik	<vojtech@suse.cz>
- * Copyright (c) 2004 Oliver Neukum	<oliver@neukum.name>
- * Copyright (c) 2005 David Kubicek	<dave@awk.cz>
- * Copyright (c) 2011 Johan Hovold	<jhovold@gmail.com>
- *
- * USB Abstract Control Model driver for USB modems and ISDN adapters
- *
- * Sponsored by SuSE
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- */
 
 #undef DEBUG
 #undef VERBOSE_DEBUG
@@ -89,14 +60,7 @@ static struct acm *acm_table[ACM_TTY_MINORS];
 
 static DEFINE_MUTEX(acm_table_lock);
 
-/*
- * acm_table accessors
- */
 
-/*
- * Look up an ACM structure by index. If found and not disconnected, increment
- * its refcount and return it with its mutex held.
- */
 static struct acm *acm_get_by_index(unsigned index)
 {
 	struct acm *acm;
@@ -117,9 +81,6 @@ static struct acm *acm_get_by_index(unsigned index)
 	return acm;
 }
 
-/*
- * Try to find an available minor number and if found, associate it with 'acm'.
- */
 static int acm_alloc_minor(struct acm *acm)
 {
 	int minor;
@@ -144,9 +105,6 @@ static void acm_release_minor(struct acm *acm)
 	mutex_unlock(&acm_table_lock);
 }
 
-/*
- * Functions for ACM control messages.
- */
 
 static int acm_ctrl_msg(struct acm *acm, int request, int value,
 							void *buf, int len)
@@ -161,9 +119,6 @@ static int acm_ctrl_msg(struct acm *acm, int request, int value,
 	return retval < 0 ? retval : 0;
 }
 
-/* devices aren't required to support these requests.
- * the cdc acm descriptor tells whether they do...
- */
 #define acm_set_control(acm, control) \
 	acm_ctrl_msg(acm, USB_CDC_REQ_SET_CONTROL_LINE_STATE, control, NULL, 0)
 #define acm_set_line(acm, line) \
@@ -171,10 +126,6 @@ static int acm_ctrl_msg(struct acm *acm, int request, int value,
 #define acm_send_break(acm, ms) \
 	acm_ctrl_msg(acm, USB_CDC_REQ_SEND_BREAK, ms, NULL, 0)
 
-/*
- * Write buffer management.
- * All of these assume proper locks taken by the caller.
- */
 
 static int acm_wb_alloc(struct acm *acm)
 {
@@ -208,9 +159,6 @@ static int acm_wb_is_avail(struct acm *acm)
 	return n;
 }
 
-/*
- * Finish write. Caller must hold acm->write_lock
- */
 static void acm_write_done(struct acm *acm, struct acm_wb *wb)
 {
 	wb->use = 0;
@@ -218,11 +166,6 @@ static void acm_write_done(struct acm *acm, struct acm_wb *wb)
 	usb_autopm_put_interface_async(acm->control);
 }
 
-/*
- * Poke write.
- *
- * the caller is responsible for locking
- */
 
 static int acm_start_wb(struct acm *acm, struct acm_wb *wb)
 {
@@ -294,9 +237,6 @@ static int acm_write_start(struct acm *acm, int wbn)
 	return rc;
 
 }
-/*
- * attributes exported through sysfs
- */
 static ssize_t show_caps
 (struct device *dev, struct device_attribute *attr, char *buf)
 {
@@ -329,9 +269,6 @@ static ssize_t show_country_rel_date
 }
 
 static DEVICE_ATTR(iCountryCodeRelDate, S_IRUGO, show_country_rel_date, NULL);
-/*
- * Interrupt handlers for various ACM device responses
- */
 
 /* control interface reports status changes with "interrupt" transfers */
 static void acm_ctrl_irq(struct urb *urb)
@@ -553,9 +490,6 @@ static void acm_softint(struct work_struct *work)
 	tty_kref_put(tty);
 }
 
-/*
- * TTY handlers
- */
 
 static int acm_tty_install(struct tty_driver *driver, struct tty_struct *tty)
 {
@@ -1048,9 +982,6 @@ static const struct tty_port_operations acm_port_ops = {
 	.destruct = acm_port_destruct,
 };
 
-/*
- * USB probe and disconnect routines.
- */
 
 /* Little helpers: write/read buffers free */
 static void acm_write_buffers_free(struct acm *acm)
@@ -1685,9 +1616,6 @@ static int acm_reset_resume(struct usb_interface *intf)
 		USB_CLASS_COMM, USB_CDC_SUBCLASS_ACM, \
 		USB_CDC_ACM_PROTO_VENDOR)
 
-/*
- * USB driver structure.
- */
 
 static const struct usb_device_id acm_ids[] = {
 	/* quirky and broken devices */
@@ -1879,9 +1807,6 @@ static struct usb_driver acm_driver = {
 #endif
 };
 
-/*
- * TTY driver structures.
- */
 
 static const struct tty_operations acm_ops = {
 	.install =		acm_tty_install,
@@ -1901,9 +1826,6 @@ static const struct tty_operations acm_ops = {
 	.tiocmset =		acm_tty_tiocmset,
 };
 
-/*
- * Init / exit.
- */
 
 static int __init acm_init(void)
 {

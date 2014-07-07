@@ -2548,12 +2548,6 @@ got_pg:
 
 }
 
-#ifdef CONFIG_MTKPASR
-extern void try_to_release_mtkpasr_page(void);
-#else
-#define try_to_release_mtkpasr_page(void)	do {} while (0)
-#endif
-
 #ifdef CONFIG_ZRAM
 #define __LOG_PAGE_ALLOC_ORDER__
 #endif
@@ -2629,24 +2623,6 @@ retry_cpuset:
                         if (!preferred_zone)
                                 goto out;
                 }
-		
-#ifdef CONFIG_MTKPASR
-		else if (gfp_mask & __GFP_WAIT) {
-			if (gfp_mask & GFP_NO_MTKPASR) {
-				/* Do nothing, just go ahead */
-			} else {
-#ifdef CONFIG_HIGHMEM
-				if (high_zoneidx == ZONE_HIGHMEM) {
-#endif
-				migratetype = MIGRATE_MTKPASR;
-				try_to_release_mtkpasr_page();
-#ifdef CONFIG_HIGHMEM
-				}
-#endif
-			}
-		}
-#endif
-
 		page = __alloc_pages_slowpath(gfp_mask, order,
 				zonelist, high_zoneidx, nodemask,
 				preferred_zone, migratetype);
@@ -2934,22 +2910,14 @@ static inline void show_node(struct zone *zone)
 		printk("Node %d ", zone_to_nid(zone));
 }
 
-#ifdef CONFIG_MTKPASR
-extern unsigned long mtkpasr_show_page_reserved(void);
-#else
-#define mtkpasr_show_page_reserved(void) (0)
-#endif
 void si_meminfo(struct sysinfo *val)
 {
 	val->totalram = totalram_pages;
 	val->sharedram = 0;
-	val->freeram = global_page_state(NR_FREE_PAGES) + mtkpasr_show_page_reserved();
+	val->freeram = global_page_state(NR_FREE_PAGES);
 	val->bufferram = nr_blockdev_pages();
 	val->totalhigh = totalhigh_pages;
 	val->freehigh = nr_free_highpages();
-#ifdef CONFIG_HIGHMEM
-	val->freehigh += mtkpasr_show_page_reserved();
-#endif
 	val->mem_unit = PAGE_SIZE;
 }
 

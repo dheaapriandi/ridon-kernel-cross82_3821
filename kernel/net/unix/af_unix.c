@@ -1,84 +1,3 @@
-/*
- * NET4:	Implementation of BSD Unix domain sockets.
- *
- * Authors:	Alan Cox, <alan@lxorguk.ukuu.org.uk>
- *
- *		This program is free software; you can redistribute it and/or
- *		modify it under the terms of the GNU General Public License
- *		as published by the Free Software Foundation; either version
- *		2 of the License, or (at your option) any later version.
- *
- * Fixes:
- *		Linus Torvalds	:	Assorted bug cures.
- *		Niibe Yutaka	:	async I/O support.
- *		Carsten Paeth	:	PF_UNIX check, address fixes.
- *		Alan Cox	:	Limit size of allocated blocks.
- *		Alan Cox	:	Fixed the stupid socketpair bug.
- *		Alan Cox	:	BSD compatibility fine tuning.
- *		Alan Cox	:	Fixed a bug in connect when interrupted.
- *		Alan Cox	:	Sorted out a proper draft version of
- *					file descriptor passing hacked up from
- *					Mike Shaver's work.
- *		Marty Leisner	:	Fixes to fd passing
- *		Nick Nevin	:	recvmsg bugfix.
- *		Alan Cox	:	Started proper garbage collector
- *		Heiko EiBfeldt	:	Missing verify_area check
- *		Alan Cox	:	Started POSIXisms
- *		Andreas Schwab	:	Replace inode by dentry for proper
- *					reference counting
- *		Kirk Petersen	:	Made this a module
- *	    Christoph Rohland	:	Elegant non-blocking accept/connect algorithm.
- *					Lots of bug fixes.
- *	     Alexey Kuznetosv	:	Repaired (I hope) bugs introduces
- *					by above two patches.
- *	     Andrea Arcangeli	:	If possible we block in connect(2)
- *					if the max backlog of the listen socket
- *					is been reached. This won't break
- *					old apps and it will avoid huge amount
- *					of socks hashed (this for unix_gc()
- *					performances reasons).
- *					Security fix that limits the max
- *					number of socks to 2*max_files and
- *					the number of skb queueable in the
- *					dgram receiver.
- *		Artur Skawina   :	Hash function optimizations
- *	     Alexey Kuznetsov   :	Full scale SMP. Lot of bugs are introduced 8)
- *	      Malcolm Beattie   :	Set peercred for socketpair
- *	     Michal Ostrowski   :       Module initialization cleanup.
- *	     Arnaldo C. Melo	:	Remove MOD_{INC,DEC}_USE_COUNT,
- *	     				the core infrastructure is doing that
- *	     				for all net proto families now (2.5.69+)
- *
- *
- * Known differences from reference BSD that was tested:
- *
- *	[TO FIX]
- *	ECONNREFUSED is not returned from one end of a connected() socket to the
- *		other the moment one end closes.
- *	fstat() doesn't return st_dev=0, and give the blksize as high water mark
- *		and a fake inode identifier (nor the BSD first socket fstat twice bug).
- *	[NOT TO FIX]
- *	accept() returns a path name even if the connecting socket has closed
- *		in the meantime (BSD loses the path and gives up).
- *	accept() returns 0 length path for an unbound connector. BSD returns 16
- *		and a null first byte in the path (but not for gethost/peername - BSD bug ??)
- *	socketpair(...SOCK_RAW..) doesn't panic the kernel.
- *	BSD af_unix apparently has connect forgetting to block properly.
- *		(need to check this with the POSIX spec in detail)
- *
- * Differences from 2.0.0-11-... (ANK)
- *	Bug fixes and improvements.
- *		- client shutdown killed server socket.
- *		- removed all useless cli/sti pairs.
- *
- *	Semantic changes/extensions.
- *		- generic control message passing.
- *		- SCM_CREDENTIALS control message.
- *		- "Abstract" (not FS based) socket bindings.
- *		  Abstract names are sequences of bytes (not zero terminated)
- *		  started by 0, so that this name space does not intersect
- *		  with BSD names.
- */
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -1201,11 +1120,6 @@ static inline void unix_set_secdata(struct scm_cookie *scm, struct sk_buff *skb)
 { }
 #endif /* CONFIG_SECURITY_NETWORK */
 
-/*
- *  SMP locking strategy:
- *    hash table is protected with spinlock unix_table_lock
- *    each socket state is protected by separate spin lock.
- */
 
 static inline unsigned unix_hash_fold(__wsum n)
 {
@@ -1251,12 +1165,6 @@ static inline void unix_release_addr(struct unix_address *addr)
 		kfree(addr);
 }
 
-/*
- *	Check unix socket name:
- *		- should be not zero length.
- *	        - if started by not zero, should be NULL terminated (FS object)
- *		- if started by zero, it is abstract name.
- */
 
 static int unix_mkname(struct sockaddr_un *sunaddr, int len, unsigned *hashp)
 {
@@ -1386,10 +1294,6 @@ static void unix_write_space(struct sock *sk)
 	rcu_read_unlock();
 }
 
-/* When dgram socket disconnects (or changes its peer), we clear its receive
- * queue of packets arrived from previous peer. First, it allows to do
- * flow control based only on wmem_alloc; second, sk connected to peer
- * may receive messages only from that peer. */
 static void unix_dgram_disconnected(struct sock *sk, struct sock *other)
 {
 	if (!skb_queue_empty(&sk->sk_receive_queue)) {
@@ -1726,12 +1630,6 @@ int unix_sock_track_socket_check_unixsk(struct proto_ops *ops)
       }
 }
 
-/*
- * AF_UNIX sockets do not interact with hardware, hence they
- * dont trigger interrupts - so it's safe for them to have
- * bh-unsafe locking for their sk_receive_queue.lock. Split off
- * this special lock-class by reinitializing the spinlock key:
- */
 static struct lock_class_key af_unix_sk_receive_queue_lock_key;
 
 static struct sock *unix_create1(struct net *net, struct socket *sock)
@@ -2758,11 +2656,6 @@ static int unix_scm_to_skb(struct scm_cookie *scm, struct sk_buff *skb, bool sen
 	return err;
 }
 
-/*
- * Some apps rely on write() giving SCM_CREDENTIALS
- * We include credentials if source or destination socket
- * asserted SOCK_PASSCRED.
- */
 static void maybe_add_creds(struct sk_buff *skb, const struct socket *sock,
 			    const struct sock *other)
 {
@@ -2776,9 +2669,6 @@ static void maybe_add_creds(struct sk_buff *skb, const struct socket *sock,
 	}
 }
 
-/*
- *	Send AF_UNIX data.
- */
 
 static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
 			      struct msghdr *msg, size_t len)
@@ -3406,9 +3296,6 @@ out:
 	return err;
 }
 
-/*
- *	Sleep until data has arrive. But check for races..
- */
 
 static long unix_stream_data_wait(struct sock *sk, long timeo)
 {
@@ -4205,10 +4092,6 @@ static void __exit af_unix_exit(void)
 	unregister_pernet_subsys(&unix_net_ops);
 }
 
-/* Earlier than device_initcall() so that other drivers invoking
-   request_module() don't end up in a loop when modprobe tries
-   to use a UNIX socket. But later than subsys_initcall() because
-   we depend on stuff initialised there */
 fs_initcall(af_unix_init);
 module_exit(af_unix_exit);
 

@@ -1,20 +1,3 @@
-/*
- * Gadget Driver for Android
- *
- * Copyright (C) 2008 Google, Inc.
- * Author: Mike Lockwood <lockwood@android.com>
- *         Benoit Goby <benoit@android.com>
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -34,13 +17,6 @@
 #include "gadget_chips.h"
 #include "logger.h"
 
-/*
- * Kbuild is not very cooperative with respect to linking separately
- * compiled library objects into one module.  So for now we won't use
- * separate compilation ... ensuring init/exit sections work to shrink
- * the runtime footprint, and giving us at least some parts of what
- * a "gcc --combine ... part1.c part2.c part3.c ... " build would.
- */
 #include "usbstring.c"
 #include "config.c"
 #include "epautoconf.c"
@@ -1954,12 +1930,13 @@ static ssize_t								\
 field ## _store(struct device *dev, struct device_attribute *attr,	\
 		const char *buf, size_t size)				\
 {									\
-	if (size >= sizeof(buffer))					\
-		return -EINVAL;						\
-	if (sscanf(buf, "%s", buffer) == 1) {				\
-		return size;						\
-	}								\
-	return -1;							\
+	if ((size >= sizeof(buffer)) || (size == 0))	\
+	{	\
+		return -EINVAL;	\
+	}		\
+	memset(buffer,0,sizeof(buffer));	\
+	strncpy(buffer,buf,size);	\
+	return size;			\
 }									\
 static DEVICE_ATTR(field, S_IRUGO | S_IWUSR, field ## _show, field ## _store);
 

@@ -36,6 +36,9 @@ module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 int earlysuspend_debug_mask = DEBUG_USER_STATE;
 int early_suspend_count = 0;
 int forbid_id = 0x0;
+int g_suspend_sys_sync_count = 0;
+int wait_sys_sync_flag = 0;
+
 
 #define _TAG_PM_M "Ker_PM"
 #define pm_warn(fmt, ...)	\
@@ -46,9 +49,13 @@ static LIST_HEAD(early_suspend_handlers);
 static void early_sys_sync(struct work_struct *work);
 static void early_suspend(struct work_struct *work);
 static void late_resume(struct work_struct *work);
+static void suspend_sys_sync(struct work_struct *work);
+
 static DECLARE_WORK(early_sys_sync_work, early_sys_sync);
 static DECLARE_WORK(early_suspend_work, early_suspend);
 static DECLARE_WORK(late_resume_work, late_resume);
+static DECLARE_WORK(suspend_sys_sync_work, suspend_sys_sync);
+
 static DEFINE_SPINLOCK(state_lock);
 
 //
@@ -64,6 +71,7 @@ enum {
 };
 static int state;
 static DECLARE_COMPLETION(fb_drv_ready);
+static DECLARE_COMPLETION(sys_sync_done);
 
 void register_early_suspend(struct early_suspend *handler)
 {
@@ -101,6 +109,28 @@ static void early_sys_sync(struct work_struct *work)
     pm_warn("--\n");
     wake_unlock(&sys_sync_wake_lock);
 }
+
+//static void suspend_sys_sync(struct work_struct *work)
+//{
+//    pm_warn("++\n");
+//    sys_sync();
+//if (wait_sys_sync_flag)
+//	complete(&sys_sync_done);
+//    pm_warn("--\n");
+//}
+static void suspend_sys_sync(struct work_struct *work)
+{
+    pm_warn("modi ++\n");
+    sys_sync();
+    pm_warn("modi sync done\n");
+		if (wait_sys_sync_flag)
+		{
+			complete(&sys_sync_done);
+			pm_warn("modi complete sync done\n");
+		}
+    pm_warn("modi--\n");
+}
+
 
 static void early_suspend(struct work_struct *work)
 {
@@ -164,6 +194,12 @@ static void late_resume(struct work_struct *work)
     
     pr_warn("@@@@@@@@@@@@@@@@@@@@@@@\n@@@__late_resume__@@@\n@@@@@@@@@@@@@@@@@@@@@@@\n");
 
+    if (wait_sys_sync_flag)
+    {
+    	complete(&sys_sync_done);
+    }
+
+	
 	pm_autosleep_set_state(PM_SUSPEND_ON);
 
     mutex_lock(&early_suspend_lock);
@@ -284,6 +320,41 @@ static void  __exit org_wakelocks_exit(void)
 {
     destroy_workqueue(suspend_work_queue);
 }
+//[MTK]
+//void suspend_syssync_enqueue(void)  
+//{  
+//    spin_lock(&state_lock); 
+//	queue_work(sys_sync_work_queue, &suspend_sys_sync_work);
+//    spin_unlock(&state_lock);  
+//	return;
+//}  
+void suspend_syssync_enqueue(void)  
+{  
+	  wait_sys_sync_flag = 1;
+	  pm_warn("modi enqueue sync\n");
+    spin_lock(&state_lock); 
+    pm_warn("modi queue sync\n");
+		queue_work(sys_sync_work_queue, &suspend_sys_sync_work);
+		pm_warn("modi queue sync done\n");
+    spin_unlock(&state_lock);  
+    pm_warn("modi queue sync complete\n");
+		return;
+} 
 
+//void suspend_check_sys_sync_done(void)
+//{
+//	wait_sys_sync_flag = 1;
+//	wait_for_completion(&sys_sync_done);
+//	wait_sys_sync_flag = 0;
+//	return;
+//}
+void suspend_check_sys_sync_done(void)
+{
+	pm_warn("modi wait sync here\n");
+	wait_for_completion(&sys_sync_done);
+	pm_warn("modi wait sync done\n");
+	wait_sys_sync_flag = 0;
+	return;
+}
 core_initcall(org_wakelocks_init);
 module_exit(org_wakelocks_exit);

@@ -4220,22 +4220,9 @@ static long validate_slab_cache(struct kmem_cache *s)
  * and freed.
  */
 
-#ifdef CONFIG_MTK_MEMCFG
-#define MTK_MEMCFG_SLABTRACE_CNT 4
-#endif 
-/* MTK_MEMCFG_SLABTRACE_CNT should be always <= TRACK_ADDRS_COUNT */
-#if (MTK_MEMCFG_SLABTRACE_CNT > TRACK_ADDRS_COUNT)
-#error (MTK_MEMCFG_SLABTRACE_CNT > TRACK_ADDRS_COUNT)
-#endif 
-
 struct location {
 	unsigned long count;
 	unsigned long addr;
-#ifdef CONFIG_MTK_MEMCFG
-#ifdef CONFIG_STACKTRACE
-	unsigned long addrs[MTK_MEMCFG_SLABTRACE_CNT];	/* Called from address */
-#endif
-#endif 
 	long long sum_time;
 	long min_time;
 	long max_time;
@@ -4254,13 +4241,8 @@ struct loc_track {
 static void free_loc_track(struct loc_track *t)
 {
 	if (t->max)
-#ifndef CONFIG_MTK_PAGERECORDER
 		free_pages((unsigned long)t->loc,
 			get_order(sizeof(struct location) * t->max));
-#else
-		__free_pages_nopagedebug((unsigned long)t->loc,
-			get_order(sizeof(struct location) * t->max));
-#endif
 }
 
 static int alloc_loc_track(struct loc_track *t, unsigned long max, gfp_t flags)
@@ -4270,11 +4252,7 @@ static int alloc_loc_track(struct loc_track *t, unsigned long max, gfp_t flags)
 
 	order = get_order(sizeof(struct location) * max);
 
-#ifndef CONFIG_MTK_PAGERECORDER
 	l = (void *)__get_free_pages(flags, order);
-#else
-	l = (void *)__get_free_pages_nopagedebug(flags, order);
-#endif 
 	if (!l)
 		return 0;
 
@@ -5573,97 +5551,45 @@ static const struct file_operations proc_slabinfo_operations = {
 };
 
 #ifdef CONFIG_MTK_MEMCFG
-
-static int mtk_memcfg_add_location(struct loc_track *t, struct kmem_cache *s,
-				const struct track *track)
+static void mtk_memcfg_print_track(struct seq_file *m, const char *s, struct track *t)
 {
-	long start, end, pos;
-	struct location *l;
-	unsigned long (*caddrs)[MTK_MEMCFG_SLABTRACE_CNT];	/* Called from addresses */
-	unsigned long taddrs[MTK_MEMCFG_SLABTRACE_CNT] 
-		= { [0 ... MTK_MEMCFG_SLABTRACE_CNT - 1] = 0,};		/* Called from addresses of track */
-	unsigned long age = jiffies - track->when;
-	int i, cnt;
+	if (!t->addr)
+		return;
 
-	start = -1;
-	end = t->count;
-
-	/* find the index of track->addr */
-	for (i = 0; i < TRACK_ADDRS_COUNT; i++)
-		if (track->addr == track->addrs[i])
-			break;
-	cnt = min(MTK_MEMCFG_SLABTRACE_CNT, TRACK_ADDRS_COUNT - i);
-	memcpy(taddrs, track->addrs + i, (cnt * sizeof (unsigned long)));
-
-	for ( ; ; ) {
-		pos = start + (end - start + 1) / 2;
-
-		/*
-		 * There is nothing at "end". If we end up there
-		 * we need to add something to before end.
-		 */
-		if (pos == end)
-			break;
-
-		caddrs = t->loc[pos].addrs;
-		if (!memcmp(caddrs, taddrs, MTK_MEMCFG_SLABTRACE_CNT * sizeof (unsigned long))) {
-
-			l = &t->loc[pos];
-			l->count++;
-			if (track->when) {
-				l->sum_time += age;
-				if (age < l->min_time)
-					l->min_time = age;
-				if (age > l->max_time)
-					l->max_time = age;
-
-				if (track->pid < l->min_pid)
-					l->min_pid = track->pid;
-				if (track->pid > l->max_pid)
-					l->max_pid = track->pid;
-
-				cpumask_set_cpu(track->cpu,
-						to_cpumask(l->cpus));
-			}
-			node_set(page_to_nid(virt_to_page(track)), l->nodes);
-			return 1;
-		}
-
-		if (memcmp(caddrs, taddrs, MTK_MEMCFG_SLABTRACE_CNT * sizeof (unsigned long)) < 0) 
-			end = pos;
-		else
-			start = pos;
+	seq_printf(m, ">> %s in %pS age=%lu cpu=%u pid=%d: ",
+		s, (void *)t->addr, jiffies - t->when, t->cpu, t->pid);
+#ifdef CONFIG_STACKTRACE
+	{
+		int i;
+		for (i = 0; i < TRACK_ADDRS_COUNT; i++)
+			if (t->addrs[i])
+				seq_printf(m, "%s%p", i? " ": "",(void *)t->addrs[i]);
+			else
+				break;
+		seq_printf(m, "\n");
 	}
-
-	/*
-	 * Not found. Insert new tracking element.
-	 */
-	if (t->count >= t->max && !alloc_loc_track(t, 2 * t->max, GFP_ATOMIC))
-		return 0;
-
-	l = t->loc + pos;
-	if (pos < t->count)
-		memmove(l + 1, l,
-			(t->count - pos) * sizeof(struct location));
-	t->count++;
-	l->count = 1;
-	l->addr = track->addr;
-	memcpy(l->addrs, taddrs, MTK_MEMCFG_SLABTRACE_CNT * sizeof (unsigned long));
-	l->sum_time = age;
-	l->min_time = age;
-	l->max_time = age;
-	l->min_pid = track->pid;
-	l->max_pid = track->pid;
-	cpumask_clear(to_cpumask(l->cpus));
-	cpumask_set_cpu(track->cpu, to_cpumask(l->cpus));
-	nodes_clear(l->nodes);
-	node_set(page_to_nid(virt_to_page(track)), l->nodes);
-	return 1;
+#endif
 }
 
-static void mtk_memcfg_process_slab(struct loc_track *t, struct kmem_cache *s,
-		struct page *page, enum track_item alloc,
-		unsigned long *map)
+static void mtk_memcfg_print_tracking(struct seq_file *m, struct kmem_cache *s, void *object)
+{
+	if (!(s->flags & SLAB_STORE_USER))
+		return;
+
+	seq_printf(m, "obj: 0x%08lx\n", (unsigned long)object);
+	mtk_memcfg_print_track(m, "Allocated", get_track(s, object, TRACK_ALLOC));
+	mtk_memcfg_print_track(m, "Freed", get_track(s, object, TRACK_FREE));
+}
+
+static void mtk_memcfg_print_page_info(struct seq_file *m, struct page *page)
+{
+	seq_printf(m, "INFO: Slab 0x%p objects=%u used=%u fp=0x%p flags=0x%04lx\n",
+		page, page->objects, page->inuse, page->freelist, page->flags);
+
+}
+
+static void mtk_memcfg_process_slab(struct seq_file *m, struct kmem_cache *s,
+		struct page *page, unsigned long *map)
 {
 	void *addr = page_address(page);
 	void *p;
@@ -5671,25 +5597,23 @@ static void mtk_memcfg_process_slab(struct loc_track *t, struct kmem_cache *s,
 	bitmap_zero(map, page->objects);
 	get_map(s, page, map);
 
+	mtk_memcfg_print_page_info(m, page);
 	for_each_object(p, s, addr, page->objects)
-		if (!test_bit(slab_index(p, s, addr), map))
-			mtk_memcfg_add_location(t, s, get_track(s, p, alloc));
+		if (!test_bit(slab_index(p, s, addr), map)) {
+			mtk_memcfg_print_tracking(m, s, p);
+		}
 }
 
-static int mtk_memcfg_list_locations(struct kmem_cache *s, struct seq_file *m,
-					enum track_item alloc)
+static int mtk_memcfg_list_locations(struct seq_file *m, struct kmem_cache *s)
 {
-	unsigned long i, j, trace_cnt;
-	struct loc_track t = { 0, 0, NULL };
 	int node;
 	unsigned long *map = kmalloc(BITS_TO_LONGS(oo_objects(s->max)) *
 				     sizeof(unsigned long), GFP_KERNEL);
 
-	if (!map || !alloc_loc_track(&t, PAGE_SIZE / sizeof(struct location),
-				     GFP_TEMPORARY)) {
-		kfree(map);
-		return seq_printf(m, "Out of memory\n");
+	if (!map) {
+		return seq_printf(m, "%s Out of memory\n", __FUNCTION__);
 	}
+
 	/* Push back cpu slabs */
 	flush_all(s);
 
@@ -5701,36 +5625,17 @@ static int mtk_memcfg_list_locations(struct kmem_cache *s, struct seq_file *m,
 		if (!atomic_long_read(&n->nr_slabs))
 			continue;
 
+		/*
+		 * Do not hold any lock to avoid from deadlock while 
+		 * copy_to_user. It's ok since we do not need a precise result
+		 */
 		spin_lock_irqsave(&n->list_lock, flags);
 		list_for_each_entry(page, &n->partial, lru)
-			mtk_memcfg_process_slab(&t, s, page, alloc, map);
+			mtk_memcfg_process_slab(m, s, page, map);
 		list_for_each_entry(page, &n->full, lru)
-			mtk_memcfg_process_slab(&t, s, page, alloc, map);
+			mtk_memcfg_process_slab(m, s, page, map);
 		spin_unlock_irqrestore(&n->list_lock, flags);
 	}
-
-	for (i = 0; i < t.count; i++) {
-		struct location *l = &t.loc[i];
-
-		seq_printf(m, "%7ld ", l->count);
-
-		if (l->addr)
-			seq_printf(m, "%pS", (void *)l->addr);
-		else
-			seq_printf(m, "<not-available>");
-
-		for (j = 0; j < MTK_MEMCFG_SLABTRACE_CNT; j++)
-			if (l->addrs[j])
-				seq_printf(m, " %p", (void *)l->addrs[j]);
-
-		seq_printf(m, "\n");
-	}
-
-	free_loc_track(&t);
-	kfree(map);
-
-	if (!t.count)
-		seq_printf(m, "No data\n");
 	return 0;
 }
 
@@ -5739,11 +5644,11 @@ static int mtk_memcfg_slabtrace_show(struct seq_file *m, void *p)
 	struct kmem_cache *s;
 	down_read(&slub_lock);
 	list_for_each_entry(s, &slab_caches, list) {
-		seq_printf(m, "========== kmem_cache: %s alloc_calls ==========\n", s->name);
+		seq_printf(m, "========== kmem_cache: %s ==========\n", s->name);
 		if (!(s->flags & SLAB_STORE_USER)) {
 			continue;
 		} else {
-			mtk_memcfg_list_locations(s, m, TRACK_ALLOC);
+			mtk_memcfg_list_locations(m, s);
 		}
 	}
 	up_read(&slub_lock);

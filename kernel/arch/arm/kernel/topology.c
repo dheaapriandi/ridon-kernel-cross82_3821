@@ -297,7 +297,7 @@ static void init_cpu_domains(int cpuid, int socket_id)
 		if(list_empty(&cpu_domains))
 		{
 			cluster = (struct cpu_domain *)
-				kmalloc(sizeof(struct cpu_domain), GFP_ATOMIC);
+				kmalloc(sizeof(struct cpu_domain), GFP_KERNEL);
 				memset(cluster, 0, sizeof(struct cpu_domain));
 			cluster->cluster_id = socket_id;
 			list_add(&cluster->cpu_domains, &cpu_domains);
@@ -323,7 +323,7 @@ static void init_cpu_domains(int cpuid, int socket_id)
 			if(pos == &cpu_domains)//Not found, allocate one
 			{
 				cluster = (struct cpu_domain *)
-				kmalloc(sizeof(struct cpu_domain), GFP_ATOMIC);
+				kmalloc(sizeof(struct cpu_domain), GFP_KERNEL);
 				memset(cluster, 0, sizeof(struct cpu_domain));
 				cluster->cluster_id = socket_id;
 				list_add(&cluster->cpu_domains, &cpu_domains);
