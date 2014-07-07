@@ -28,7 +28,6 @@
 #include <cust_eint.h>
 #include "si_drv_mdt_tx.h"
 #include "si_mdt_inputdev.h"
-#include "hdmitx_i2c.h"
 
 static ktime_t hr_timer_AbortTimer_CHK_ktime;
 unsigned long delay_in_ms;
@@ -499,11 +498,8 @@ static void WriteInitialRegisterValues ( void )
     SiiRegWrite(TX_PAGE_L0 | 0x0080, 0x08);
 	SiiRegWrite(TX_PAGE_L0 | 0x00F7, 0x03);
 	SiiRegWrite(TX_PAGE_L0 | 0x00F8, 0x8C);
-#ifdef MHL_SET_24PIN_MODE
-	SiiRegWrite(TX_PAGE_L0 | 0x0008, 0x35);
-#else
+	///SiiRegWrite(TX_PAGE_L0 | 0x0008, 0x35);
 	SiiRegWrite(TX_PAGE_L0 | 0x0008, 0x31);
-#endif
 	SiiRegWrite(TX_PAGE_3 | 0x0014, 0x57);
 	SiiRegWrite(TX_PAGE_3 | 0x0018, 0x04);    ////0x24 -->0x4 for some smartbook will disconnect.
 	SiiRegWrite(TX_PAGE_3 | 0x0010, 0x27);
@@ -1248,7 +1244,7 @@ void SiiMhlTxHwGpioSuspend(void)
 #else
 void SiiMhlTxHwGpioSuspend(void)
 {
-#ifdef MHL_SET_GPIO_MODE
+#if 0 ///Ning mask
     int i;
     u32 gpio[]={
         GPIO143, GPIO144, GPIO145, GPIO146, GPIO147,
@@ -1303,7 +1299,7 @@ void SiiMhlTxHwGpioResume(void)
 #else
 void SiiMhlTxHwGpioResume(void)
 {
-#ifdef MHL_SET_GPIO_MODE
+#if 0////Ning mask
     int i;
     u32 gpio_rgb[]={
         GPIO143, GPIO144, GPIO145, GPIO146, GPIO147,

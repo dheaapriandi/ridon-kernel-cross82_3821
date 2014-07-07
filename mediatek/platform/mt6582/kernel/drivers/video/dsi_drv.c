@@ -1773,12 +1773,10 @@ void DSI_PHY_clk_setting(LCM_PARAMS *lcm_params)
 	OUTREGBIT(MIPITX_DSI_BG_CON_REG,DSI_PHY_REG->MIPITX_DSI_BG_CON,RG_DSI_V12_SEL,4);
 	OUTREGBIT(MIPITX_DSI_BG_CON_REG,DSI_PHY_REG->MIPITX_DSI_BG_CON,RG_DSI_BG_CKEN,1);
 	OUTREGBIT(MIPITX_DSI_BG_CON_REG,DSI_PHY_REG->MIPITX_DSI_BG_CON,RG_DSI_BG_CORE_EN,1);
-	OUTREGBIT(MIPITX_DSI_BG_CON_REG,DSI_PHY_REG->MIPITX_DSI_BG_CON,RG_DSI_BG_FAST_CHARGE,0);
 	mdelay(10);
 
 	OUTREGBIT(MIPITX_DSI0_CON_REG,DSI_PHY_REG->MIPITX_DSI0_CON,RG_DSI0_CKG_LDOOUT_EN,1);
 	OUTREGBIT(MIPITX_DSI0_CON_REG,DSI_PHY_REG->MIPITX_DSI0_CON,RG_DSI0_LDOCORE_EN,1);
-	OUTREGBIT(MIPITX_DSI0_CON_REG,DSI_PHY_REG->MIPITX_DSI0_CON,RG_DSI0_DSICLK_FREQ_SEL,1);
 
 	OUTREGBIT(MIPITX_DSI_PLL_PWR_REG,DSI_PHY_REG->MIPITX_DSI_PLL_PWR,DA_DSI0_MPPLL_SDM_PWR_ON,1);
 	OUTREGBIT(MIPITX_DSI_PLL_PWR_REG,DSI_PHY_REG->MIPITX_DSI_PLL_PWR,DA_DSI0_MPPLL_SDM_ISO_EN,1);
@@ -3169,7 +3167,7 @@ void DSI_Config_VDO_Timing(LCM_PARAMS *lcm_params)
 
 void DSI_write_lcm_cmd(unsigned int cmd)
 {
-	DSI_T0_INS t0_tmp;
+	DSI_T0_INS *t0_tmp=0;
 	DSI_CMDQ_CONFG CONFG_tmp;
 
 	CONFG_tmp.type=SHORT_PACKET_RW;
@@ -3179,12 +3177,12 @@ void DSI_write_lcm_cmd(unsigned int cmd)
 	CONFG_tmp.TE=DISABLE_TE;
 	CONFG_tmp.RPT=DISABLE_RPT;
 
-	t0_tmp.CONFG = *((unsigned char *)(&CONFG_tmp));
-	t0_tmp.Data_ID= (cmd&0xFF);
-	t0_tmp.Data0 = 0x0;
-	t0_tmp.Data1 = 0x0;
+	t0_tmp->CONFG = *((unsigned char *)(&CONFG_tmp));
+	t0_tmp->Data_ID= (cmd&0xFF);
+	t0_tmp->Data0 = 0x0;
+	t0_tmp->Data1 = 0x0;
 
-	DSI_Write_T0_INS(&t0_tmp);
+	DSI_Write_T0_INS(t0_tmp);
 }
 
 
@@ -3589,7 +3587,7 @@ UINT32 DSI_read_lcm_reg()
 
 DSI_STATUS DSI_write_lcm_fb(unsigned int addr, bool long_length)
 {
-	DSI_T1_INS t1_tmp;
+	DSI_T1_INS *t1_tmp=0;
 	DSI_CMDQ_CONFG CONFG_tmp;
 
 	CONFG_tmp.type=FB_WRITE;
@@ -3605,14 +3603,14 @@ DSI_STATUS DSI_write_lcm_fb(unsigned int addr, bool long_length)
 	CONFG_tmp.RPT=DISABLE_RPT;
 
 
-	t1_tmp.CONFG = *((unsigned char *)(&CONFG_tmp));
-	t1_tmp.Data_ID= 0x39;
-	t1_tmp.mem_start0 = (addr&0xFF);
+	t1_tmp->CONFG = *((unsigned char *)(&CONFG_tmp));
+	t1_tmp->Data_ID= 0x39;
+	t1_tmp->mem_start0 = (addr&0xFF);
 
 	if(long_length)
-		t1_tmp.mem_start1 = ((addr>>8)&0xFF);
+		t1_tmp->mem_start1 = ((addr>>8)&0xFF);
 
-	return DSI_Write_T1_INS(&t1_tmp);
+	return DSI_Write_T1_INS(t1_tmp);
 
 
 }

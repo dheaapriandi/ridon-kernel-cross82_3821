@@ -56,7 +56,7 @@ S32 pwrap_write( U32  adr, U32  wdata )
 	return pwrap_wacs2( PWRAP_WRITE, adr,wdata,0 );
 }
 EXPORT_SYMBOL(pwrap_write);
-/********************************************************************/
+/*********************************************************************/
 /********************************************************************/
 // return value : EINT_STA: [0]: CPU IRQ status in MT6331
 //						[1]: MD32 IRQ status in MT6331
@@ -81,7 +81,7 @@ void pmic_wrap_eint_clr(int offset)
 	mt_pmic_wrap_eint_clr(offset);
 }
 EXPORT_SYMBOL(pmic_wrap_eint_clr);
-/*******************************************************************/
+/************************************************************************/
 static ssize_t mt_pwrap_show(struct device_driver *driver, char *buf)
 {
 	if(mt_wrp.show_hal != NULL)

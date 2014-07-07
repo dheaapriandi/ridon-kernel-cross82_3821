@@ -1,3 +1,4 @@
+
 #ifndef _CAMERA_CUSTOM_AEPTABLE_H_
 #define _CAMERA_CUSTOM_AEPTABLE_H_
 

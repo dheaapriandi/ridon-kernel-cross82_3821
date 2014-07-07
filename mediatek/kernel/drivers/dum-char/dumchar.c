@@ -112,21 +112,6 @@ static int init_sd_cmd(struct msdc_ioctl * cmd,loff_t addr,
 	cmd->opcode = MSDC_SINGLE_READ_WRITE;
 	else
 	cmd->opcode = MSDC_MULTIPLE_READ_WRITE;	
-/*
-	printk("*****************************\nDumCharDebug:in init_sd_cmd:\n");
-	printk("cmd->opcode=%d MSDC_SINGLE_READ_WRITE =(2) MSDC_MULTIPLE_READ_WRITE =(3)\n",cmd->opcode);
-	printk("cmd->host_num=%d supose=1\n",cmd->host_num);
-	printk("cmd->iswrite=%d write=1 read=0\n",cmd->iswrite);
-	printk("cmd->trans_type=%d\n",cmd->trans_type);	
-	printk("cmd->total_size=%d\n",cmd->total_size);	
-	printk("cmd->address=%d\n",cmd->address);	
-	printk("cmd->buffer=%p\n",cmd->buffer);	
-	printk("cmd->cmd_driving=%d\n",cmd->cmd_driving);	
-	printk("cmd->dat_driving=%d\n",cmd->dat_driving);
-	printk("cmd->clock_freq=%d\n",cmd->clock_freq);	
-	printk("cmd->result=%d\n",cmd->result);	
-	printk("***************************\n");	
-*/
 	return 0; 
 
 }
@@ -1131,9 +1116,9 @@ int dumchar_probe(struct platform_device * dev)
 				dumchar_devices[i].size = s_info.emmc_user_capacity * 512 - dumchar_devices[i].start_address - s_info.emmc_reserve * 512;
 			}
 	#endif
-			//if(!strcmp(PartInfo[i].name,"otp")||!strcmp(PartInfo[i].name,"bmtpool")){
-				//dumchar_devices[i].size = (PartInfo[i].start_address & 0x0000FFFF)*128*1024;
-			//}
+			if(!strcmp(PartInfo[i].name,"otp")||!strcmp(PartInfo[i].name,"bmtpool")){
+				dumchar_devices[i].size = (PartInfo[i].start_address & 0x0000FFFF)*128*1024;
+			}
 			printk("[Dumchar] %s start address=%llx size=%llx\n",dumchar_devices[i].dumname,dumchar_devices[i].start_address,dumchar_devices[i].size);
 #endif
 		}else{

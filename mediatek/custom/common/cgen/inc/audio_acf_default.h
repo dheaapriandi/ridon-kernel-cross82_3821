@@ -1,42 +1,5 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- * audio_acf_default.h
- *
- * Project:
- * --------
- *   ALPS
- *
- * Description:
- * ------------
- * This file is the header of audio customization related parameters or definition.
- *
- * Author:
- * -------
- * Tina Tsai
- *
- *============================================================================
- *             HISTORY
- * Below this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- * 04 22 2013 kh.hung
- * [ALPS00580843] [MT6572tdv1_phone[lca]][music][Symbio][Free test] 音?播放器播放音?的?音?大?小，不?定
- * Use default DRC setting.
- * 
- * Review: http://mtksap20:8080/go?page=NewReview&reviewid=59367
- *
- *
- *
- *
- *------------------------------------------------------------------------------
- * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *============================================================================
- ****************************************************************************/
+
+
 #ifndef AUDIO_ACF_DEFAULT_H
 #define AUDIO_ACF_DEFAULT_H
 #if defined(MTK_AUDIO_BLOUD_CUSTOMPARAMETER_V4)              

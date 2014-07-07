@@ -1453,7 +1453,7 @@ TaskStruct* cmdq_acquire_task(int32_t  scenario,
         // resource cleanup, and clean pTask to NULL
         cmdq_release_task(pTask); 
         pTask = NULL; 
-        
+
         // throw AEE
         CMDQ_AEE("CMDQ", "Copy commands buffer failed, [%d]\n", status);
     }
@@ -2487,7 +2487,7 @@ int32_t cmdq_core_wait_task_done(
 
     // init
     pThread = &(gCmdqContext.thread[thread]);
-    status = 0;  
+    status = 0;
 
     // get wait time when condition gets true
     waitQ = cmdq_core_wait_task_done_with_interruptible_timeout(pTask, thread, predump_start_time_ms, predump_duration_ms, predump_retry_count); 
@@ -2935,8 +2935,8 @@ void cmdqHandleError(int32_t thread, uint32_t value)
 
     // suspend thread first
     if(0 > cmdq_suspend_HW_thread(thread))
-    {      
-        cmdq_attach_error_task(NULL, thread);  
+    {
+        cmdq_attach_error_task(NULL, thread);
         spin_unlock_irqrestore(&gCmdqExecLock, flags);
         CMDQ_AEE("CMDQ", "suspend HW thread %d failed in cmdqHandleError\n", thread);
         return;

@@ -12,14 +12,22 @@ extern void lte_sdio_turnoff_wakedevice(void);
 extern struct mtlte_dev *lte_dev_p ;
 
 #if INTEGRATION_DEBUG
-struct timespec lte_time_before_t, lte_time_now_t, lte_time_diff_t;
-KAL_UINT32 eemcs_sdio_throughput_log = 0;
+//struct timespec lte_time_before_t, lte_time_now_t;
+KAL_UINT32 lte_jiffies_before, lte_jiffies_now, lte_time_diff_sec;
+KAL_UINT32 rxq_wait_big_buf_time = 0;
+KAL_UINT32 rxq_workq_buf_exe_time = 0;
+KAL_UINT32 rxq_workq_get_skb_time = 0;
+KAL_UINT32 rxq_workq_callback_user_time = 0;
+
+KAL_UINT32 eemcs_sdio_throughput_log = 1;
 KAL_UINT32 log_sdio_ul_now = 0;
 KAL_UINT32 log_sdio_dl_now = 0;
-KAL_UINT32 log_sdio_ul_history = 0;
-KAL_UINT32 log_sdio_dl_history = 0;
+KAL_UINT32 log_sdio_ul_history = 1;
+KAL_UINT32 log_sdio_dl_history = 1;
 KAL_UINT32 log_sdio_buf_pool = 0;
 KAL_UINT32 log_sdio_ul_txqcnt= 0;
+
+KAL_UINT32 log_sdio_print_now = 0;
 
 KAL_UINT32 sdio_rxq_skb_log[RXQ_NUM];
 KAL_UINT32 sdio_txq_skb_log[TXQ_NUM];
@@ -1035,6 +1043,7 @@ static SDIO_TXRXWORK_RESP mtlte_hif_sdio_rx(KAL_UINT32 rxqno)
 	sdio_whisr_enhance *tailor_cache = NULL;
 	KAL_UINT16	*fw_rx_pkt_num ;
 	KAL_UINT16	*fw_rx_pkt_len ;
+	KAL_UINT32 wait_start = 0, cur_time = 0;
 
 #if THREAD_FOR_MEMCPY_SKB
     KAL_UINT32 rxbuf_num_thistime;
@@ -1109,17 +1118,26 @@ static SDIO_TXRXWORK_RESP mtlte_hif_sdio_rx(KAL_UINT32 rxqno)
         
 #if THREAD_FOR_MEMCPY_SKB
  #if !ALLOCATE_SKB_IN_QWORK
+  #if BUFFER_POOL_FOR_EACH_QUE
+        if (mtlte_df_DL_pkt_in_buff_pool(rxqno) < rx_queue_info[rxqno].max_rx_pktcnt){
+            mtlte_df_DL_try_reload_swq() ; // try to reload it 
+        }
+  #else
         if (mtlte_df_DL_pkt_in_buff_pool() < rx_queue_info[rxqno].max_rx_pktcnt){
             mtlte_df_DL_try_reload_swq() ; // try to reload it 
         }
+  #endif      
  #endif
 #else
         // 3. Check the DL pkt buffer pool is enough or not to receive the rx packet
-        if (mtlte_df_DL_pkt_in_buff_pool() < rx_queue_info[rxqno].max_rx_pktcnt){
+  #if BUFFER_POOL_FOR_EACH_QUE
+        if (mtlte_df_DL_pkt_in_buff_pool(rxqno) < rx_queue_info[rxqno].max_rx_pktcnt){
             #if IMMEDIATE_RELOAD_DL_SKB
-                while (mtlte_df_DL_pkt_in_buff_pool() < rx_queue_info[rxqno].max_rx_pktcnt){
-                    mtlte_df_DL_prepare_skb_for_swq_short(rx_queue_info[rxqno].max_rx_pktcnt);
-                    KAL_SLEEP_MSEC(10);
+                while (mtlte_df_DL_pkt_in_buff_pool(rxqno) < rx_queue_info[rxqno].max_rx_pktcnt){
+                    mtlte_df_DL_prepare_skb_for_swq_short(rx_queue_info[rxqno].max_rx_pktcnt, rxqno);
+                    if (mtlte_df_DL_pkt_in_buff_pool(rxqno) < rx_queue_info[rxqno].max_rx_pktcnt){
+                        KAL_SLEEP_USEC(1000);
+                    }
                 }
             #else
                 KAL_DBGPRINT(KAL, DBG_INFO,("[RX] RXQ%d mtlte_df_DL_pkt_in_buff_pool is unenough\r\n", rxqno)) ;
@@ -1128,6 +1146,23 @@ static SDIO_TXRXWORK_RESP mtlte_hif_sdio_rx(KAL_UINT32 rxqno)
                 goto RX_UPDATE_WHISR ;
             #endif            
         } 
+  #else
+        if (mtlte_df_DL_pkt_in_buff_pool() < rx_queue_info[rxqno].max_rx_pktcnt){
+            #if IMMEDIATE_RELOAD_DL_SKB
+                while (mtlte_df_DL_pkt_in_buff_pool() < rx_queue_info[rxqno].max_rx_pktcnt){
+                    mtlte_df_DL_prepare_skb_for_swq_short(rx_queue_info[rxqno].max_rx_pktcnt);
+                    if (mtlte_df_DL_pkt_in_buff_pool() < rx_queue_info[rxqno].max_rx_pktcnt){
+                        KAL_SLEEP_USEC(1000);
+                    }
+                }
+            #else
+                KAL_DBGPRINT(KAL, DBG_INFO,("[RX] RXQ%d mtlte_df_DL_pkt_in_buff_pool is unenough\r\n", rxqno)) ;
+                ret_resp |= WORK_RESP_RX_NOT_COMPLETE ; 
+                mtlte_df_DL_try_reload_swq() ; // try to reload it 
+                goto RX_UPDATE_WHISR ;
+            #endif            
+        } 
+  #endif
 #endif
 
 		// 4. Check the SWQ is over thereshold or not
@@ -1169,6 +1204,7 @@ static SDIO_TXRXWORK_RESP mtlte_hif_sdio_rx(KAL_UINT32 rxqno)
         buf_usage_now = hif_sdio_handler.rx_buf_usage[rxbuf_num_thistime];
         KAL_MUTEXUNLOCK(&hif_sdio_handler.rx_buf_lock[rxbuf_num_thistime]);
 
+ 		wait_start = jiffies;
 #if USE_EVENT_TO_WAKE_BUFFER
         if(buf_usage_now != NOT_BE_USED){
             wait_event_interruptible( lte_dev_p->sdio_thread_wq, (kthread_should_stop() || (hif_sdio_handler.wake_evt_buff[rxbuf_num_thistime]==1)));
@@ -1205,6 +1241,13 @@ static SDIO_TXRXWORK_RESP mtlte_hif_sdio_rx(KAL_UINT32 rxqno)
             KAL_ASSERT(0);
         }
 #endif
+        cur_time = jiffies;
+        if (cur_time > wait_start) {
+			rxq_wait_big_buf_time = cur_time - wait_start;
+			if (rxq_wait_big_buf_time > 50) { // > 500ms
+				KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf][WARN] DLQ%d rxq_wait_big_buf_time=%dms, rxbuf_num_thistime=%d\n", rxqno, 10*rxq_wait_big_buf_time, rxbuf_num_thistime)) ;			
+			}
+        }
 
         #if INTEGRATION_DEBUG
         if(eemcs_sdio_throughput_log == 1){
@@ -1539,6 +1582,12 @@ KAL_INT32 mtlte_hif_sdio_process()
 	KAL_UINT32 nm_index = 0 ;
     KAL_UINT32 time_of_no_resource = 0 ;
 
+    //KAL_UINT32 diff_jif = 0;
+    KAL_UINT32 proc_time = 0, proc_start = 0;
+    
+	
+
+
 #if INTEGRATION_DEBUG
     KAL_UINT32 log_qno = 0 ;
     KAL_UINT32 log_total_ul = 0 ;
@@ -1551,6 +1600,7 @@ KAL_INT32 mtlte_hif_sdio_process()
 #endif
 
 	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s\n",KAL_FUNC_NAME)) ;
+        proc_start = jiffies;
 
 #if !USING_WAKE_MD_EINT
 	// 1. check thw owner ship 	
@@ -1719,9 +1769,20 @@ KAL_INT32 mtlte_hif_sdio_process()
 
 #if INTEGRATION_DEBUG
         if(eemcs_sdio_throughput_log == 1){
-            jiffies_to_timespec(jiffies , &lte_time_now_t);
+            //jiffies_to_timespec(jiffies , &lte_time_now_t);
+            lte_jiffies_now = jiffies;
+            lte_time_diff_sec = (lte_jiffies_now - lte_jiffies_before) / HZ;
+
+            if(lte_time_diff_sec >= 10){
+                log_sdio_print_now = 1;
+            }else if(lte_jiffies_now < lte_jiffies_before){
+                log_sdio_print_now = 1;
+                lte_time_diff_sec = 0;
+            }else{
+                log_sdio_print_now = 0;
+            }
             
-            if(lte_time_now_t.tv_sec-lte_time_before_t.tv_sec >= 10){
+            if( log_sdio_print_now == 1){
 
                 KAL_DBGPRINT(KAL, DBG_ERROR,(" ===== SDIO perf log ===== \n")) ;
                 
@@ -1738,22 +1799,28 @@ KAL_INT32 mtlte_hif_sdio_process()
                 if(log_sdio_ul_history == 1){
                     log_total_ul = 0;
                     for(log_qno=0; log_qno<TXQ_NUM; log_qno++){
-                        KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf] pkt of ULQ%d in past %d sec = %d \n", log_qno, (int)(lte_time_now_t.tv_sec-lte_time_before_t.tv_sec), sdio_txq_skb_log[log_qno])) ;
+                        KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf] pkt of ULQ%d in past %d sec = %d \n", log_qno, lte_time_diff_sec, sdio_txq_skb_log[log_qno])) ;
                         log_total_ul += sdio_txq_skb_log[log_qno];
                     }
-                    KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf] Total ULQ packet in past %d sec = %d \n", (int)(lte_time_now_t.tv_sec-lte_time_before_t.tv_sec), log_total_ul)) ;
+                    KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf] Total ULQ packet in past %d sec = %d \n", lte_time_diff_sec, log_total_ul)) ;
                 }
                 if(log_sdio_dl_history == 1){
                     log_total_dl = 0;
                     for(log_qno=0; log_qno<RXQ_NUM; log_qno++){
-                        KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf] pkt of DLQ%d in past %d sec = %d \n", log_qno, (int)(lte_time_now_t.tv_sec-lte_time_before_t.tv_sec), sdio_rxq_skb_log[log_qno])) ;
+                        KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf] pkt of DLQ%d in past %d sec = %d \n", log_qno, lte_time_diff_sec, sdio_rxq_skb_log[log_qno])) ;
                         log_total_dl += sdio_rxq_skb_log[log_qno];
                     }
-                    KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf] Total DLQ packet in past %d sec = %d \n", (int)(lte_time_now_t.tv_sec-lte_time_before_t.tv_sec), log_total_dl)) ;
+                    KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf] Total DLQ packet in past %d sec = %d \n", lte_time_diff_sec, log_total_dl)) ;
                 }
 
                 if(log_sdio_buf_pool == 1){
-                    KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf] empty skb in pool now = %d \n", mtlte_df_DL_pkt_in_buff_pool())) ;
+                    #if BUFFER_POOL_FOR_EACH_QUE
+                        for(log_qno=0; log_qno<RXQ_NUM; log_qno++){
+                            KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf] empty skb in pool of RxQ%d now = %d \n", log_qno, mtlte_df_DL_pkt_in_buff_pool(log_qno))) ;
+                        }
+                    #else
+                        KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf] empty skb in pool now = %d \n", mtlte_df_DL_pkt_in_buff_pool())) ;
+                    #endif
                 }
                 if(log_sdio_ul_txqcnt == 1){
                     for(log_qno=0; log_qno<TXQ_NUM; log_qno++){
@@ -1763,7 +1830,8 @@ KAL_INT32 mtlte_hif_sdio_process()
                 
                 KAL_DBGPRINT(KAL, DBG_ERROR,(" ===== ===== ===== ===== \n")) ;
 
-                lte_time_before_t = lte_time_now_t;
+                //lte_time_before_t = lte_time_now_t;
+                lte_jiffies_before = lte_jiffies_now;
                 for(log_qno=0; log_qno<TXQ_NUM; log_qno++){
                     sdio_txq_skb_log[log_qno] = 0;
                 }
@@ -1799,6 +1867,12 @@ END_OF_TXRX_PROCESS :
 	mtlte_hif_sdio_enable_interrupt() ;
 
 	KAL_DBGPRINT(KAL, DBG_INFO,("<==== %s\n",KAL_FUNC_NAME)) ;
+	if (jiffies >= proc_start) {
+		proc_time = jiffies - proc_start;
+		if (proc_time > 100) {
+			KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf][Busy] <==== %s, proc_time= %dms\n",KAL_FUNC_NAME, 10*proc_time)) ;
+		}
+	}
 	return KAL_SUCCESS;
 }
 
@@ -1824,6 +1898,8 @@ static void mtlte_hif_DL_skb_enqueue_work(struct work_struct *work)
     KAL_UINT32 rxbuf_start ;
     KAL_UINT32 rxbuf_end ;
     KAL_UINT32 continue_check;
+    KAL_UINT32 start_time = 0, cur_time = 0, monitor_time = 0;
+    //KAL_UINT32 diff_time = 0; 
     
 	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s\n",KAL_FUNC_NAME)) ;	
 
@@ -1851,6 +1927,7 @@ static void mtlte_hif_DL_skb_enqueue_work(struct work_struct *work)
   
 
         if(0xFF != rxque_num_thistime){
+			start_time = jiffies;
             KAL_MUTEXLOCK(&hif_sdio_handler.all_buf_full);
             
             switch(rxque_num_thistime){
@@ -1887,14 +1964,41 @@ static void mtlte_hif_DL_skb_enqueue_work(struct work_struct *work)
     		}
 
 #if ALLOCATE_SKB_IN_QWORK
+  #if BUFFER_POOL_FOR_EACH_QUE
+            if (mtlte_df_DL_pkt_in_buff_pool(rxque_num_thistime) < rx_queue_info[rxque_num_thistime].max_rx_pktcnt){
+			    mtlte_df_DL_try_reload_swq() ; // try to reload it 
+			}
+  #else
 		    if (mtlte_df_DL_pkt_in_buff_pool() < rx_queue_info[rxque_num_thistime].max_rx_pktcnt){
 			    mtlte_df_DL_try_reload_swq() ; // try to reload it 
 			}	
+  #endif          
 #endif
+  #if BUFFER_POOL_FOR_EACH_QUE
+            monitor_time = jiffies;
+            while (mtlte_df_DL_pkt_in_buff_pool(rxque_num_thistime) < rx_queue_info[rxque_num_thistime].max_rx_pktcnt){
+                mtlte_df_DL_prepare_skb_for_swq_short(rx_queue_info[rxque_num_thistime].max_rx_pktcnt, rxque_num_thistime);
+                if (mtlte_df_DL_pkt_in_buff_pool(rxque_num_thistime) < rx_queue_info[rxque_num_thistime].max_rx_pktcnt){
+                    KAL_SLEEP_USEC(1000);
+                }
+            }
+  #else
+			monitor_time = jiffies;			
             while (mtlte_df_DL_pkt_in_buff_pool() < rx_queue_info[rxque_num_thistime].max_rx_pktcnt){
                 mtlte_df_DL_prepare_skb_for_swq_short(rx_queue_info[rxque_num_thistime].max_rx_pktcnt);
-                KAL_SLEEP_MSEC(10);
+                if (mtlte_df_DL_pkt_in_buff_pool() < rx_queue_info[rxque_num_thistime].max_rx_pktcnt){
+                    KAL_SLEEP_USEC(1000);
+                }
             }
+  #endif
+			cur_time = jiffies;
+			if (cur_time >= monitor_time) {
+				rxq_workq_get_skb_time = cur_time - monitor_time;
+				if (rxq_workq_get_skb_time> 50) { //>500ms
+					KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf][WARN] DLQ%d workq_immediate_reload_skb_time= %dms,rxbuf_thistime=%d \n", 
+							rxque_num_thistime, 10*rxq_workq_get_skb_time, rxbuf_thistime));
+				}
+			}
 
             total_len = 0 ; 
             total_pkt_num = *(fw_rx_pkt_num);
@@ -1905,7 +2009,11 @@ static void mtlte_hif_DL_skb_enqueue_work(struct work_struct *work)
                 #else					
     			mtlte_df_DL_enswq_buf(rxque_num_thistime, (hif_sdio_handler.rx_data_buf[rxbuf_thistime] + total_len), fw_rx_pkt_len[j]) ;
                 #endif						
-    			total_len +=KAL_ALIGN_TO_DWORD(fw_rx_pkt_len[j])+MT_LTE_RX_LEGACY_SDU_TAIL ; 									
+    			total_len +=KAL_ALIGN_TO_DWORD(fw_rx_pkt_len[j])+MT_LTE_RX_LEGACY_SDU_TAIL ; 
+                
+#if !DISPATCH_AFTER_ALL_SKB_DONE
+                mtlte_df_DL_rx_callback(rxque_num_thistime);
+#endif
     		}
             
             #if USE_QUE_WORK_DISPATCH_RX
@@ -1930,11 +2038,20 @@ static void mtlte_hif_DL_skb_enqueue_work(struct work_struct *work)
             wake_up_all(&(lte_dev_p->sdio_thread_wq));
 #endif
 
-            #if DISPATCH_AFTER_ALL_SKB_DONE
+#if DISPATCH_AFTER_ALL_SKB_DONE
+            monitor_time = jiffies;
             for (j=0 ; j<total_pkt_num ; j++){
                 mtlte_df_DL_rx_callback(rxque_num_thistime);
             }
-            #endif
+			cur_time = jiffies;
+			if (cur_time >= monitor_time) {
+				rxq_workq_callback_user_time = cur_time - monitor_time;
+				if (rxq_workq_callback_user_time > 50) { //>500ms
+					KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf][WARN] DLQ%d workq_callback_to_user_time=%dms, total_pkt_num=%d ,rxbuf_thistime=%d\n", 
+								rxque_num_thistime, 10*rxq_workq_callback_user_time, total_pkt_num, rxbuf_thistime));
+				}
+			}
+#endif
 
             rxbuf_start++;
             if(rxbuf_start >= RX_BUF_NUM){
@@ -1943,6 +2060,14 @@ static void mtlte_hif_DL_skb_enqueue_work(struct work_struct *work)
 
             hif_sdio_handler.rx_buf_order_dispatch = rxbuf_start;
 
+			cur_time = jiffies;
+			if (cur_time >= start_time) {
+				rxq_workq_buf_exe_time = cur_time - start_time;
+				if (rxq_workq_buf_exe_time > 50) { //>500ms
+					KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO perf][WARN] DLQ%d rxq_workq_total_time = %dms, total_pkt_num=%d, rxbuf_thistime=%d \n", 
+							rxque_num_thistime, 10*rxq_workq_buf_exe_time, total_pkt_num, rxbuf_thistime));
+				}
+			}
         }
     }
 
@@ -2090,7 +2215,9 @@ KAL_INT32 mtlte_hif_sdio_probe()
     lte_sdio_disable_wd_eirq();
 	
 #if INTEGRATION_DEBUG
-    jiffies_to_timespec(jiffies , &lte_time_before_t);
+    //jiffies_to_timespec(jiffies , &lte_time_before_t);
+    lte_jiffies_before = jiffies;
+        
     for (i=0 ; i<TXQ_NUM; i++){
         sdio_txq_skb_log[i] = 0;
     }
@@ -2099,6 +2226,16 @@ KAL_INT32 mtlte_hif_sdio_probe()
         sdio_rxq_skb_log[i] = 0;
     }
 #endif
+
+    hif_sdio_handler.expt_reset_allQ = 0 ;
+
+    for (i=0 ; i<TXQ_NUM; i++){
+		hif_sdio_handler.tx_expt_stop[i] = 0 ;
+	}
+
+    for (i=0 ; i<RXQ_NUM; i++){
+		hif_sdio_handler.rx_expt_stop[i] = 0 ;
+	}
 
 #if FORMAL_DL_FLOW_CONTROL
     for (i=0 ; i<RXQ_NUM; i++){
@@ -2118,9 +2255,8 @@ KAL_INT32 mtlte_hif_sdio_probe()
 	return ret ; 
 }
 
-KAL_INT32 mtlte_hif_sdio_remove()
+KAL_INT32 mtlte_hif_sdio_remove_phase1()
 {
-	KAL_INT32 i = 0 ;
 	KAL_INT32 ret = KAL_SUCCESS;
 
 	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s\n",KAL_FUNC_NAME)) ;
@@ -2133,7 +2269,22 @@ KAL_INT32 mtlte_hif_sdio_remove()
 
 #if THREAD_FOR_MEMCPY_SKB
     flush_workqueue(hif_sdio_handler.rx_memcpy_work_queue);
-        
+#endif
+
+	KAL_DBGPRINT(KAL, DBG_INFO,("<==== %s\n",KAL_FUNC_NAME)) ;
+	
+	return ret ; 
+}
+
+
+KAL_INT32 mtlte_hif_sdio_remove_phase2()
+{
+	KAL_INT32 i = 0 ;
+	KAL_INT32 ret = KAL_SUCCESS;
+
+	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s\n",KAL_FUNC_NAME)) ;
+	
+#if THREAD_FOR_MEMCPY_SKB    
     for (i=0 ; i<RX_BUF_NUM; i++){
         hif_sdio_handler.rx_buf_usage[i] = NOT_BE_USED;
     }
@@ -2162,6 +2313,10 @@ KAL_INT32 mtlte_hif_sdio_init()
     KAL_INT32 i = 0 ;
 
 	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s\n",KAL_FUNC_NAME)) ;
+
+#ifdef USER_BUILD_KERNEL
+    mtlte_hal_register_MSDC_ERR_callback(mtlte_hif_WDT_handle);
+#endif
 	
 	if ((ret = KAL_ALLOCATE_PHYSICAL_DMA_MEM_NEW(hif_sdio_handler.data_buf, MT_LTE_SDIO_DATA_BUFF_LEN))){
 		goto BUF_MEM_FAIL ;
@@ -2225,6 +2380,7 @@ KAL_INT32 mtlte_hif_sdio_init()
     }
 #endif
     
+
 #if THREAD_FOR_MEMCPY_SKB
 
 #if defined (TCP_OUT_OF_ORDER_SOLUTION)

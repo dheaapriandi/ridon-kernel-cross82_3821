@@ -146,7 +146,10 @@ typedef enum
 typedef struct 
 {
 	kal_bool			bat_exist;
-	kal_bool			bat_full;  
+	kal_bool			bat_full;
+	#ifdef BATT_ID_CHECK_SUPPORT
+	kal_bool    bat_id_valid;
+	#endif
 	INT32			bat_charging_state;
 	UINT32			bat_vol;         
 	kal_bool			bat_in_recharging_state;	
@@ -191,7 +194,7 @@ extern kal_uint32 bat_get_ui_percentage(void);
 extern kal_uint32 get_charging_setting_current(void);
 extern kal_uint32 bat_is_recharging_phase(void);
 extern void do_chrdet_int_task(void);
-
+extern void reset_charging_iocharger(void);
 
 #ifdef CONFIG_MTK_SMART_BATTERY
 extern void wake_up_bat(void);

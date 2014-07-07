@@ -1,3 +1,4 @@
+
 #ifndef CUST_FM_H
 #define CUST_FM_H
 
@@ -6,12 +7,6 @@ typedef enum{
 	FM_RDS_TX_ENABLE
 }fm_rds_tx_enable_state;
 
-/*
-FM BAND width
-0x01: US/Europe band  87.5MHz ~ 108MHz
-0x02: Japan band      76MHz   ~ 90MHz
-0x03: Japan wideband  76MHZ   ~ 108MHz
-*/
 // band
 #define FM_BAND_UNKNOWN 0
 #define FM_BAND_UE      1 // US/Europe band  87.5MHz ~ 108MHz (DEFAULT)
@@ -61,17 +56,8 @@ enum fmtx_tone_freq {
     FMTX_MAX_TONE
 };
 
-/*
-FM Seek/scan width
-0x01: 100KHz
-0x02: 200KHz
-*/
 #define FM_SPACE_WIDTH   0x01
 
-/*
-FM factory mode test freq
-Unit:100KHz
-*/
 uint16_t fmtx_freq_list[] = {878, 886, 891, 910, 920, 930, 940, 990, 1050, 1070};
 //unsigned char fmtx_ps[8] = {'m', 't', 'k', 'F', 'm', 'R', 'd', 's'};
 unsigned char fmtx_ps[8] = {0};

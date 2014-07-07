@@ -1,9 +1,3 @@
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- */
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -315,9 +309,6 @@ static ssize_t cpu_ss_debug_mode_write(struct file *file, const char *buffer, un
     return -EINVAL;
 }
 
-/*********************************
-* cpu speed stress initialization 
-**********************************/
 static int __init mt_cpu_ss_init(void)
 {
     struct proc_dir_entry *mt_entry = NULL;

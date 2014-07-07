@@ -64,7 +64,7 @@ ifeq ($(MTK_DEPENDENCY_AUTO_CHECK), true)
 endif
 	$(hide) if [ -f $$@ ]; then rm -f $$@; fi;
 	@mkdir -p $$(dir $(2))
-	$(hide) for x in $$(sort $$(wildcard $(1)/*.h)); do echo "#include \"$(3)$$$$x\"" >>$$@; done;
+	$(hide) for x in $$(wildcard $(1)/*.h); do echo "#include \"$(3)$$$$x\"" >>$$@; done;
 	$(hide) for x in $(4); do echo "#include \"$$$$x\"" >>$$@; done;
 endef
 

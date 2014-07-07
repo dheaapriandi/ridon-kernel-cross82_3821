@@ -1,7 +1,6 @@
 #include <mach/hal_pub_kpd.h>
 #include <mach/hal_priv_kpd.h>
 #include <mach/mt_clkmgr.h>
-#include <linux/kpd.h>
 
 #define KPD_DEBUG	KPD_YES
 
@@ -26,47 +25,6 @@ static u16 kpd_keymap[KPD_NUM_KEYS] = KPD_INIT_KEYMAP();
 static u16 kpd_keymap_state[KPD_NUM_MEMS] = {
 	0xffff, 0xffff, 0xffff, 0xffff, 0x00ff
 };
-
-static bool kpd_sb_enable = false;
-
-#ifdef MTK_SMARTBOOK_SUPPORT
-static void sb_kpd_release_keys(struct input_dev *dev)
-{
-	int code;
-	for (code = 0; code <= KEY_MAX; code++) {
-		if (test_bit(code, dev->keybit)) {
-			kpd_print("report release event for sb plug in! keycode:%d \n",code);
-			input_report_key(dev, code, 0);
-			input_sync(dev);
-		}
-	}
-}
-
-void sb_kpd_enable(void)
-{
-	kpd_sb_enable = true;
-	kpd_print("sb_kpd_enable performed! \n");	
-	mt65xx_reg_sync_writew(0x0, KP_EN);
-	sb_kpd_release_keys(kpd_input_dev);
-}
-
-void sb_kpd_disable(void)
-{
-	kpd_sb_enable = false;
-	kpd_print("sb_kpd_disable performed! \n");
-	mt65xx_reg_sync_writew(0x1, KP_EN);
-}
-#else
-void sb_kpd_enable(void)
-{
-	kpd_print("sb_kpd_enable empty function for HAL!\n");	
-}
-
-void sb_kpd_disable(void)
-{
-	kpd_print("sb_kpd_disable empty function for HAL!\n");
-}
-#endif
 
 #ifndef EVB_PLATFORM
 static void enable_kpd(int enable)
@@ -503,26 +461,22 @@ void kpd_set_debounce(u16 val)
 /********************************************************************/
 void kpd_pmic_rstkey_hal(unsigned long pressed){
 #ifdef KPD_PMIC_RSTKEY_MAP
-	if(!kpd_sb_enable){
 		input_report_key(kpd_input_dev, KPD_PMIC_RSTKEY_MAP, pressed);
 		input_sync(kpd_input_dev);
 		if (kpd_show_hw_keycode) {
 			printk(KPD_SAY "(%s) HW keycode =%d using PMIC\n",
 			       pressed ? "pressed" : "released", KPD_PMIC_RSTKEY_MAP);
 		}
-	}
 #endif
 }
 
 void kpd_pmic_pwrkey_hal(unsigned long pressed){
 #if KPD_PWRKEY_USE_PMIC
-	if(!kpd_sb_enable){
 		input_report_key(kpd_input_dev, KPD_PWRKEY_MAP, pressed);
 		input_sync(kpd_input_dev);
 		if (kpd_show_hw_keycode) {
 			printk(KPD_SAY "(%s) HW keycode =%d using PMIC\n",
 			       pressed ? "pressed" : "released", KPD_PWRKEY_MAP);
-		}
 		}
 #endif
 }

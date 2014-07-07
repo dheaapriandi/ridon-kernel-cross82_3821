@@ -4,7 +4,9 @@
 #include "defs.h"
 #include "osal/include/osal.h"
 #include "si_osdebug.h"
-#include "hdmitx_i2c.h"
+
+///if mhl chip CI2CA pin is pull up, the folloing should be defined. otherwise, please mask it.
+#define SII_I2C_ADDR  (0x76)
 
 
 #ifdef __cplusplus 

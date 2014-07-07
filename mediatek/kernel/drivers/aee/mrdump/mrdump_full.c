@@ -13,7 +13,6 @@
 #include <linux/stacktrace.h>
 #include <linux/vmalloc.h>
 #include <asm/pgtable.h>
-#include <asm/processor.h>
 #include <mach/fiq_smp_call.h>
 #include <mach/smp.h>
 #include <linux/mrdump.h>
@@ -132,12 +131,6 @@ static void __mrdump_reboot_va(AEE_REBOOT_MODE reboot_mode, struct pt_regs *regs
 	crash_record->reboot_mode = reboot_mode;
 	__inner_flush_dcache_all();
 
-	if (reboot_mode == AEE_REBOOT_MODE_NESTED_EXCEPTION) {
-	  while (1) {
-	    cpu_relax();
-	  }
-	}
-	
 	mrdump_plat->reboot();
 }
 
@@ -168,7 +161,8 @@ static int mrdump_create_dump(struct notifier_block *this, unsigned long event, 
 	return NOTIFY_DONE;
 }
 
-void __mrdump_create_oops_dump(AEE_REBOOT_MODE reboot_mode, struct pt_regs *regs, const char *msg, ...)
+#if 0
+static void __mrdump_create_oops_dump(AEE_REBOOT_MODE reboot_mode, struct pt_regs *regs, const char *msg, ...)
 {
 	va_list ap;
 
@@ -177,7 +171,6 @@ void __mrdump_create_oops_dump(AEE_REBOOT_MODE reboot_mode, struct pt_regs *regs
 	va_end(ap);
 }
 
-#if 0
 static int mrdump_create_oops_dump(struct notifier_block *self, unsigned long cmd, void *ptr)
 {
 	if (mrdump_enable) {

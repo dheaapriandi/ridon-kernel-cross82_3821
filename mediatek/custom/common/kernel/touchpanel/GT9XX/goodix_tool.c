@@ -14,11 +14,14 @@
  * General Public License for more details.
  *
  * Version:1.2
- *        V1.0:2012/05/01,create file.
+ *        V1.0:2012/05/01,create file. 
  *        V1.2:2012/10/17,reset_guitar etc.
- *
+ *        V1.4: 2013/06/08, new proc name
  */
 
+//Begin,[xiaoguang.xiong][2013.07.23][PR 493294]
+//update driver version from v1.0 to v1.8,follow goodix's FAE shixuebo's advise.
+   
 #include "tpd.h"
 #include <linux/interrupt.h>
 #include <cust_eint.h>
@@ -33,8 +36,8 @@
 #include <asm/uaccess.h>
 
 #include "tpd_custom_gt9xx.h"
-
-
+  
+ 
 #pragma pack(1)
 typedef struct
 {
@@ -59,7 +62,7 @@ st_cmd_head cmd_head;
 #define UPDATE_FUNCTIONS
 #define DATA_LENGTH_UINT    512
 #define CMD_HEAD_LENGTH     (sizeof(st_cmd_head) - sizeof(u8*))
-#define GOODIX_ENTRY_NAME   "goodix_tool"
+static char procname[20] = {0};
 extern struct i2c_client *i2c_client_point;
 static struct i2c_client *gt_client = NULL;
 
@@ -76,9 +79,39 @@ static s32 goodix_tool_read(char *page, char **start, off_t off, int count, int 
 static s32(*tool_i2c_read)(u8 *, u16);
 static s32(*tool_i2c_write)(u8 *, u16);
 
+#if GTP_ESD_PROTECT
+extern void gtp_esd_switch(struct i2c_client *client, s32 on);
+#endif
+
 s32 DATA_LENGTH = 0;
 s8 IC_TYPE[16] = {0};
-
+static void tool_set_proc_name(char * procname)
+{
+    char *months[12] = {"Jan", "Feb", "Mar", "Apr", "May", 
+        "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+    char date[20] = {0};
+    char month[4] = {0};
+    int i = 0, n_month = 1, n_day = 0, n_year = 0;
+    
+    sprintf(date, "%s", __DATE__);
+    
+    //GTP_DEBUG("compile date: %s", date);
+    
+    sscanf(date, "%s %d %d", month, &n_day, &n_year);
+    
+    for (i = 0; i < 12; ++i)
+    {
+        if (!memcmp(months[i], month, 3))
+        {
+            n_month = i+1;
+            break;
+        }
+    }
+    
+    sprintf(procname, "gmnode%04d%02d%02d", n_year, n_month, n_day);    
+    
+    //GTP_DEBUG("procname = %s", procname);
+}
 static s32 tool_i2c_read_no_extra(u8 *buf, u16 len)
 {
     s32 ret = -1;
@@ -155,8 +188,6 @@ static void unregister_i2c_func(void)
 s32 init_wr_node(struct i2c_client *client)
 {
     s32 i;
-    const s8 entry_prefix[] = "GMNode_";
-    s8 gtp_tool_entry[30];
 
     gt_client = i2c_client_point;
     GTP_INFO("client %d.%d", (int)gt_client, (int)client);
@@ -194,13 +225,8 @@ s32 init_wr_node(struct i2c_client *client)
 
     register_i2c_func();
 
- //   goodix_proc_entry = create_proc_entry(GOODIX_ENTRY_NAME, 0664, NULL);
- 
-    memset(gtp_tool_entry, 0, sizeof(gtp_tool_entry));
-    i = sizeof(entry_prefix)/sizeof(s8);
-    memcpy(gtp_tool_entry, entry_prefix, i-1);
-    memcpy(&gtp_tool_entry[i-1], __DATE__, sizeof(__DATE__)/sizeof(s8));
-    goodix_proc_entry = create_proc_entry(gtp_tool_entry, 0664, NULL);
+    tool_set_proc_name(procname);
+    goodix_proc_entry = create_proc_entry(procname, 0666, NULL);
 
     if (goodix_proc_entry == NULL)
     {
@@ -222,7 +248,7 @@ void uninit_wr_node(void)
     kfree(cmd_head.data);
     cmd_head.data = NULL;
     unregister_i2c_func();
-    remove_proc_entry(GOODIX_ENTRY_NAME, NULL);
+    remove_proc_entry(procname, NULL);
 }
 
 static u8 relation(u8 src, u8 dst, u8 rlt)
@@ -266,11 +292,11 @@ static u8 relation(u8 src, u8 dst, u8 rlt)
 
 /*******************************************************
 Function:
-	Comfirm function.
+    Comfirm function.
 Input:
   None.
 Output:
-	Return write length.
+    Return write length.
 ********************************************************/
 static u8 comfirm(void)
 {
@@ -310,11 +336,11 @@ static u8 comfirm(void)
 
 /*******************************************************
 Function:
-	Goodix tool write function.
+    Goodix tool write function.
 Input:
   standard proc write function param.
 Output:
-	Return write length.
+    Return write length.
 ********************************************************/
 static s32 goodix_tool_write(struct file *filp, const char __user *buff, unsigned long len, void *data)
 {
@@ -403,19 +429,22 @@ static s32 goodix_tool_write(struct file *filp, const char __user *buff, unsigne
     }
     else if (7 == cmd_head.wr)//disable irq!
     {
-        //     gtp_irq_disable(i2c_get_clientdata(gt_client));
-
+        mt_eint_mask(CUST_EINT_TOUCH_PANEL_NUM);
+    #if GTP_ESD_PROTECT
+        gtp_esd_switch(i2c_client_point, SWITCH_OFF);
+    #endif
         return CMD_HEAD_LENGTH;
     }
     else if (9 == cmd_head.wr) //enable irq!
     {
-//       gtp_irq_enable(i2c_get_clientdata(gt_client));
-
+        mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
+    #if GTP_ESD_PROTECT
+        gtp_esd_switch(i2c_client_point, SWITCH_ON);
+    #endif
         return CMD_HEAD_LENGTH;
     }
     else if (17 == cmd_head.wr)
     {
-        //struct goodix_ts_data *ts = i2c_get_clientdata(gt_client);
         ret = copy_from_user(&cmd_head.data[GTP_ADDR_LENGTH], &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
 
         if (ret)
@@ -437,8 +466,8 @@ static s32 goodix_tool_write(struct file *filp, const char __user *buff, unsigne
         return CMD_HEAD_LENGTH;
     }
 
-#ifdef UPDATE_FUNCTIONS
-    else if (11 == cmd_head.wr)//Enter update mode!
+#ifdef UPDATE_FUNCTIONS      
+    else if (11 == cmd_head.wr) //Enter update mode!
     {
         if (FAIL == gup_enter_update_mode(gt_client))
         {
@@ -455,7 +484,7 @@ static s32 goodix_tool_write(struct file *filp, const char __user *buff, unsigne
         total_len = 0;
         memset(cmd_head.data, 0, cmd_head.data_len + 1);
         memcpy(cmd_head.data, &buff[CMD_HEAD_LENGTH], cmd_head.data_len);
-
+        GTP_DEBUG("update firmware, filename: %s", cmd_head.data);
         if (FAIL == gup_update_proc((void *)cmd_head.data))
         {
             return FAIL;
@@ -469,11 +498,11 @@ static s32 goodix_tool_write(struct file *filp, const char __user *buff, unsigne
 
 /*******************************************************
 Function:
-	Goodix tool read function.
+    Goodix tool read function.
 Input:
   standard proc read function param.
 Output:
-	Return read length.
+    Return read length.
 ********************************************************/
 static s32 goodix_tool_read(char *page, char **start, off_t off, int count, int *eof, void *data)
 {

@@ -1,19 +1,4 @@
-/*
-**
-** Copyright 2008, The Android Open Source Project
-**
-** Licensed under the Apache License, Version 2.0 (the "License");
-** you may not use this file except in compliance with the License.
-** You may obtain a copy of the License at
-**
-**     http://www.apache.org/licenses/LICENSE-2.0
-**
-** Unless required by applicable law or agreed to in writing, software
-** distributed under the License is distributed on an "AS IS" BASIS,
-** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-** See the License for the specific language governing permissions and
-** limitations under the License.
-*/
+
 
 #ifndef _AE_PARAM_H
 #define _AE_PARAM_H
@@ -192,9 +177,6 @@ typedef struct
     MUINT16 AE_HIST[4*AE_HISTOGRAM_BIN]; // 4 histogram x 128 bin (256 bytes)
 } AWBAE_STAT_T;
 
-/*******************************************************************************
-* Dynamic Frame Rate for Video
-******************************************************************************/
 typedef struct VdoDynamicFrameRate_S
 {
     MBOOL   isEnableDFps;
@@ -242,9 +224,6 @@ struct AE_PARAMETER
 
 typedef struct AE_PARAMETER AE_PARAM_T;
 
-/***********************
-    Exposure time value , use in AE TV mode
-***********************/
 typedef enum
 {
     TV_1_2      =0x00000002,    //!<: TV= 1/2 sec
@@ -286,12 +265,6 @@ typedef enum
     TV_16_1     =0xFFFF0016    //!<: TV= 16 sec
 }eTimeValue;
 
-/***********************
-    Apertur time value , use in AE AV mode
-    It's impossible list all Fno in enum
-    So choose most close Fno.in enum
-    and set real value in  structure "strAV.AvValue"
-***********************/
 typedef enum
 {
     Fno_2,       //!<: Fno 2.0

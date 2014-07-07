@@ -1,3 +1,4 @@
+
 #ifndef _CFG_FTBL_OV7675_YUV_H_
 #define _CFG_FTBL_OV7675_YUV_H_
 

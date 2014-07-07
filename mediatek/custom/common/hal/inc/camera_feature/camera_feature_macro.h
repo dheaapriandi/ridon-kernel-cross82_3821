@@ -1,3 +1,4 @@
+
 #ifndef _CAMERA_FEATURE_MACRO_H_
 #define _CAMERA_FEATURE_MACRO_H_
 
@@ -6,9 +7,6 @@ namespace NSFeature
 {
 
 
-/*******************************************************************************
-* MACRO Define: Scene Independent
-*******************************************************************************/
 #define _GETFINFO_SCENE_INDEP(_sensor_type_sz)                              \
     static                                                                  \
     FInfoIF*                                                                \
@@ -30,9 +28,6 @@ namespace NSFeature
     }                                                                       \
 
 
-/*******************************************************************************
-* MACRO Define: Scene Dependent
-*******************************************************************************/
 #define _GETFINFO_SCENE_DEP(_sensor_type_sz)                                \
     template <MUINT32 _SceneNum>                                            \
     static                                                                  \
@@ -67,9 +62,6 @@ namespace NSFeature
     }
 
 
-/*******************************************************************************
-* MACRO Define: Config Scene
-*******************************************************************************/
 #define _CONFIG_SCENE(_sid, _sensor_type_sz)                                \
     case _sid:                                                              \
     {                                                                       \
@@ -89,9 +81,6 @@ namespace NSFeature
     break;
 
 
-/*******************************************************************************
-* MACRO Define: Config Feature
-*******************************************************************************/
 #define CHECK_FID_RAW(_fid)     \
     STATIC_CHECK(Fid2Type<_fid>::Info::isRAW, _fid##__NOT_RAW_fid)
 #define CHECK_FID_RAW_SI(_fid)  \

@@ -1,34 +1,5 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- * aud_hd_record_custom.h
- *
- * Project:
- * --------
- *   ALPS
- *
- * Description:
- * ------------
- * This file is the header of audio customization related function or definition.
- *
- * Author:
- * -------
- * Charlie Lu.
- *
- *============================================================================
- *             HISTORY
- * Below this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- *
- *------------------------------------------------------------------------------
- * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *============================================================================
- ****************************************************************************/
+
+
 #ifndef AUDIO_HD_RECORD_CUSTOM_H
 #define AUDIO_HD_RECORD_CUSTOM_H
 

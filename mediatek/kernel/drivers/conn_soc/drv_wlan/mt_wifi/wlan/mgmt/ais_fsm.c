@@ -1187,6 +1187,11 @@ aisFsmInit (
             &prAisFsmInfo->rChannelTimeoutTimer,
             (PFN_MGMT_TIMEOUT_FUNC)aisFsmRunEventChannelTimeout,
             (UINT_32)NULL);
+	
+	cnmTimerInitTimer(prAdapter,
+                &prAisFsmInfo->rDeauthDoneTimer,
+                (PFN_MGMT_TIMEOUT_FUNC)aisFsmRunEventDeauthTimeout,
+                (UINT_32)NULL);
 
     //4 <1.2> Initiate PWR STATE
     SET_NET_PWR_STATE_IDLE(prAdapter, NETWORK_TYPE_AIS_INDEX);
@@ -2436,7 +2441,8 @@ aisFsmSteps (
                     prAisBssInfo->prStaRecOfAP,
                     (P_SW_RFB_T)NULL,
                     REASON_CODE_DEAUTH_LEAVING_BSS,
-                    aisDeauthXmitComplete);
+                    aisDeauthXmitComplete);	
+			cnmTimerStartTimer(prAdapter, &prAisFsmInfo->rDeauthDoneTimer, 100);
             break;
 
         case AIS_STATE_REQ_REMAIN_ON_CHANNEL:
@@ -4071,6 +4077,7 @@ aisFsmRunEventScanDoneTimeOut (
 
     DBGLOG(AIS, STATE, ("aisFsmRunEventScanDoneTimeOut Current[%d]\n",prAisFsmInfo->eCurrentState));
 	DBGLOG(AIS, STATE, ("Isr/task %u %u %u\n", IsrCnt, IsrPassCnt, TaskIsrCnt));
+    set_bit(GLUE_FLAG_INT_BIT, &(prAdapter->prGlueInfo)->u4Flag);
 
 	/* report all scanned frames to upper layer to avoid scanned frame is timeout */
 	/* must be put before kalScanDone */
@@ -4289,6 +4296,14 @@ aisFsmRunEventJoinTimeout (
     return;
 } /* end of aisFsmRunEventJoinTimeout() */
 
+VOID
+aisFsmRunEventDeauthTimeout (
+    IN P_ADAPTER_T prAdapter,
+    UINT_32 u4Param
+    )
+{
+	aisDeauthXmitComplete(prAdapter, NULL, TX_RESULT_LIFE_TIMEOUT);
+}
 
 #if defined(CFG_TEST_MGMT_FSM) && (CFG_TEST_MGMT_FSM != 0)
 /*----------------------------------------------------------------------------*/
@@ -4639,6 +4654,9 @@ aisDeauthXmitComplete (
     ASSERT(prAdapter);
 
     prAisFsmInfo = &(prAdapter->rWifiVar.rAisFsmInfo);
+	
+	if (rTxDoneStatus == TX_RESULT_SUCCESS)
+		cnmTimerStopTimer(prAdapter, &prAisFsmInfo->rDeauthDoneTimer);
 
     if(prAisFsmInfo->eCurrentState == AIS_STATE_DISCONNECTING) {
         if(rTxDoneStatus != TX_RESULT_DROPPED_IN_DRIVER) {

@@ -901,13 +901,11 @@ unsigned int disphal_check_lcm(UINT32 color)
     }
     else if(LCM_TYPE_DPI == lcm_params->type){//DPI
     }
-    else if(LCM_TYPE_DSI == lcm_params->type){ //dsi 
-		ret = DSI_Check_LCM(color);
-		if(lcm_params->dsi.mode != CMD_MODE){
-			DSI_SetMode(lcm_params->dsi.mode);
-			DSI_clk_HS_mode(1);
-       		DSI_CHECK_RET(DSI_StartTransfer(FALSE));
-		}
+    else if(LCM_TYPE_DSI == lcm_params->type){ //dsi buffer
+		if(lcm_params->dsi.mode == CMD_MODE)
+        	ret = DSI_Check_LCM(color);
+		else//video mode
+			ret = 0;
     }
     else
     {

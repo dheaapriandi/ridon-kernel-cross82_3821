@@ -1,6 +1,3 @@
-#################################################################
-# dependency between AST TD modem & MMSYS1
-##################################################################
 ifeq (AST_TL1_TDD, $(strip $(MODEM_L1_3GSOLUTION)))
   ifneq (yes,$(strip $(MTK_ASTBSP_SUPPORT)))
     # MMSYS1 is required to be powered on when using AST TD modem

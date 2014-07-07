@@ -1,12 +1,3 @@
-/******************************************************************************
- * mt_gpio_fpga.c - MTKLinux GPIO Device Driver
- * 
- * Copyright 2008-2009 MediaTek Co.,Ltd.
- * 
- * DESCRIPTION:
- *     This file provid the other drivers GPIO debug functions
- *
- ******************************************************************************/
  
 #include <mach/mt_gpio.h>
 #include <mach/mt_gpio_core.h>

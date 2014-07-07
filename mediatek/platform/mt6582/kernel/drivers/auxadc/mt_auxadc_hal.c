@@ -250,8 +250,7 @@ int IMM_auxadc_GetOneChannelValue_Cali(int Channel, int*voltage)
 	        printk("[adc_api]:IMM_auxadc_GetOneChannelValue_Cali  get raw value error %d \n",ret);
 		return -1;
      }
-     //*voltage = rawvalue*1500000 / AUXADC_PRECISE;
-     *voltage = (int)((long long)rawvalue*1500000 / (long long)AUXADC_PRECISE);
+     *voltage = rawvalue*1500000 / AUXADC_PRECISE;
       //printk("[adc_api]:IMM_auxadc_GetOneChannelValue_Cali  voltage= %d uv \n",*voltage);
       return 0;
      

@@ -1,3 +1,4 @@
+
 #ifndef _CAMERA_FEATURE_ENUM_H_
 #define _CAMERA_FEATURE_ENUM_H_
 

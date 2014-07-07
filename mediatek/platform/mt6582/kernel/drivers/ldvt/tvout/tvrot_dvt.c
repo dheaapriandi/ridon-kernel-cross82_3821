@@ -1,17 +1,3 @@
-/*
- * Copyright (C) 2010 MediaTek, Inc.
- *
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -159,13 +145,6 @@ void TVDVT_init_lcd(void)
     LCD_CHECK_RET(LCD_FBSetFormat(LCD_FB_FORMAT_RGB888));
     LCD_CHECK_RET(LCD_FBSetPitch(SCREEN_WIDTH * 3 ));
     LCD_CHECK_RET(LCD_FBSetStartCoord(0, 0));
-/*
-    for (i = 0; i < lcm_params.dpi.intermediat_buffer_num; ++ i)
-    {
-        LCD_CHECK_RET(LCD_FBSetAddress(LCD_FB_0 + i, s_tmpBuffers[i].pa));
-        LCD_CHECK_RET(LCD_FBEnable(LCD_FB_0 + i, TRUE));
-    }
-*/
 
     LCD_CHECK_RET(LCD_FBSetAddress(LCD_FB_0, dst_buf_pa)); //buffer address.
     LCD_CHECK_RET(LCD_FBEnable(LCD_FB_0, TRUE));

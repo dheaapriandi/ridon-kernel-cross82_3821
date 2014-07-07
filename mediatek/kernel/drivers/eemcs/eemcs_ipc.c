@@ -100,23 +100,25 @@ static KAL_INT32 eemcs_ipc_rx_callback(struct sk_buff *skb, KAL_UINT32 private_d
     CCCI_BUFF_T *p_cccih = NULL;
     KAL_UINT32  node_id;
     IPC_MSGSVC_TASKMAP_T *id_map;
+    unsigned int i = 0;
+    char * addr;
 
-	DEBUG_LOG_FUNCTION_ENTRY;
+    DEBUG_LOG_FUNCTION_ENTRY;
 
-	if (skb){
-		p_cccih = (CCCI_BUFF_T *)skb->data;
-        DBGLOG(IPCD,TRA,"%s: CCCI_H(0x%08X, 0x%08X, %02d, 0x%08X)", __FUNCTION__,\
+    if (skb){
+        p_cccih = (CCCI_BUFF_T *)skb->data;
+        DBGLOG(IPCD,DBG,"[RX]CCCI_H(0x%08X, 0x%08X, %02d, 0x%08X)", \
             p_cccih->data[0],p_cccih->data[1],p_cccih->channel, p_cccih->reserved);
-	}
+    }
     
 #ifndef _EEMCS_IPCD_LB_UT_
     /* Check IPC task id and extq_id */
     if ((id_map=unify_AP_id_2_local_id(p_cccih->reserved))==NULL)
-   	{
-	   DBGLOG(IPCD,ERR,"Wrong AP Unify id (%#x)@RX.!!! PACKET DROP !!!\n",p_cccih->reserved);
+    {
+       DBGLOG(IPCD,ERR,"Wrong AP Unify id (%#x)@RX.!!! PACKET DROP !!!\n",p_cccih->reserved);
        dev_kfree_skb(skb);
        return KAL_SUCCESS ;
-   	}
+    }
     node_id = id_map->task_id;
 #else
     node_id = 0;
@@ -126,10 +128,20 @@ static KAL_INT32 eemcs_ipc_rx_callback(struct sk_buff *skb, KAL_UINT32 private_d
         skb_pull(skb, sizeof(CCCI_BUFF_T));
         p_ilm = (ipc_ilm_t*)(skb->data);
         p_ilm->dest_mod_id = p_cccih->reserved;
-        p_ilm->local_para_ptr = (local_para_struct *)p_ilm+1;
+        p_ilm->local_para_ptr = (local_para_struct *)(p_ilm+1);
+
+        if (p_ilm->local_para_ptr != NULL) {
+            DBGLOG(IPCD, INF, "[RX][KERN]src=%d dest=0x%x sap=0x%x msg=0x%x local_ptr=%p msg_len=%d", \
+				p_ilm->src_mod_id, p_ilm->dest_mod_id, p_ilm->sap_id, p_ilm->msg_id,\
+				p_ilm->local_para_ptr, p_ilm->local_para_ptr->msg_len); 
+            for (i=0; i<32; i++) {
+		addr = (char *)p_ilm;
+		DBGLOG(IPCD, DBG, "%p=%x", (addr+i), *(addr+i));
+            }
+        }
+		
         mtk_conn_md_bridge_send_msg((ipc_ilm_t*)(skb->data));
         dev_kfree_skb(skb);
-        DBGLOG(IPCD, TRA, "IPC(%d) MT_CONN kernel rx callback", node_id);
     }
     else if(IPCD_OPEN == atomic_read(&eemcs_ipc_inst.ipc_node[node_id].dev_state)){
         skb_queue_tail(&eemcs_ipc_inst.ipc_node[node_id].rx_skb_list, skb); /* spin_lock_ireqsave inside, refering skbuff.c */
@@ -137,8 +149,8 @@ static KAL_INT32 eemcs_ipc_rx_callback(struct sk_buff *skb, KAL_UINT32 private_d
         kill_fasync(&eemcs_ipc_inst.ipc_node[node_id].fasync, SIGIO, POLL_IN);
         wake_up_poll(&eemcs_ipc_inst.ipc_node[node_id].rx_waitq,POLLIN); /* wake up rx_waitq */
     }else{
-		DBGLOG(IPCD,ERR,"PKT DROP while ipc dev(%d) closed", node_id);
-		dev_kfree_skb(skb);
+        DBGLOG(IPCD, ERR, "PKT DROP while ipc dev(%d) closed", node_id);
+        dev_kfree_skb(skb);
         eemcs_update_statistics(0, eemcs_ipc_inst.eemcs_port_id, RX, DROP);
     }
     
@@ -148,16 +160,16 @@ static KAL_INT32 eemcs_ipc_rx_callback(struct sk_buff *skb, KAL_UINT32 private_d
 
 static int eemcs_ipc_open(struct inode *inode,  struct file *file)
 {
-	int id = iminor(inode) - EEMCS_IPC_MINOR_BASE;
+    int id = iminor(inode) - EEMCS_IPC_MINOR_BASE;
     int ret = 0;
     DEBUG_LOG_FUNCTION_ENTRY;
     if (id >= EEMCS_IPCD_MAX_NUM || id < 0){
-        DBGLOG(IPCD,ERR,"Wrong minor num(%d)", id);
+        DBGLOG(IPCD, ERR, "Wrong minor num(%d)", id);
         return -EINVAL;
     }
     
-	DBGLOG(IPCD,DEF,"ipc_open: deivce(%s) iminor(%d)", \
-			eemcs_ipc_inst.ipc_node[id].dev_name, id);
+    DBGLOG(IPCD, INF, "ipc_open: deivce(%s) iminor(%d)", \
+        eemcs_ipc_inst.ipc_node[id].dev_name, id);
 
     //4 <1> check multiple open
     if(IPCD_CLOSE != atomic_read(&eemcs_ipc_inst.ipc_node[id].dev_state)){
@@ -180,10 +192,10 @@ static int eemcs_ipc_kern_open(int id)
     int ret = 0;
     DEBUG_LOG_FUNCTION_ENTRY;
     if (id >= EEMCS_IPCD_MAX_NUM || id < 0){
-        DBGLOG(IPCD,ERR,"Wrong minor num(%d)", id);
+        DBGLOG(IPCD, ERR, "Wrong minor num(%d)", id);
         return -EINVAL;
     }
-	DBGLOG(IPCD,DEF,"ipc_kern_open: deivce(%s) iminor(%d)", \
+    DBGLOG(IPCD, INF, "ipc_kern_open: deivce(%s) iminor(%d)", \
         eemcs_ipc_inst.ipc_node[id].dev_name, id);
 
     //4 <1> check multiple open
@@ -202,9 +214,9 @@ static int eemcs_ipc_kern_open(int id)
 
 static int eemcs_ipc_release(struct inode *inode, struct file *file)
 {    
-	int id = iminor(inode) - EEMCS_IPC_MINOR_BASE;
+    int id = iminor(inode) - EEMCS_IPC_MINOR_BASE;
     DEBUG_LOG_FUNCTION_ENTRY;    
-    DBGLOG(IPCD,DEF,"ipc_release: deivce(%s) iminor(%d) ", \
+    DBGLOG(IPCD, INF, "ipc_release: deivce(%s) iminor(%d) ", \
         eemcs_ipc_inst.ipc_node[id].dev_name, id);
 
     atomic_set(&eemcs_ipc_inst.ipc_node[id].dev_state, IPCD_CLOSE);
@@ -225,45 +237,45 @@ static long eemcs_ipc_ioctl( struct file *fp, unsigned int cmd, unsigned long ar
     switch(cmd)
     {
         case CCCI_IPC_RESET_RECV:
-            DBGLOG( IPCD, TRA,"CCCI_IPC_RESET_RECV: Clean device(%d)", curr_node->ipc_node_id );
+            DBGLOG( IPCD, TRA, "CCCI_IPC_RESET_RECV: Clean device(%d)", curr_node->ipc_node_id );
             skb_queue_purge(&curr_node->rx_skb_list);
             atomic_set(&curr_node->rx_pkt_cnt, 0);
             ret = 0;
             break;
         case CCCI_IPC_RESET_SEND:
-            DBGLOG( IPCD, TRA,"CCCI_IPC_RESET_SEND: Wakeup device(%d)", curr_node->ipc_node_id );
+            DBGLOG(IPCD, TRA, "CCCI_IPC_RESET_SEND: Wakeup device(%d)", curr_node->ipc_node_id );
             wake_up(&curr_node->tx_waitq);
             ret = 0;
             break;
         case CCCI_IPC_WAIT_MD_READY:
             if (check_device_state() != EEMCS_BOOTING_DONE){
-                DBGLOG(IPCD,TRA,"CCCI_IPC_WAIT_MD_READY: MD not ready(sta=%d)", check_device_state());
+                DBGLOG(IPCD, TRA, "CCCI_IPC_WAIT_MD_READY: MD not ready(sta=%d)", check_device_state());
                 wait_event_interruptible(eemcs_ipc_inst.state_waitq,(check_device_state() == EEMCS_BOOTING_DONE));
             }
             ret = 0;
 			
-            DBGLOG(IPCD,TRA,"CCCI_IPC_WAIT_MD_READY ok");
+            DBGLOG(IPCD, TRA, "CCCI_IPC_WAIT_MD_READY ok");
             break;
         case CCCI_IPC_KERN_WRITE_TEST:
-            {
-                int node_id;
-                ipc_ilm_t ilm = {AP_MOD_WMT, MD_MOD_L4C, 0, 0, NULL, NULL};
-        		if(copy_from_user(&node_id, (void __user *)arg, sizeof(unsigned int))) {
-    				DBGLOG(IPCD, ERR, "CCCI_IPC_KERN_WRITE_TEST: copy_from_user fail!");
-    				ret = -EFAULT;
-                    break;
-    			} 
-                DBGLOG(IPCD, TRA,"CCCI_IPC_KERN_WRITE_TEST: %d", node_id);
-
-                ret = eemcs_ipc_kern_write(&ilm);
-                if (ret > 0 ){
-                    ret = 0;
-                }
-
+        {
+            int node_id;
+            ipc_ilm_t ilm = {AP_MOD_WMT, MD_MOD_L4C, 0, 0, NULL, NULL};
+            if(copy_from_user(&node_id, (void __user *)arg, sizeof(unsigned int))) {
+                DBGLOG(IPCD, ERR, "CCCI_IPC_KERN_WRITE_TEST: copy_from_user fail!");
+                ret = -EFAULT;
                 break;
+            } 
+            DBGLOG(IPCD, TRA, "CCCI_IPC_KERN_WRITE_TEST: %d", node_id);
+
+            ret = eemcs_ipc_kern_write(&ilm);
+            if (ret > 0 ){
+                ret = 0;
             }
+
+            break;
+        }
         default:
-            DBGLOG(IPCD,ERR,"unsupport ioctrl(%d)\n", cmd);
+            DBGLOG(IPCD, ERR, "unsupport ioctrl(%d)\n", cmd);
             ret=-EINVAL;
             break;           
     }
@@ -284,67 +296,78 @@ static ssize_t eemcs_ipc_write(struct file *fp, const char __user *buf, size_t i
     ipc_ilm_t *ilm=NULL;
     IPC_MSGSVC_TASKMAP_T *id_map;
     size_t count = in_sz;
+    size_t skb_alloc_size;
     
     DEBUG_LOG_FUNCTION_ENTRY;        
-    DBGLOG(IPCD,TRA,"ipc_write: deivce=%s iminor=%d len=%d", curr_node->dev_name, node_id, count);
+    DBGLOG(IPCD, DBG, "[TX]deivce=%s iminor=%d len=%d", curr_node->dev_name, node_id, count);
 
     p_type = ccci_get_port_type(port_id);
     if(p_type != EX_T_USER) 
     {
-        DBGLOG(IPCD,ERR,"PORT%d refuse port(%d) access user port", port_id, p_type);
+        DBGLOG(IPCD, ERR, "PORT%d refuse port(%d) access user port", port_id, p_type);
         ret=-EINVAL;
         goto _exit;                    
     }
-    if(!eemcs_device_ready())
-    {
-        DBGLOG(IPCD,ERR,"MD device not ready!");
-        ret= -EIO;
-		return ret;
-    }
 
-    control_flag = ccci_get_port_cflag(port_id);
+    control_flag = ccci_get_port_cflag(port_id);	
+    if (check_device_state() == EEMCS_EXCEPTION) {//modem exception		
+        if ((control_flag & TX_PRVLG2) == 0) {
+            DBGLOG(IPCD, TRA, "[TX]PORT%d write fail when modem exception", port_id);
+            return -ETXTBSY;
+        }
+    } else if (check_device_state() != EEMCS_BOOTING_DONE) {//modem not ready
+        if ((control_flag & TX_PRVLG1) == 0) {
+            DBGLOG(IPCD, TRA, "[TX]PORT%d write fail when modem not ready", port_id);
+            return -ENODEV;
+        }
+    }
 
     if((control_flag & EXPORT_CCCI_H) && (count < sizeof(CCCI_BUFF_T)))
     {
-        DBGLOG(IPCD,ERR,"invalid wirte_len(%d) of PORT%d", count, port_id);
+        DBGLOG(IPCD, ERR, "invalid wirte_len(%d) of PORT%d", count, port_id);
         ret=-EINVAL;
         goto _exit;            
     }
 
     if(control_flag & EXPORT_CCCI_H){
         if(count > (MAX_TX_BYTE+sizeof(CCCI_BUFF_T))){
-            DBGLOG(IPCD,WAR,"PORT%d wirte_len(%d)>MTU(%d)!", port_id, count, MAX_TX_BYTE);
+            DBGLOG(IPCD, WAR, "PORT%d wirte_len(%d)>MTU(%d)!", port_id, count, MAX_TX_BYTE);
             count = MAX_TX_BYTE+sizeof(CCCI_BUFF_T);
         }
+        skb_alloc_size = count - sizeof(CCCI_BUFF_T);
     }else{
         if(count > MAX_TX_BYTE){
-            DBGLOG(IPCD,WAR,"PORT%d wirte_len(%d)>MTU(%d)!", port_id, count, MAX_TX_BYTE);
+            DBGLOG(IPCD, WAR, "PORT%d wirte_len(%d)>MTU(%d)!", port_id, count, MAX_TX_BYTE);
             count = MAX_TX_BYTE;
         }
+        skb_alloc_size = count;
     }
 
-	if (ccci_ch_write_space_alloc(eemcs_ipc_inst.ccci_ch.tx)==0){
-        DBGLOG(IPCD,WAR,"PORT%d write return 0)", port_id);
+    if (ccci_ch_write_space_alloc(eemcs_ipc_inst.ccci_ch.tx)==0){
+        DBGLOG(IPCD, WAR, "PORT%d write return 0)", port_id);
         ret = -EAGAIN;
         goto _exit;
-	}	
+    }	
     
-    new_skb = ccci_ipc_mem_alloc(count + CCCI_IPC_HEADER_ROOM);
+    new_skb = ccci_ipc_mem_alloc(skb_alloc_size + CCCI_IPC_HEADER_ROOM);
     if(NULL == new_skb)
     {
-        DBGLOG(IPCD,ERR,"PORT%d alloct tx memory fail", port_id);
+        DBGLOG(IPCD, ERR, "PORT%d alloct tx memory fail", port_id);
         ret = -ENOMEM;
         goto _exit;            
     }
     
     /* reserve SDIO_H header room */
+    #ifdef CCCI_SDIO_HEAD
     skb_reserve(new_skb, sizeof(SDIO_H));
+    #endif
 
     ccci_header = (CCCI_BUFF_T *)skb_put(new_skb, sizeof(CCCI_BUFF_T)) ;
 
     if(copy_from_user(skb_put(new_skb, count), buf, count))
     {
-        DBGLOG(IPCD,ERR,"PORT%d copy_from_user(len=%d) fail", port_id, count);
+        DBGLOG(IPCD, ERR, "[TX]PORT%d copy_from_user(len=%d, %p->%p) fail", \
+		port_id, count, buf, new_skb->data);
         dev_kfree_skb(new_skb);
         ret = -EFAULT;
         goto _exit;
@@ -355,7 +378,7 @@ static ssize_t eemcs_ipc_write(struct file *fp, const char __user *buf, size_t i
 	if ((id_map=local_MD_id_2_unify_id(ilm->dest_mod_id))==NULL)
 	{
 		DBGLOG(IPCD,ERR,"Invalid dest_mod_id=%d",ilm->dest_mod_id);
-        dev_kfree_skb(new_skb);
+		dev_kfree_skb(new_skb);
 		ret=-EINVAL;
 		goto _exit;
 	}
@@ -365,7 +388,7 @@ static ssize_t eemcs_ipc_write(struct file *fp, const char __user *buf, size_t i
     ccci_header->reserved   = id_map->extq_id;
     ccci_header->channel    = eemcs_ipc_inst.ccci_ch.tx;
 
-    DBGLOG(IPCD,TRA,"ipc_write: PORT%d CCCI_MSG(0x%08X, 0x%08X, %02d, 0x%08X)", 
+    DBGLOG(IPCD, DBG, "[TX]PORT%d CCCI_MSG(0x%08X, 0x%08X, %02d, 0x%08X)", 
                     port_id, 
                     ccci_header->data[0], ccci_header->data[1],
                     ccci_header->channel, ccci_header->reserved);
@@ -373,14 +396,14 @@ static ssize_t eemcs_ipc_write(struct file *fp, const char __user *buf, size_t i
   
     ret = ccci_ch_write_desc_to_q(ccci_header->channel, new_skb);
 
-	if (KAL_SUCCESS != ret) {
-		DBGLOG(IPCD,ERR,"PKT of ch%d DROP!",ccci_header->channel);
-		dev_kfree_skb(new_skb);
+    if (KAL_SUCCESS != ret) {
+        DBGLOG(IPCD, ERR, "PORT%d PKT DROP of ch%d!", port_id, ccci_header->channel);
+        dev_kfree_skb(new_skb);
         ret = -EAGAIN;
-	} else {
+    } else {
         atomic_inc(&curr_node->tx_pkt_cnt);
         wake_up(&curr_node->tx_waitq); /* wake up tx_waitq for notify poll_wait of state change */
-	}
+    }
 
 _exit:
     DEBUG_LOG_FUNCTION_LEAVE;
@@ -401,106 +424,126 @@ ssize_t eemcs_ipc_kern_write(ipc_ilm_t *in_ilm){
     ipc_ilm_t *ilm=NULL;
     IPC_MSGSVC_TASKMAP_T *id_map;
     size_t count = sizeof(ipc_ilm_t);
-    
+    size_t skb_alloc_size;
+    char * addr;
+    int i = 0;
     DEBUG_LOG_FUNCTION_ENTRY;
     
-    DBGLOG(IPCD,TRA, "ipc_kern_write: src=0x%x dest=0x%x sap=0x%x msg=0x%x local_ptr=%#X peer_ptr=%#X",
-                     (unsigned int)in_ilm->src_mod_id, (unsigned int)in_ilm->dest_mod_id,
-                     (unsigned int)in_ilm->sap_id, (unsigned int)in_ilm->msg_id,
-                     (unsigned int)in_ilm->local_para_ptr, (unsigned int)in_ilm->peer_buff_ptr);
     // src module id check
     node_id =(KAL_UINT8) (in_ilm->src_mod_id & (~AP_UNIFY_ID_FLAG)); // source id is ap side txq_id
     if (node_id >= EEMCS_IPCD_MAX_NUM){
-        DBGLOG(IPCD,ERR,"invalid src_mod_id=0x%x", in_ilm->src_mod_id);
+        DBGLOG(IPCD, ERR, "invalid src_mod_id=0x%x", in_ilm->src_mod_id);
         ret = -EINVAL;
         goto _exit;
     }
     curr_node = (eemcs_ipc_node_t *)&eemcs_ipc_inst.ipc_node[node_id];
     node_id = curr_node->ipc_node_id;/* node_id */
     if (atomic_read(&curr_node->dev_state) != IPCD_KERNEL){
-        DBGLOG(IPCD,ERR,"invalid dev_state(not IPCD_KERNEL), src_mod_id=0x%x", in_ilm->src_mod_id);
+        DBGLOG(IPCD, ERR, "invalid dev_state(not IPCD_KERNEL), src_mod_id=0x%x", in_ilm->src_mod_id);
         ret = -EINVAL;
         goto _exit;
     }
 
-    if(in_ilm->local_para_ptr != NULL){
-        count = sizeof(ipc_ilm_t) + in_ilm->local_para_ptr->msg_len;
-    }
-    
-    DBGLOG(IPCD,TRA,"ipc_kern_write: dev=%s iminor=%d len=%d", curr_node->dev_name, node_id, count);
-
     p_type = ccci_get_port_type(port_id);
     if(p_type != EX_T_USER) 
     {
-        DBGLOG(IPCD,ERR,"PORT%d refuse port(%d) access user port", port_id, p_type);
+        DBGLOG(IPCD, ERR, "PORT%d refuse port(%d) access user port", port_id, p_type);
         ret=-EINVAL;
         goto _exit;                    
     }
-    if(!eemcs_device_ready())
-    {
-        DBGLOG(IPCD,ERR,"MD device not ready!");
-        ret= -EIO;
-		return ret;
+	
+    control_flag = ccci_get_port_cflag(port_id);
+    if (check_device_state() == EEMCS_EXCEPTION) {//modem exception		
+        if ((control_flag & TX_PRVLG2) == 0) {
+            DBGLOG(IPCD, TRA, "[TX]PORT%d kernel write fail when modem exception", port_id);
+            return -ETXTBSY;
+        }
+    } else if (check_device_state() != EEMCS_BOOTING_DONE) {//modem not ready
+        if ((control_flag & TX_PRVLG1) == 0) {
+            DBGLOG(IPCD, TRA, "[TX]PORT%d kernel write fail when modem not ready", port_id);
+            return -ENODEV;
+        }
     }
 
-    control_flag = ccci_get_port_cflag(port_id);
+    DBGLOG(IPCD, INF, "[TX][KERN]iminor=%d src=0x%x dest=0x%x sap=0x%x msg_id=0x%x local_ptr=%#X peer_ptr=%#X",\
+                node_id, \
+                (unsigned int)in_ilm->src_mod_id, (unsigned int)in_ilm->dest_mod_id, \
+                (unsigned int)in_ilm->sap_id, (unsigned int)in_ilm->msg_id, \
+                (unsigned int)in_ilm->local_para_ptr, (unsigned int)in_ilm->peer_buff_ptr);
 
+    if(in_ilm->local_para_ptr != NULL){
+        count = sizeof(ipc_ilm_t) + in_ilm->local_para_ptr->msg_len;		
+        DBGLOG(IPCD, DBG, "[TX][KERN]ilm_len=%d local_len=%d msg_len=%d", \
+		sizeof(ipc_ilm_t), sizeof(local_para_struct), count);
+    }
+	
     if((control_flag & EXPORT_CCCI_H) && (count < sizeof(CCCI_BUFF_T)))
     {
-        DBGLOG(IPCD,ERR,"invalid wirte_len(%d) of PORT%d", count, port_id);
+        DBGLOG(IPCD, ERR, "invalid wirte_len(%d) of PORT%d", count, port_id);
         ret=-EINVAL;
         goto _exit;            
     }
 
     if(control_flag & EXPORT_CCCI_H){
         if(count > (MAX_TX_BYTE+sizeof(CCCI_BUFF_T))){
-            DBGLOG(IPCD,WAR,"PORT%d wirte_len(%d)>MTU(%d)", port_id, count, MAX_TX_BYTE);
+            DBGLOG(IPCD, WAR, "PORT%d wirte_len(%d)>MTU(%d)", port_id, count, MAX_TX_BYTE);
             count = MAX_TX_BYTE+sizeof(CCCI_BUFF_T);
         }
+        skb_alloc_size = count - sizeof(CCCI_BUFF_T);
     }else{
         if(count > MAX_TX_BYTE){
-            DBGLOG(IPCD,WAR,"PORT%d wirte_len(%d)>MTU(%d)", port_id, count, MAX_TX_BYTE);
+            DBGLOG(IPCD, WAR, "PORT%d wirte_len(%d)>MTU(%d)", port_id, count, MAX_TX_BYTE);
             count = MAX_TX_BYTE;
         }
+        skb_alloc_size = count;
     }
 
-	if (ccci_ch_write_space_alloc(eemcs_ipc_inst.ccci_ch.tx)==0){
-        DBGLOG(IPCD,WAR,"PORT%d write return 0)", port_id);
+    if (ccci_ch_write_space_alloc(eemcs_ipc_inst.ccci_ch.tx)==0){
+        DBGLOG(IPCD, WAR, "PORT%d write return 0)", port_id);
         ret = -EAGAIN;
         goto _exit;
-	}	
+    }	
     
-    new_skb = ccci_ipc_mem_alloc(count + CCCI_IPC_HEADER_ROOM);
+    new_skb = ccci_ipc_mem_alloc(skb_alloc_size + CCCI_IPC_HEADER_ROOM);
     if(NULL == new_skb)
     {
-        DBGLOG(IPCD,ERR,"PORT%d alloct tx memory fail", port_id);
+        DBGLOG(IPCD, ERR, "PORT%d alloct tx memory fail", port_id);
         ret = -ENOMEM;
         goto _exit;            
     }
     
     /* reserve SDIO_H header room */
+    #ifdef CCCI_SDIO_HEAD
     skb_reserve(new_skb, sizeof(SDIO_H));
+    #endif
 
     ccci_header = (CCCI_BUFF_T *)skb_put(new_skb, sizeof(CCCI_BUFF_T)) ;
 
-    memcpy(skb_put(new_skb, count), in_ilm, count);
+    memcpy(skb_put(new_skb, sizeof(ipc_ilm_t)), in_ilm, sizeof(ipc_ilm_t));
+
+    count = in_ilm->local_para_ptr->msg_len;
+    memcpy(skb_put(new_skb, count), in_ilm->local_para_ptr, count);
 
     ilm = (ipc_ilm_t*)((char*)ccci_header + sizeof(CCCI_BUFF_T));
+    for (i=0; i<count+sizeof(ipc_ilm_t); i++) {
+        addr = (char *)ilm;
+        DBGLOG(IPCD, DBG, "%p=%x", (addr+i), *(addr+i));
+    }
     /* Check IPC extq_id */
-	if ((id_map=local_MD_id_2_unify_id(ilm->dest_mod_id))==NULL)
-	{
-		DBGLOG(IPCD,ERR,"Invalid dest_mod_id=%d",ilm->dest_mod_id);
+    if ((id_map=local_MD_id_2_unify_id(ilm->dest_mod_id))==NULL)
+    {
+        DBGLOG(IPCD,ERR,"Invalid dest_mod_id=%d",ilm->dest_mod_id);
         dev_kfree_skb(new_skb);
-		ret=-EINVAL;
-		goto _exit;
-	}
+        ret=-EINVAL;
+        goto _exit;
+    }
     
     /* user bring down the payload only */
     ccci_header->data[1]    = count + sizeof(CCCI_BUFF_T);
     ccci_header->reserved   = id_map->extq_id;
     ccci_header->channel    = eemcs_ipc_inst.ccci_ch.tx;
 
-    DBGLOG(IPCD,TRA,"ipc_kern_write: PORT%d CCCI_MSG(0x%08X, 0x%08X, %02d, 0x%08X)", 
+    DBGLOG(IPCD, DBG, "[TX][KERN]PORT%d CCCI_MSG(0x%08X, 0x%08X, %02d, 0x%08X)", 
                     port_id, 
                     ccci_header->data[0], ccci_header->data[1],
                     ccci_header->channel, ccci_header->reserved);
@@ -508,14 +551,14 @@ ssize_t eemcs_ipc_kern_write(ipc_ilm_t *in_ilm){
   
     ret = ccci_ch_write_desc_to_q(ccci_header->channel, new_skb);
 
-	if (KAL_SUCCESS != ret) {
-		DBGLOG(IPCD,ERR,"PKT DROP of ch%d!",ccci_header->channel);
-		dev_kfree_skb(new_skb);
+    if (KAL_SUCCESS != ret) {
+        DBGLOG(IPCD, ERR, "PKT DROP of ch%d!",ccci_header->channel);
+        dev_kfree_skb(new_skb);
         ret = -EAGAIN;
-	} else {
+    } else {
         atomic_inc(&curr_node->tx_pkt_cnt);
         wake_up(&curr_node->tx_waitq); /* wake up tx_waitq for notify poll_wait of state change */
-	}
+    }
 
 _exit:
     DEBUG_LOG_FUNCTION_LEAVE;
@@ -541,13 +584,13 @@ static ssize_t eemcs_ipc_read(struct file *fp, char *buf, size_t count, loff_t *
     DEBUG_LOG_FUNCTION_ENTRY;
     
     flag=fp->f_flags;
-    DBGLOG(IPCD,TRA,"ipc_read: deivce iminor=%d, len=%d", node_id ,count);
+    DBGLOG(IPCD, DBG, "[RX]deivce iminor=%d, len=%d", node_id ,count);
 
     if(!eemcs_device_ready())
     {
-        DBGLOG(IPCD,ERR,"MD device not ready!");
+        DBGLOG(IPCD, ERR, "MD device not ready!");
         ret= -EIO;
-		return ret;
+        return ret;
     }
 
     /* Check receive pkt count */
@@ -558,14 +601,15 @@ static ssize_t eemcs_ipc_read(struct file *fp, char *buf, size_t count, loff_t *
         if (flag&O_NONBLOCK)
         {	
             ret=-EAGAIN;
-            DBGLOG(IPCD,TRA,"ipc_read: PORT%d for NONBLOCK",port_id);
+            DBGLOG(IPCD, TRA, "ipc_read: PORT%d for NONBLOCK",port_id);
             goto _exit;
         }
         ret = wait_event_interruptible(curr_node->rx_waitq, atomic_read(&curr_node->rx_pkt_cnt) > 0);
         if(ret)
         {
             ret = -EINTR;
-            DBGLOG(IPCD,ERR,"ipc_read: PORT(%d) interruptted while waiting data.", port_id);			
+            DBGLOG(IPCD, ERR, "[RX]PORT%d read interrupt by syscall.signal(%lld)", port_id, \
+		*(long long *)current->pending.signal.sig);	
             goto _exit;
         }
     }
@@ -573,7 +617,7 @@ static ssize_t eemcs_ipc_read(struct file *fp, char *buf, size_t count, loff_t *
     /*
      * Cached memory from last read fail
      */
-    DBGLOG(IPCD,TRA,"ipc_read: dequeue from rx_skb_list, rx_pkt_cnt(%d)",rx_pkt_cnt);
+    DBGLOG(IPCD, DBG, "[RX]dequeue from rx_skb_list, rx_pkt_cnt(%d)",rx_pkt_cnt);
     rx_skb = skb_dequeue(&curr_node->rx_skb_list);
     /* There should be rx_skb in the list */
     KAL_ASSERT(NULL != rx_skb);
@@ -583,7 +627,7 @@ static ssize_t eemcs_ipc_read(struct file *fp, char *buf, size_t count, loff_t *
 
     ccci_header = (CCCI_BUFF_T *)rx_skb->data;
 
-    DBGLOG(IPCD,TRA,"ipc_read: PORT%d CCCI_MSG(0x%08X, 0x%08X, %02d, 0x%08X)",\
+    DBGLOG(IPCD, DBG, "[RX]PORT%d CCCI_MSG(0x%08X, 0x%08X, %02d, 0x%08X)",\
             port_id, ccci_header->data[0],ccci_header->data[1],
             ccci_header->channel, ccci_header->reserved);
     
@@ -593,13 +637,11 @@ static ssize_t eemcs_ipc_read(struct file *fp, char *buf, size_t count, loff_t *
     read_len = ccci_header->data[1] - sizeof(CCCI_BUFF_T);
     /* remove CCCI_HEADER */
     skb_pull(rx_skb, sizeof(CCCI_BUFF_T));
- 
-    DBGLOG(IPCD,TRA,"ipc_read: PORT%d read_len=%d",port_id, read_len);
 
     payload=(unsigned char*)rx_skb->data;
     if(count < read_len)
     {
-        DBGLOG(IPCD,ERR,"PKT DROP of PORT%d! want_read=%d, read_len=%d", 
+        DBGLOG(IPCD, ERR, "PKT DROP of PORT%d! want_read=%d, read_len=%d", 
                 port_id, count, read_len);
         atomic_inc(&curr_node->rx_pkt_drop_cnt);
         eemcs_update_statistics(0, eemcs_ipc_inst.eemcs_port_id, RX, DROP);
@@ -608,15 +650,15 @@ static ssize_t eemcs_ipc_read(struct file *fp, char *buf, size_t count, loff_t *
         goto _exit;
     }
 
-    DBGLOG(IPCD,TRA,"ipc_read: copy_to_user(len=%d), %p -> %p", read_len, payload, buf);
-
     ret = copy_to_user(buf, payload, read_len);
     if(ret!=0)
     {
-        DBGLOG(IPCD,ERR,"copy_to_user(len=%d) fail: %d", read_len, ret);
+        DBGLOG(IPCD, ERR, "[RX]PORT%d copy_to_user(len=%d, %p->%p) fail: %d", \
+		port_id, read_len, payload, buf, ret);
         ret = -EFAULT;
         goto _exit;
     }       
+    DBGLOG(IPCD, DBG, "[RX]copy_to_user(len=%d, %d): %p->%p", read_len, ret, payload, buf);
 
     dev_kfree_skb(rx_skb);
 

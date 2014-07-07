@@ -1,3 +1,4 @@
+
 #ifndef _CAMERA_FEATURE_DEBUG_H_
 #define _CAMERA_FEATURE_DEBUG_H_
 
@@ -5,16 +6,6 @@
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-/*
-    (1) GLOBAL_ENABLE_MY_xxx == 0
-         --> force to disable.
-    (2) GLOBAL_ENABLE_MY_xxx == 1
-         --> ENABLE_MY_xxx in local file decides to enable/disable.
-        (2.1) ENABLE_MY_xxx in local file == 1 --> enable.
-        (2.2) ENABLE_MY_xxx in local file == 0 --> disable.
-        (2.3) ENABLE_MY_xxx in local file undefine
-               --> ENABLE_MY_xxx in global file decides to enable/disable.
-*/
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //  Global On/Off
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

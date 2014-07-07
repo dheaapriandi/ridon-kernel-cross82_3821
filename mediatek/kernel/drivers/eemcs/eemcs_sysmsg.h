@@ -58,7 +58,11 @@
 #define EMCS_ERROR_NODEV        34
 
 #define CURR_MD_ID (0)
+#ifdef CCCI_SDIO_HEAD
 #define CCCI_SYSMSG_HEADER_ROOM (sizeof(SDIO_H)+sizeof(CCCI_BUFF_T))
+#else
+#define CCCI_SYSMSG_HEADER_ROOM (sizeof(CCCI_BUFF_T))
+#endif
 #define CCCI_SYSMSG_MAX_REQ_NUM (5)
 
 

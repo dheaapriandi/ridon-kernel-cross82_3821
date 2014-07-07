@@ -581,7 +581,7 @@ int disp_bls_set_backlight(unsigned int level)
     mutex_lock(&backlight_mutex);
     disp_aal_lock();
     param = get_aal_config();
-    param->pwmDuty = level;
+    param->pwmDuty = brightness_mapping(level);
     disp_aal_unlock();
     mutex_unlock(&backlight_mutex);
     return 0;

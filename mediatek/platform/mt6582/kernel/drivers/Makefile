@@ -66,7 +66,3 @@ obj-y	+= $(call all-subdirs-with-makefile,met)
 #ifneq   ($(MTK_GPU_SUPPORT),no)
 obj-y   += gpu/
 #endif
-
-ifeq ($(MTK_NFC_SUPPORT),yes)
-obj-y	+= nfc/
-endif

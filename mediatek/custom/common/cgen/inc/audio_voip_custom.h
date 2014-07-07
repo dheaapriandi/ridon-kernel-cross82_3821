@@ -1,9 +1,7 @@
+
 #ifndef AUDIO_VOIP_CUSTOM_H
 #define AUDIO_VOIP_CUSTOM_H
 
-/****************************************************
-* Define default AP side VOIP parameters
-*****************************************************/
 
 //VoIP speech parameters common part
 #define DEFAULT_VOIP_SPEECH_COMMON_PARAM  \

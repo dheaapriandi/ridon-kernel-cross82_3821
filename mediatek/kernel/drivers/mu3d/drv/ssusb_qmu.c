@@ -1,3 +1,4 @@
+
 #ifdef USE_SSUSB_QMU
 #include <linux/spinlock.h>
 #include <linux/dma-mapping.h>
@@ -9,26 +10,11 @@
 #include "ssusb_qmu.h"
 
 #ifdef NEVER
-/*
- * 1. Configure the HW register (starting address)  with gpd heads (starting address)  for each Queue
- * 2. Enable Queue with each EP and interrupts
-*/
 void usb_initialize_qmu() {
 	mu3d_hal_init_qmu();
 }
 
-/*
- * txstate_qmu() & rxstate_qmu() should not be called.
- * musb_g_tx() wont call txstate_qmu(), because this flow is PIO mode.
- * and there is no function calling rxstate_qmu().
- */
 
-/*
-  put usb_request buffer into GPD/BD data structures, and ask QMU to start TX.
-
-  caller: musb_g_tx
-
-*/
 
 void txstate_qmu(struct musb *musb, struct musb_request *req)
 {
@@ -80,15 +66,6 @@ void rxstate_qmu(struct musb *musb, struct musb_request *req)
 }
 #endif /* NEVER */
 
-/*
-    1. Find the last gpd HW has executed and update Tx_gpd_last[]
-    2. Set the flag for txstate to know that TX has been completed
-
-    ported from proc_qmu_tx() from test driver.
-
-    caller:qmu_interrupt after getting QMU done interrupt and TX is raised
-
-*/
 
 void qmu_tx_interrupt(struct musb *musb, u8 ep_num)
 {
@@ -167,17 +144,6 @@ void qmu_tx_interrupt(struct musb *musb, u8 ep_num)
 		ep_num, Tx_gpd_last[ep_num], Tx_gpd_end[ep_num]);
 }
 
-/*
-   When receiving RXQ done interrupt, qmu_interrupt calls this function.
-
-   1. Traverse GPD/BD data structures to count actual transferred length.
-   2. Set the done flag to notify rxstate_qmu() to report status to upper gadget driver.
-
-    ported from proc_qmu_rx() from test driver.
-
-    caller:qmu_interrupt after getting QMU done interrupt and TX is raised
-
-*/
 void qmu_rx_interrupt(struct musb *musb, u8 ep_num)
 {
 	DEV_UINT32 buf_len = 0, received_len = 0;

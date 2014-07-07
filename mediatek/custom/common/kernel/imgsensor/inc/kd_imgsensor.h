@@ -142,6 +142,10 @@
 #define OV8825_SENSOR_ID            			0x8825
 #define OV12830_SENSOR_ID			  0xC830
 #define OV5648MIPI_SENSOR_ID                    0x5648
+//begin zhaozhen.wu@tcl.com add for ov5648 compatibility
+#define OV5648QTMIPI_SENSOR_ID                  0x5649
+#define OV5648STMIPI_SENSOR_ID                  0x564a
+//end
 #define OV5693_SENSOR_ID                        0x5690
 
 #define PO6030K_SENSOR_ID                       0x0060
@@ -246,6 +250,10 @@
 
 #define SENSOR_DRVNAME_OV5647_RAW   	"ov5647"
 #define SENSOR_DRVNAME_OV5648_MIPI_RAW   	"ov5648mipi"
+//begin zhaozhen.wu@tcl.com add for ov5648 compatibility
+#define SENSOR_DRVNAME_OV5648QT_MIPI_RAW   	"ov5648qtmipi"
+#define SENSOR_DRVNAME_OV5648ST_MIPI_RAW   	"ov5648stmipi"
+//end
 #define SENSOR_DRVNAME_OV5693_MIPI_RAW     "ov5693mipi"
 #define SENSOR_DRVNAME_OV5642_MIPI_YUV    "ov5642mipiyuv"
 #define SENSOR_DRVNAME_OV5642_MIPI_RGB    "ov5642mipirgb"

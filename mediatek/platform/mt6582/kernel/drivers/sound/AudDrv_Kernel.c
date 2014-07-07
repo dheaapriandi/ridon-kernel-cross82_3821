@@ -1,53 +1,7 @@
-/*
- * Copyright (C) 2007 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/*******************************************************************************
- *
- * Filename:
- * ---------
- *   AudDrv_Kernelc
- *
- * Project:
- * --------
- *   MT6583  Audio Driver Kernel Function
- *
- * Description:
- * ------------
- *   Audio register
- *
- * Author:
- * -------
- * Chipeng Chang
- *
- *------------------------------------------------------------------------------
- * $Revision: #1 $
- * $Modtime:$
- * $Log:$
- *
- *
- *******************************************************************************/
 
 
-/*****************************************************************************
- *                     C O M P I L E R   F L A G S
- *****************************************************************************/
 
 
-/*****************************************************************************
- *                E X T E R N A L   R E F E R E N C E S
- *****************************************************************************/
 
 #define CONFIG_MTK_DEEP_IDLE
 #ifdef CONFIG_MTK_DEEP_IDLE
@@ -115,10 +69,6 @@ extern int cust_matv_gpio_off(void);
 #define AUDDRV_GPIO_WR32(addr, data)   __raw_writel(data, addr)
 #define AUDDRV_GPIO_RD32(addr)         __raw_readl(addr)
 
-/*****************************************************************************
-*           DEFINE AND CONSTANT
-******************************************************************************
-*/
 
 #define AUDDRV_NAME   "MediaTek Audio Driver"
 #define AUDDRV_AUTHOR "MediaTek WCX"
@@ -130,9 +80,6 @@ extern int cust_matv_gpio_off(void);
 #define AFE_INT_TIMEOUT       (10)
 #define AFE_UL_TIMEOUT       (10)
 
-/*****************************************************************************
-*           V A R I A B L E     D E L A R A T I O N
-*******************************************************************************/
 
 static char       auddrv_name[]       = "AudDrv_driver_device";
 static u64        AudDrv_dmamask      = 0xffffffffUL;
@@ -190,9 +137,6 @@ static DEFINE_MUTEX(gamp_mutex);
 static DEFINE_MUTEX(AnaClk_mutex);
 
 
-/*****************************************************************************
-*           FUNCTION     D E L A R A T I O N
-*******************************************************************************/
 void CheckPowerState(void);
 bool GetHeadPhoneState(void);
 void Auddrv_Check_Irq(void);
@@ -373,21 +317,6 @@ void CheckWriteWaitEvent(void)
 }
 
 
-/****************************************************************************
- * FUNCTION
- *  AudDrv_Read_Procmem
- *
- * DESCRIPTION
- *  dump AFE/Analog register
- *  cat /proc/Audio
- *
- * PARAMETERS
- *
- *
- * RETURNS
- *  length
- *
- ***************************************************************************** */
 
 static int AudDrv_Read_Procmem(char *buf, char **start, off_t offset, int count , int *eof, void *data)
 {
@@ -660,6 +589,13 @@ void Auddrv_Handle_Mem_context(AFE_MEM_CONTROL_T *Mem_Block)
         return;
     }
 
+    if (HW_Cur_ReadIdx < mBlock->pucPhysBufAddr || (HW_Cur_ReadIdx >= mBlock->u4BufferSize+ mBlock->pucPhysBufAddr))
+    {
+        //HW_Cur_ReadIdx = mBlock->pucPhysBufAddr;
+        PRINTK_AUDDRV("AudDrv: UL HW_Cur_ReadIdx Invalid 0x%x (>=0x%x,< 0x%x)",HW_Cur_ReadIdx,mBlock->pucPhysBufAddr,mBlock->u4BufferSize+ mBlock->pucPhysBufAddr);
+        return;    
+    }
+
     // HW already fill in
     Hw_Get_bytes = (HW_Cur_ReadIdx - mBlock->pucPhysBufAddr) - mBlock->u4WriteIdx;
     if (Hw_Get_bytes < 0)
@@ -717,21 +653,6 @@ void Auddrv_Handle_Mem_context(AFE_MEM_CONTROL_T *Mem_Block)
 }
 
 
-/*****************************************************************************
- * FUNCTION
- *  Auddrv_DL1_Interrupt_Handler
- *
- * DESCRIPTION
- * update hardware pointer and send event to write thread to copy data into hardware buffer
- *
- * PARAMETERS
- *  None
- *
- * RETURNS
- *  None
- *
- *****************************************************************************
-*/
 
 void Auddrv_UL_Interrupt_Handler(void)  // irq2 ISR handler
 {
@@ -768,21 +689,6 @@ void Auddrv_UL_Interrupt_Handler(void)  // irq2 ISR handler
     spin_unlock_irqrestore(&auddrv_irqstatus_lock, flags);
 }
 
-/*****************************************************************************
- * FUNCTION
- *  Auddrv_DL1_Interrupt_Handler
- *
- * DESCRIPTION
- * update hardware pointer and send event to write thread to copy data into hardware buffer
- *
- * PARAMETERS
- *  None
- *
- * RETURNS
- *  None
- *
- *****************************************************************************
- */
 void Auddrv_DL_Interrupt_Handler(void)  // irq1 ISR handler
 {
     unsigned long flags = 0;
@@ -802,10 +708,11 @@ void Auddrv_DL_Interrupt_Handler(void)  // irq1 ISR handler
         HW_Cur_ReadIdx = Afe_Get_Reg(AFE_DL1_CUR);
     }
 
-    if (HW_Cur_ReadIdx == 0)
+    if (HW_Cur_ReadIdx == 0|| HW_Cur_ReadIdx < Afe_Block->pucPhysBufAddr || (HW_Cur_ReadIdx >= Afe_Block->u4BufferSize+ Afe_Block->pucPhysBufAddr))
     {
         PRINTK_AUDDRV("[Auddrv] HW_Cur_ReadIdx ==[%d] AudDrvSuspendStatus = [%d]\n", HW_Cur_ReadIdx, AudDrvSuspendStatus);
         HW_Cur_ReadIdx = Afe_Block->pucPhysBufAddr;
+        AudIrqReset = true;
     }
     HW_memory_index = (HW_Cur_ReadIdx - Afe_Block->pucPhysBufAddr);
     /*
@@ -897,15 +804,6 @@ static void ClearInterruptTiming(void)
     Irq_time_t2 = 0;
 }
 
-/*****************************************************************************
- * FUNCTION
- *  AudDrv_IRQ_handler / AudDrv_magic_tasklet
- *
- * DESCRIPTION
- *  IRQ handler
- *
- *****************************************************************************
- */
 static irqreturn_t AudDrv_IRQ_handler(int irq, void *dev_id)
 {
     unsigned long flags = 0 ;
@@ -943,9 +841,10 @@ static irqreturn_t AudDrv_IRQ_handler(int irq, void *dev_id)
         PRINTK_AUDDRV("IRQ Handle Exception");
         goto AudDrv_IRQ_handler_exit;
     }
-    CheckInterruptTiming();
+    
     if (u4RegValue & INTERRUPT_IRQ1_MCU)
     {
+        CheckInterruptTiming();
         Auddrv_DL_Interrupt_Handler();
     }
     if (u4RegValue & INTERRUPT_IRQ2_MCU)
@@ -969,16 +868,6 @@ AudDrv_IRQ_handler_exit:
     return IRQ_HANDLED;
 }
 
-/*****************************************************************************
- * PLATFORM DRIVER FUNCTION:
- *
- *  AudDrv_probe / AudDrv_suspend / AudDrv_resume / AudDrv_shutdown / AudDrv_remove
- *
- * DESCRIPTION
- *  Linus Platform Driver
- *
- *****************************************************************************
- */
 
 static int AudDrv_probe(struct platform_device *dev)
 {
@@ -1613,15 +1502,6 @@ static int AudDrv_pm_ops_resume(struct device *device)
 #endif
 
 
-/*****************************************************************************
- * FILE OPERATION FUNCTION
- *  AudDrv_open / AudDrv_release
- *
- * DESCRIPTION
- *
- *
- *****************************************************************************
- */
 static int AudDrv_open(struct inode *inode, struct file *fp)
 {
     PRINTK_AUDDRV("AudDrv_open do nothing inode:%p, file:%p \n", inode, fp);
@@ -1659,14 +1539,6 @@ void Auddrv_Free_Dma_Memory(AFE_MEM_CONTROL_T *pAFE_MEM)
     }
 }
 
-/*****************************************************************************
- * FUNCTION
- *  AudDrv_Force_Free_DL1_Buffer / AudDrv_Free_DL1_Buffer
- *
- * DESCRIPTION
- *  allocate DL1 Buffer
- *
- ******************************************************************************/
 
 
 int AudDrv_Force_Free_DL1_Buffer(void)
@@ -1795,14 +1667,6 @@ int AudDrv_Force_Free_Buffer(int mem_type)
 
 
 #if !defined(MTK_AUDIO_DYNAMIC_SRAM_SUPPORT)
-/*****************************************************************************
- * FUNCTION
- *  AudDrv_Allocate_DL1_Buffer / AudDrv_Free_DL1_Buffer
- *
- * DESCRIPTION
- *  allocate DL1 Buffer
- *
- ******************************************************************************/
 int AudDrv_Allocate_DL1_Buffer(struct file *fp, kal_uint32 Afe_Buf_Length)
 {
 #ifdef AUDIO_MEMORY_SRAM
@@ -1877,13 +1741,6 @@ int AudDrv_Free_DL1_Buffer(struct file *fp)
 }
 #endif
 
-/*****************************************************************************
- * FUNCTION
- *  AudDrv_Allocate_Buffer / AudDrv_Free_Buffer
- *
- * DESCRIPTION
- *  allocate  Buffer with dram
- * ******************************************************************************/
 
 int AudDrv_Allocate_Buffer(struct file *fp, kal_uint32 Afe_Buf_Length , int mem_type)
 {
@@ -2172,15 +2029,6 @@ void Auddrv_Release_MemIF_Counter(int MEM_Type)
     }
 }
 
-/*****************************************************************************
- * FILE OPERATION FUNCTION
- *  Auddrv_Get_MemIF_Context /Auddrv_Get_MemIF_Context_by_fp
- *
- * DESCRIPTION
- *  when start certaion type of MEMof , call set top use fp as read / write identiti.
- *
- *****************************************************************************
- */
 
 AFE_MEM_CONTROL_T *Auddrv_Get_MemIF_Context(int MEM_Type)
 {
@@ -2415,15 +2263,6 @@ int AudDrv_Reassign_Buffer_In_EMI(struct file *fp, unsigned long arg)
 #endif
 
 
-/*****************************************************************************
- * FILE OPERATION FUNCTION
- *  Auddrv_Set_MemIF_Fp /Auddrv_Release_MemIF_Fp
- *
- * DESCRIPTION
- *  when start certaion type of MEMof , call set top use fp as read / write identiti.
- *
- *****************************************************************************
- */
 
 void Auddrv_Set_MemIF_Fp(struct file *fp, unsigned long arg)
 {
@@ -2524,15 +2363,6 @@ void Auddrv_Release_MemIF_Fp(struct file *fp, unsigned long arg)
     PRINTK_AUDDRV("-Auddrv_Release_MemIF_Fp  = %p arg = %lu\n", pAfe_MEM_ConTrol->flip , arg);
 }
 
-/*****************************************************************************
- * FILE OPERATION FUNCTION
- *  AudDrv_Reg_Reset
- *
- * DESCRIPTION
- *  when audio driver is not first init and mediaserver died , need to reset audio driver
- *
- *****************************************************************************
- */
 
 void AudDrv_Reg_Reset(void)
 {
@@ -2548,15 +2378,6 @@ void AudDrv_Reg_Reset(void)
 }
 
 
-/*****************************************************************************
- * FILE OPERATION FUNCTION
- *  AudDrv_Reset
- *
- * DESCRIPTION
- *  when audio driver is not first init and mediaserver died , need to reset audio driver
- *
- *****************************************************************************
- */
 
 void AudDrv_Mem_Reset(void)
 {
@@ -2579,14 +2400,6 @@ void AudDrv_Mem_Reset(void)
 }
 
 
-/*****************************************************************************
- * FUNCTION
- *  AudDrv_GET_DL1_REMAIN_TIME
- *
- * DESCRIPTION
- *  Get DL1 buffer remained time
- *
- ******************************************************************************/
 int AudDrv_GET_DL1_REMAIN_TIME(struct file *fp)
 {
     int ret = 0;
@@ -2660,14 +2473,6 @@ int AudDrv_GET_DL1_REMAIN_TIME(struct file *fp)
 }
 
 
-/*****************************************************************************
- * FUNCTION
- *  AudDrv_GET_UL_REMAIN_TIME
- *
- * DESCRIPTION
- *  Get UL buffer remained time
- *
- ******************************************************************************/
 int AudDrv_GET_UL_REMAIN_TIME(struct file *fp)
 {
     AFE_MEM_CONTROL_T *pAfe_MEM_ConTrol = NULL;
@@ -2778,15 +2583,6 @@ int AudDrv_GET_UL_REMAIN_TIME(struct file *fp)
 }
 
 
-/*****************************************************************************
- * FILE OPERATION FUNCTION
- *  AudDrv_ioctl
- *
- * DESCRIPTION
- *  IOCTL Msg handle
- *
- *****************************************************************************
- */
 
 static long AudDrv_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
@@ -2974,9 +2770,11 @@ static long AudDrv_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
                 //PRINTK_AUDDRV("%s disable_dpidle_by_bit\n",__FUNCTION__);
             }
 #endif
+            AudDrv_Clk_On();
             Auddrv_Set_MemIF_Fp(fp, arg);
             Auddrv_Add_MemIF_Counter(arg);
             CheckPowerState();
+            AudDrv_Clk_Off();			
             break;
         }
         case STANDBY_MEMIF_TYPE:
@@ -2991,10 +2789,12 @@ static long AudDrv_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
                 //PRINTK_AUDDRV("%s enable_dpidle_by_bit\n",__FUNCTION__);
             }
 #endif
+            AudDrv_Clk_On();
             Auddrv_Check_Irq();
             Auddrv_Release_MemIF_Fp(fp, arg);
             Auddrv_Release_MemIF_Counter(arg);
             ClearInterruptTiming();
+            AudDrv_Clk_Off();
             break;
         }
         case AUD_RESTART:
@@ -3431,24 +3231,6 @@ static long AudDrv_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
     return ret;
 }
 
-/*****************************************************************************
- * FILE OPERATION FUNCTION
- *  AudDrv_write
- *
- * DESCRIPTION
- *  User space Write data to (kernel)HW buffer
- *
- * PARAMETERS
- *  fp      [in]
- *  data    [in] data pointer
- *  count   [in] number of bytes to be written
- *  offset  [in] no use
- *
- * RETURNS
- *  None
- *
- *****************************************************************************
- */
 static ssize_t AudDrv_write(struct file *fp, const char __user *data, size_t count, loff_t *offset)
 {
     AFE_MEM_CONTROL_T *pAfe_MEM_ConTrol = NULL;
@@ -3655,23 +3437,6 @@ static ssize_t AudDrv_write(struct file *fp, const char __user *data, size_t cou
 }
 
 
-/*****************************************************************************
- * FILE OPERATION FUNCTION
- *  AudDrv_Read
- *
- * DESCRIPTION
- *  User space read  data from  (kernel)HW buffer
- *
- * PARAMETERS
- *  fp      [in]
- *  data    [in] data pointer
- *  count   [in] number of bytes to be read
- *  offset  [in] no use
- *
- * RETURNS
- *  None
- *
- ******************************************************************************/
 
 
 ssize_t AudDrv_MEMIF_Read(struct file *fp,  char __user *data, size_t count, loff_t *offset)
@@ -3920,24 +3685,6 @@ ssize_t AudDrv_MEMIF_Read(struct file *fp,  char __user *data, size_t count, lof
 }
 
 
-/*****************************************************************************
- * FILE OPERATION FUNCTION
- *  AudDrv_read
- *
- * DESCRIPTION
- *  User space Read data from (kernel)HW buffer
- *
- * PARAMETERS
- *  fp      [in]
- *  data    [in] data pointer
- *  count   [in] number of bytes to be written
- *  offset  [in] no use
- *
- * RETURNS
- *  None
- *
- *****************************************************************************
- */
 static ssize_t AudDrv_read(struct file *fp,  char __user *data, size_t count, loff_t *offset)
 {
     uint32 read_count = 0;
@@ -3945,23 +3692,6 @@ static ssize_t AudDrv_read(struct file *fp,  char __user *data, size_t count, lo
     return read_count;
 }
 
-/*****************************************************************************
- * FUNCTION
- *  AudDrv_flush
- *
- * DESCRIPTION
- *
- *
- * PARAMETERS
- *  fp   [in]
- *  flip [in]
- *  mode [in]
- *
- * RETURNS
- *  None
- *
- *****************************************************************************
- */
 
 static int AudDrv_flush(struct file *flip, fl_owner_t id)
 {
@@ -3971,12 +3701,6 @@ static int AudDrv_flush(struct file *flip, fl_owner_t id)
     return 0;
 }
 
-/*****************************************************************************
- * STRUCT
- *  VM Operations
- *
- *****************************************************************************
- */
 void AudDrv_vma_open(struct vm_area_struct *vma)
 {
     PRINTK_AUDDRV("AudDrv_vma_open virt:%lx, phys:%lx, length:%lx \n", vma->vm_start, vma->vm_pgoff << PAGE_SHIFT, vma->vm_end - vma->vm_start);
@@ -3987,31 +3711,7 @@ void AudDrv_vma_close(struct vm_area_struct *vma)
     PRINTK_AUDDRV("AudDrv_vma_close virt");
 }
 
-/*
-static struct vm_operations_struct AudDrv_remap_vm_ops =
-{
-   .open  = AudDrv_vma_open,
-   .close = AudDrv_vma_close
-};
-*/
 
-/*****************************************************************************
- * FUNCTION
- *  AudDrv_remap_mmap
- *
- * DESCRIPTION
- *   mmap hardware memory to userspace
- *
- * PARAMETERS
- *  flip   [in]
- *  vma [in]
- *
- *
- * RETURNS
- *  status
- *
- *****************************************************************************
- */
 
 static int AudDrv_remap_mmap(struct file *flip, struct vm_area_struct *vma)
 {
@@ -4027,26 +3727,9 @@ static int AudDrv_remap_mmap(struct file *flip, struct vm_area_struct *vma)
     vma->vm_ops = &AudDrv_remap_vm_ops;
     AudDrv_vma_open(vma);
     */
-    return 0;
+    return -1;
 }
 
-/*****************************************************************************
- * FUNCTION
- *  AudDrv_fasync
- *
- * DESCRIPTION
- *  Notify the message to user space
- *
- * PARAMETERS
- *  fp   [in]
- *  flip [in]
- *  mode [in]
- *
- * RETURNS
- *  None
- *
- *****************************************************************************
- */
 static int AudDrv_fasync(int fd, struct file *flip, int mode)
 {
     PRINTK_AUDDRV("AudDrv_fasync \n");
@@ -4054,11 +3737,6 @@ static int AudDrv_fasync(int fd, struct file *flip, int mode)
 }
 
 
-/**************************************************************************
- * STRUCT
- *  File Operations and misc device
- *
- **************************************************************************/
 
 static struct file_operations AudDrv_fops =
 {
@@ -4092,14 +3770,6 @@ struct dev_pm_ops Auddrv_pm_ops =
     .restore_noirq = NULL,
 };
 
-/***************************************************************************
- * FUNCTION
- *  AudDrv_mod_init / AudDrv_mod_exit
- *
- * DESCRIPTION
- *  Module init and de-init (only be called when system boot up)
- *
- **************************************************************************/
 
 static struct platform_driver AudDrv_driver =
 {

@@ -160,6 +160,3 @@ allow zygote cpuctl_device:dir search;
 
 # 20131216 Allow ptrace for untrusted app
 allow zygote untrusted_app:process ptrace;
-
-# 20140117 for www-op 1st boot
-allow zygote system_file:lnk_file getattr;

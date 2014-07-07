@@ -1,5 +1,3 @@
-# config.mk - add supports for configuration file generation
-
 MTK_AUTOCONFIG_LIST := $(patsubst $(call relative-path,../../config/common/autoconfig/)%,%,\
   $(call wildcard2,$(call relative-path,../../config/common/autoconfig/*)))
 

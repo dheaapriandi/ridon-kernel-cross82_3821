@@ -120,10 +120,22 @@ void aee_oops_set_backtrace(struct aee_oops *oops, const char *backtrace);
 void aee_oops_set_process_path(struct aee_oops *oops, const char *process_path);
 void aee_oops_free(struct aee_oops *oops);
 
+/* powerkey press,modules use bits */
+
+#define WDT_SETBY_DEFAULT               	(0)
+#define WDT_SETBY_Backlight             	(1<<0)
+#define WDT_SETBY_Display              		(1<<1)
+#define WDT_SETBY_SF            			(1<<2)
+#define WDT_SETBY_PM            			(1<<3)
+#define WDT_SETBY_WMS_DISABLE_PWK_MONITOR 	(0xAEEAEE00)
+#define WDT_SETBY_WMS_ENABLE_PWK_MONITOR  	(0xAEEAEE01)
+#define WDT_PWK_HANG_FORCE_HWT  		 	(0xAEE0FFFF)
 
 // QHQ RT Monitor    
+#define AEEIOCTL_WDT_KICK_POWERKEY _IOR('p', 0x09, int)
 #define AEEIOCTL_RT_MON_Kick _IOR('p', 0x0A, int)
 #define AE_WDT_DEVICE_PATH      "/dev/RT_Monitor"
+#define AE_WDT_POWERKEY_DEVICE_PATH     "/dev/kick_powerkey"
 // QHQ RT Monitor    end
 
 
@@ -159,6 +171,8 @@ void aee_oops_free(struct aee_oops *oops);
 #define DB_OPT_PROC_USKTRK              (1<<25)
 #define DB_OPT_SF_RTT_DUMP              (1<<26)
 #define DB_OPT_PAGETYPE_INFO            (1<<27)
+#define DB_OPT_DUMPSYS_PROCSTATS        (1<<28)
+#define DB_OPT_DUMP_DISPLAY             (1<<29)
 
 #define aee_kernel_exception(module, msg...)	\
 	aee_kernel_exception_api(__FILE__, __LINE__, DB_OPT_DEFAULT, module, msg)
@@ -197,6 +211,5 @@ void aee_dram_console_reserve_memory(void);
 #else
 static inline void aee_dram_console_reserve_memory(void) {}
 #endif
-
-extern void *aee_excp_regs; /* To store latest exception, in case of stack corruption */
+ 
 #endif // __AEE_H__

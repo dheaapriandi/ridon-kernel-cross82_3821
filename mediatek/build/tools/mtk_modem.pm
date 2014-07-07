@@ -261,7 +261,7 @@ sub find_modem_bin
 	my $modem_bin_file;
 	my $modem_bin_link;
 	$ref_hash_feature->{"TYPE_OF_BIN"} = 0;
-	my @wildcard_list = &find_modem_glob($path_of_bin . $modem_bin_pattern);
+	my @wildcard_list = glob $path_of_bin . $modem_bin_pattern;
 	if (scalar @wildcard_list == 1)
 	{
 		my $wildcard_file = $wildcard_list[0];
@@ -287,10 +287,6 @@ sub find_modem_bin
 			$modem_bin_link = $path_of_bin . "modem.img";
 		}
 	}
-	else
-	{
-		print "[ERROR] More than one modem images are found: " . join(" ", @wildcard_list) . "\n";
-	}
 	if (-e $path_of_bin . "modem.img")
 	{
 		$modem_bin_file = $path_of_bin . "modem.img";
@@ -301,34 +297,6 @@ sub find_modem_bin
 		$modem_bin_file = $modem_bin_link;
 	}
 	return ($modem_bin_file, $modem_bin_link);
-}
-
-sub find_modem_mak
-{
-	my $ref_hash_filelist	= shift @_;
-	my $ref_hash_feature	= shift @_;
-	my $path_of_mak			= shift @_;
-	my $modem_mak_pattern = "*.mak";
-	my $modem_mak_file;
-	my @wildcard_list = &find_modem_glob($path_of_mak . $modem_mak_pattern);
-	foreach my $wildcard_file (@wildcard_list)
-	{
-		if ($wildcard_file =~ /\bMMI_DRV_DEFS\.mak/)
-		{
-		}
-		elsif ($wildcard_file =~ /~/)
-		{
-		}
-		elsif ($modem_mak_file ne "")
-		{
-			print "[WARNING] Unknown project makefile: " . $wildcard_file . " or " . $modem_mak_file . "\n";
-		}
-		else
-		{
-			$modem_mak_file = $wildcard_file;
-		}
-	}
-	return $modem_mak_file;
 }
 
 sub get_modem_file_mapping
@@ -344,7 +312,6 @@ sub get_modem_file_mapping
 	my $modem_bin_file;
 	my $modem_bin_link;
 	my $modem_bin_suffix;
-	my $modem_mak_file;
 	my @checklist_of_general;
 	my @checklist_of_dsp_bin;
 	my @checklist_of_append;
@@ -360,7 +327,6 @@ sub get_modem_file_mapping
 		$path_of_bin = $project_root . "/";
 	}
 	($modem_bin_file, $modem_bin_link) = &find_modem_bin($ref_hash_filelist, $ref_hash_feature, $path_of_bin);
-	$modem_mak_file = &find_modem_mak($ref_hash_filelist, $ref_hash_feature, $path_of_bin);
 	if (($modem_bin_file eq "") or ($modem_bin_link eq ""))
 	{
 		die;
@@ -392,7 +358,6 @@ sub get_modem_file_mapping
 	{
 		&Parse_MD_Struct($ref_hash_feature, $modem_bin_file);
 		$modem_bin_suffix = &get_modem_suffix($ref_hash_feature, 2);
-		$ref_hash_feature->{"suffix"} = $modem_bin_suffix;
 		print "Modem bin file is " . $modem_bin_file . "\n";
 		&set_modem_name($ref_hash_filelist, [$modem_bin_file], 0, "modem", $modem_bin_suffix, ".img");
 		if ($ref_hash_option)
@@ -448,6 +413,7 @@ sub get_modem_file_mapping
 			push(@checklist_of_general, $path_of_bin . "DSP_BL") if (-e $path_of_bin . "DSP_BL");
 			push(@checklist_of_general, $path_of_bin . "DSP_ROM") if (-e $path_of_bin . "DSP_ROM");
 			# ?
+			push(@checklist_of_general, $path_of_database . "lte_mcddll.dll");
 			push(@checklist_of_dsp_bin, $path_of_bin . "*DSP*.bin");
 		}
 		elsif (($ref_hash_feature->{"image_type"} >= 1) and ($ref_hash_feature->{"image_type"} <= 4))
@@ -473,22 +439,22 @@ sub get_modem_file_mapping
 		}
 		foreach my $file (@checklist_of_general)
 		{
-			my @wildcard_list = &find_modem_glob($file);
+			my @wildcard_list = glob $file;
 			&set_modem_name($ref_hash_filelist, \@wildcard_list, 0, "*", $modem_bin_suffix, "*");
 		}
 		foreach my $file (@checklist_of_append)
 		{
-			my @wildcard_list = &find_modem_glob($file);
+			my @wildcard_list = glob $file;
 			&set_modem_name($ref_hash_filelist, \@wildcard_list, 1, "*", $modem_bin_suffix, "*");
 		}
 		foreach my $file (@checklist_of_remain)
 		{
-			my @wildcard_list = &find_modem_glob($file);
+			my @wildcard_list = glob $file;
 			&set_modem_name($ref_hash_filelist, \@wildcard_list, 2, "*", "", "*");
 		}
 		foreach my $file (@checklist_of_dsp_bin)
 		{
-			my @wildcard_list = &find_modem_glob($file);
+			my @wildcard_list = glob $file;
 			if (scalar @wildcard_list == 1)
 			{
 				&set_modem_name($ref_hash_filelist, \@wildcard_list, 0, "dsp", $modem_bin_suffix, "*");
@@ -498,24 +464,7 @@ sub get_modem_file_mapping
 				die;
 			}
 		}
-		if ($modem_mak_file ne "")
-		{
-			my @wildcard_list = &find_modem_glob($modem_mak_file);
-			&set_modem_name($ref_hash_filelist, \@wildcard_list, 0, "modem", $modem_bin_suffix, "*");
-		}
 	}
-}
-
-sub find_modem_glob
-{
-	my @dirs = @_;
-	my @result;
-	foreach my $dir (@dirs)
-	{
-		$dir =~ s/([\[\]\(\)\{\}\^])/\\$1/g;
-		push(@result, glob $dir);
-	}
-	return @result;
 }
 
 return 1;

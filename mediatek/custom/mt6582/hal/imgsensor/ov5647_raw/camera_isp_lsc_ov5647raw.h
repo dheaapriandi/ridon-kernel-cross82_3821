@@ -1,3 +1,5 @@
+
+
 const NVRAM_CAMERA_SHADING_STRUCT CAMERA_SHADING_DEFAULT_VALUE = {
         Shading: {
             {

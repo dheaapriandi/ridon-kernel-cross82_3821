@@ -1352,7 +1352,7 @@ S32 pwm_set_spec_config(struct pwm_spec_config *conf)
 			mt_set_pwm_clk (conf->pwm_no, CLK_BLOCK, conf->clk_div);
 			PWMDBG("Enable newmode and set clock block\n");
 			break;
-		case PWM_CLK_NEW_MODE_BLOCK_DIV_BY_1625:      
+		case PWM_CLK_NEW_MODE_BLOCK_DIV_BY_1625:      //ROME, old mode can select
 			mt_set_pwm_clk (conf->pwm_no, CLK_BLOCK_BY_1625_OR_32K, conf->clk_div);
 			PWMDBG("Enable newmode and set clock 32K\n");
 			break;

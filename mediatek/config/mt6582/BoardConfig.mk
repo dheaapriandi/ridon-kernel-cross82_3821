@@ -78,3 +78,6 @@ WITH_DEXPREOPT := false
 # include all config files
 include $(BOARD_CONFIG_DIR)/configs/*.mk
 
+#NFC
+NFC_NCI_USE_NFCA := true
+

@@ -69,7 +69,6 @@ static fm_s32 mt6627_I2s_Setting(fm_s32 onoff, fm_s32 mode, fm_s32 sample);
 #endif
 static fm_u16 mt6627_chan_para_get(fm_u16 freq);
 static fm_s32 mt6627_desense_check(fm_u16 freq,fm_s32 rssi);
-static fm_bool mt6627_TDD_chan_check(fm_u16 freq);
 static fm_s32 mt6627_soft_mute_tune(fm_u16 freq,fm_s32 *rssi,fm_bool *valid);
 static fm_s32 mt6627_pwron(fm_s32 data)
 {
@@ -638,9 +637,7 @@ static fm_s32 mt6627_PowerUp(fm_u16 *chip_id, fm_u16 *device_id)
 
     //Wholechip FM Power Up: step 2, read HW version
     mt6627_read(0x62, &tmp_reg);
-    //*chip_id = tmp_reg;
-	if((tmp_reg == 0x6625) || (tmp_reg == 0x6627))
-		*chip_id = 0x6627;
+    *chip_id = tmp_reg;
     *device_id = tmp_reg;
     mt6627_hw_info.chip_id = (fm_s32)tmp_reg;
     WCN_DBG(FM_NTC | CHIP, "chip_id:0x%04x\n", tmp_reg);
@@ -836,11 +833,6 @@ static fm_bool mt6627_SetFreq(fm_u16 freq)
     //pwer up sequence 0425
     mt6627_top_write(0x0050,0x00000007);
     mt6627_set_bits(0x0F,0x0455,0xF800);
-	
-	if(mt6627_TDD_chan_check(freq))
-		mt6627_set_bits(0x30, 0x0008, 0xFFF3);	//use TDD solution
-	else
-		mt6627_set_bits(0x30, 0x0000, 0xFFF3);	//default use FDD solution
     mt6627_top_write(0x0050,0x0000000F);
 
 //    if (fm_cb_op->chan_para_get) {
@@ -1833,59 +1825,6 @@ static const fm_u16 mt6627_I2S_hopping_list[] =
 	6550, 6760, 6960, 6970, 7170, 7370, 7580, 7780, 7990, 8810, 9210, 9220, 10240
 };
 
-static const fm_u16 mt6627_TDD_list[] = 
-{
-	0x0000, 0x0000, 0x0000, 0x0000, 0x0000,	 //6500~6595
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //6600~6695
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //6700~6795
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //6800~6895
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //6900~6995
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //7000~7095
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //7100~7195
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //7200~7295
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //7300~7395
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //7400~7495
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //7500~7595
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //7600~7695
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //7700~7795
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //7800~7895
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //7900~7995
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //8000~8095
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //8100~8195
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //8200~8295
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //8300~8395
-    0x0101, 0x0000, 0x0000, 0x0000, 0x0000,  //8400~8495
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //8500~8595
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //8600~8695
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //8700~8795
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //8800~8895
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //8900~8995
-    0x0000, 0x0000, 0x0101, 0x0101, 0x0101,  //9000~9095
-    0x0101, 0x0000, 0x0000, 0x0000, 0x0000,  //9100~9195
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //9200~9295
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //9300~9395
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //9400~9495
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //9500~9595
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //9600~9695
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0100,  //9700~9795
-    0x0101, 0x0101, 0x0101, 0x0101, 0x0101,  //9800~9895
-    0x0101, 0x0101, 0x0001, 0x0000, 0x0000,  //9900~9995
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //10000~10095
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //10100~10195
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //10200~10295
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //10300~10395
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //10400~10495
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0000,  //10500~10595
-    0x0000, 0x0000, 0x0000, 0x0000, 0x0100,  //10600~10695
-    0x0101, 0x0101, 0x0101, 0x0101, 0x0101,  //10700~10795
-    0x0001   //10800
-};
-
-static const fm_u16 mt6627_TDD_Mask[] = 
-{
-	0x0001, 0x0010, 0x0100, 0x1000
-};
-
 // return value: 0, not a de-sense channel; 1, this is a de-sense channel; else error no
 static fm_s32 mt6627_is_dese_chan(fm_u16 freq)
 {
@@ -1923,32 +1862,6 @@ static fm_s32 mt6627_desense_check(fm_u16 freq,fm_s32 rssi)
 	}
     return 0;
 }
-
-static fm_bool mt6627_TDD_chan_check(fm_u16 freq)
-{
-	fm_u32 i = 0;
-	fm_u16 freq_tmp = freq;
-	fm_s32 ret = 0;
-
-	ret = fm_get_channel_space(freq_tmp);
-    if (0 == ret) {
-        freq_tmp *= 10;
-    }    
-	else if(-1 == ret)
-		return fm_false;
-	
-	i = (freq_tmp - 6500)/5;
-	
-	WCN_DBG(FM_NTC | CHIP, "Freq %d is 0x%4x, mask is 0x%4x\n", freq,(mt6627_TDD_list[i/4]),mt6627_TDD_Mask[i%4]);
-	if(mt6627_TDD_list[i/4] & mt6627_TDD_Mask[i%4])
-	{
-		WCN_DBG(FM_NTC | CHIP, "Freq %d use TDD solution\n", freq);
-		return fm_true;
-	}
-	else
-    	return fm_false;
-}
-
 
 //get channel parameter, HL side/ FA / ATJ
 static fm_u16 mt6627_chan_para_get(fm_u16 freq)

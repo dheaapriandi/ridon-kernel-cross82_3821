@@ -9,10 +9,11 @@
 
 #define SW_WORK_AROUND_ACCDET_REMOTE_BUTTON_ISSUE
 #define DEBUG_THREAD 1
-
+#define AUXADC_HEADSET_ID_CHANNEL 1
 /*----------------------------------------------------------------------
 static variable defination
 ----------------------------------------------------------------------*/
+extern int IMM_GetOneChannelValue(int dwChannel, int data[4], int* rawdata);
 
 #define REGISTER_VALUE(x)   (x - 1)
 
@@ -20,6 +21,7 @@ static variable defination
 static int button_press_debounce = 0x400;
 
 static int debug_enable = 1;
+static int iphone_headset = 0;
 
 struct headset_mode_settings *cust_headset_settings = NULL;
 
@@ -198,6 +200,52 @@ static void pmic_pwrap_write(unsigned int addr, unsigned int wdata)
     pwrap_write(addr, wdata);
 	//ACCDET_DEBUG("[Accdet]wrap write func addr=0x%x, wdate=0x%x\n", addr, wdata);
 }
+
+static int get_headset_adc(void)
+{
+	int data[4] = {0,0,0,0};
+	int rawdata=0;
+	int res = 0, i = 0;
+	int headset_id_vol = 0;
+	for(i = 0; i < 5; i++)
+	{
+		res = IMM_GetOneChannelValue(AUXADC_HEADSET_ID_CHANNEL,data,&rawdata);
+		if(res < 0)
+		{
+			printk("[adc_driver]: get data error\n");
+			break;
+		}
+		 
+		headset_id_vol += data[0]*1000+data[1]*10;
+		printk("accdet  gyc  adc: i = %d,  headset_id_vol =%d\n",i,headset_id_vol);
+	}
+	headset_id_vol = headset_id_vol/5;
+	return headset_id_vol;
+}
+
+static int get_accdet_status()
+{
+	int current_status = 0;
+	int headset_id_vol = 0;
+	
+	if(iphone_headset == 1){
+		mt_set_gpio_out(GPIO110, GPIO_OUT_ZERO); 
+	}
+	 headset_id_vol = get_headset_adc();
+	 if(800 < headset_id_vol && headset_id_vol < 1200){	 	
+		iphone_headset = 1;
+	 }
+	ACCDET_DEBUG("[Accdet] gyc  GPIO110 = %d,iphone_headset = %d\n",mt_get_gpio_out(GPIO110),iphone_headset);
+	current_status = ((pmic_pwrap_read(ACCDET_STATE_RG) & 0xc0)>>6);
+	if(iphone_headset == 1)
+		mt_set_gpio_out(GPIO110, GPIO_OUT_ONE);
+	ACCDET_DEBUG("[Accdet] gyc  GPIO110 = %d,iphone_headset = %d\n",mt_get_gpio_out(GPIO110),iphone_headset);
+	if(current_status == 3 && iphone_headset == 1)
+		current_status = 1;
+	
+	return current_status;
+
+}
 #ifndef ACCDET_MULTI_KEY_FEATURE
 //detect if remote button is short pressed or long pressed
 static bool is_long_press(void)
@@ -267,6 +315,40 @@ static void inline enable_accdet(u32 state_swctrl)
    pmic_pwrap_write(ACCDET_CTRL, ACCDET_ENABLE);
   
 
+}
+
+static void detect_headset_status()
+{
+	int headset_id_vol = 0;
+	msleep(500);
+	headset_id_vol = get_headset_adc();
+	
+	 if(0 < headset_id_vol && headset_id_vol < 150){
+	 	
+		cable_type = HEADSET_NO_MIC;
+		ACCDET_DEBUG("[Accdet]  gyc  cable_type = HEADSET_NO_MIC\n");
+		
+	 }else if(150 <  headset_id_vol && headset_id_vol < 800){
+		
+		cable_type = HEADSET_MIC;
+		ACCDET_DEBUG("[Accdet]  gyc  cable_type = HEADSET_MIC\n");
+	 }else {
+		iphone_headset = 1;
+		mt_set_gpio_out(GPIO110, GPIO_OUT_ONE);
+		msleep(500);
+	 	headset_id_vol = get_headset_adc();
+		cable_type = HEADSET_MIC;
+		if(headset_id_vol > 1300){
+			cable_type = NO_DEVICE;
+			iphone_headset = 0;
+			ACCDET_DEBUG("[Accdet]  gyc  iphone cable_type = NO_DEVICE\n");
+	 	}else {
+			ACCDET_DEBUG("[Accdet]  gyc  iphone cable_type = HEADSET_MIC\n");
+		} 	
+	 }
+	
+	switch_set_state((struct switch_dev *)&accdet_data, cable_type);
+   
 }
 
 #ifdef ACCDET_EINT
@@ -340,11 +422,17 @@ static void disable_micbias_callback(struct work_struct *work)
 }
 
 static void accdet_eint_work_callback(struct work_struct *work)
-{
-   //KE under fastly plug in and plug out
-    mt_eint_mask(CUST_EINT_ACCDET_NUM);
-   
-    if (cur_eint_state == EINT_PIN_PLUG_IN) {
+{	
+	int data[4] = {0,0,0,0};
+	int rawdata=0;
+	int res = 0, i = 0;
+	int headset_id_vol = 0;
+	
+	//KE under fastly plug in and plug out
+	mt_eint_mask(CUST_EINT_ACCDET_NUM);
+	
+	ACCDET_DEBUG("[Accdet] gyc  cur_eint_state = %d\n",cur_eint_state);
+	if (cur_eint_state == EINT_PIN_PLUG_IN) {
 		ACCDET_DEBUG("[Accdet]EINT func :plug-in\n");
 		mutex_lock(&accdet_eint_irq_sync_mutex);
 		eint_accdet_sync_flag = 1;
@@ -359,26 +447,33 @@ static void accdet_eint_work_callback(struct work_struct *work)
 		#ifdef ACCDET_PIN_SWAP
 			pmic_pwrap_write(0x0400, pmic_pwrap_read(0x0400)|(1<<14)); 
 			msleep(800);
-		    accdet_FSA8049_enable();  //enable GPIO209 for PIN swap 
-		    ACCDET_DEBUG("[Accdet] FSA8049 enable!\n");
+		    	accdet_FSA8049_enable();  //enable GPIO209 for PIN swap 
+		    	ACCDET_DEBUG("[Accdet] FSA8049 enable!\n");
 			msleep(250); //PIN swap need ms 
 		#endif
-		
+			//msleep(500);
+			//detect_headset_status();
 			accdet_init();// do set pwm_idle on in accdet_init
-		
+			
 		#ifdef ACCDET_PIN_RECOGNIZATION
-		  show_icon_delay = 1;
-		//micbias always on during detected PIN recognition
-		  pmic_pwrap_write(ACCDET_PWM_WIDTH, cust_headset_settings->pwm_width);
-    	  pmic_pwrap_write(ACCDET_PWM_THRESH, cust_headset_settings->pwm_width);
-		  ACCDET_DEBUG("[Accdet]pin recog start!  micbias always on!\n");
+			show_icon_delay = 1;
+			//micbias always on during detected PIN recognition
+			pmic_pwrap_write(ACCDET_PWM_WIDTH, cust_headset_settings->pwm_width);
+			pmic_pwrap_write(ACCDET_PWM_THRESH, cust_headset_settings->pwm_width);
+			ACCDET_DEBUG("[Accdet]pin recog start!  micbias always on!\n");
 		#endif
 		//set PWM IDLE  on
 		#ifdef ACCDET_MULTI_KEY_FEATURE
 			pmic_pwrap_write(ACCDET_STATE_SWCTRL, (pmic_pwrap_read(ACCDET_STATE_SWCTRL)|ACCDET_SWCTRL_IDLE_EN));
 		#endif  
 		//enable ACCDET unit
-			enable_accdet(ACCDET_SWCTRL_EN); 
+			
+
+			msleep(50);
+		      enable_accdet(ACCDET_SWCTRL_EN);
+			msleep(500);  
+			detect_headset_status();
+	 
     } else {
 //EINT_PIN_PLUG_OUT
 //Disable ACCDET
@@ -406,7 +501,10 @@ static void accdet_eint_work_callback(struct work_struct *work)
 			pmic_pwrap_write(ACCDET_RSV, ACCDET_1V9_MODE_OFF);
 			ACCDET_DEBUG("ACCDET use in 1.9V mode!! \n");
   			#endif
-		  
+		
+    		mt_set_gpio_out(GPIO110, GPIO_OUT_ZERO); 
+		iphone_headset = 0;
+		ACCDET_DEBUG("[Accdet] gyc GPIO_OUT_ZERO GPIO110 = %d,iphone_headset = %d\n",mt_get_gpio_out(GPIO110),iphone_headset);
     }
     //unmask EINT
     //msleep(500);
@@ -545,7 +643,7 @@ static int key_check(int b)
 	//ACCDET_DEBUG("adc_data: %d v\n",b);
 	
 	/* 0.24V ~ */
-	ACCDET_DEBUG("accdet: come in key_check!!\n");
+	ACCDET_DEBUG("[Accdet]: come in key_check!!\n");
 	if((b<DW_KEY_HIGH_THR)&&(b >= DW_KEY_THR)) 
 	{
 		ACCDET_DEBUG("adc_data: %d mv\n",b);
@@ -614,12 +712,13 @@ static int multi_key_detection(void)
 	m_key = cur_key = key_check(cali_voltage);
 
 	send_key_event(m_key, KEYDOWN_FLAG);
-
+	ACCDET_DEBUG("[Accdet] count = %d\n", count);
 	while(index++ < count)
 	{
 
-		/* Check if the current state has been changed */
 		current_status = ((pmic_pwrap_read(ACCDET_STATE_RG) & 0xc0)>>6);
+		ACCDET_DEBUG("[Accdet]  gyc  accdet current_status = %d\n", current_status);
+		if(current_status == 3 )
 		ACCDET_DEBUG("[Accdet]accdet current_status = %d\n", current_status);
 		if(current_status != 0)
 		{
@@ -796,72 +895,81 @@ static ssize_t notify_sendKeyEvent(int event)
 
 static inline void check_cable_type(void)
 {
-    int current_status = 0;
+	int current_status = 0;
 	int irq_temp = 0; //for clear IRQ_bit
 	int wait_clear_irq_times = 0;
+	int data[4] = {0,0,0,0};
+	int rawdata=0;
+	int res = 0, i = 0;
+	int headset_id_vol = 0;
+	
 #ifdef ACCDET_PIN_RECOGNIZATION
-    int pin_adc_value = 0;
+	int pin_adc_value = 0;
 #define PIN_ADC_CHANNEL 5
 #endif
-    
-    current_status = ((pmic_pwrap_read(ACCDET_STATE_RG) & 0xc0)>>6); //A=bit1; B=bit0
-    ACCDET_DEBUG("[Accdet]accdet interrupt happen:[%s]current AB = %d\n", 
+	current_status = get_accdet_status();
+	ACCDET_DEBUG("[Accdet]accdet interrupt happen:[%s]current AB = %d\n", 
 		accdet_status_string[accdet_status], current_status);
-	    	
-    button_status = 0;
-    pre_status = accdet_status;
+	
+	button_status = 0;
+	pre_status = accdet_status;
 
-    ACCDET_DEBUG("[Accdet]check_cable_type: ACCDET_IRQ_STS = 0x%x\n", pmic_pwrap_read(ACCDET_IRQ_STS));
-    IRQ_CLR_FLAG = FALSE;
+	ACCDET_DEBUG("[Accdet]check_cable_type: ACCDET_IRQ_STS = 0x%x\n", pmic_pwrap_read(ACCDET_IRQ_STS));
+	IRQ_CLR_FLAG = FALSE;
+	ACCDET_DEBUG("gyc3 [Accdet]accdet interrupt happen:accdet_status = %d\n",accdet_status);
+	
 	switch(accdet_status)
-    {
-        case PLUG_OUT:
-			  #ifdef ACCDET_PIN_RECOGNIZATION
-			    pmic_pwrap_write(ACCDET_DEBOUNCE1, cust_headset_settings->debounce1);
-			  #endif
-            if(current_status == 0)
-            {
-				#ifdef ACCDET_PIN_RECOGNIZATION
-				//micbias always on during detected PIN recognition
-				pmic_pwrap_write(ACCDET_PWM_WIDTH, cust_headset_settings->pwm_width);
-    	  		pmic_pwrap_write(ACCDET_PWM_THRESH, cust_headset_settings->pwm_width);
-		  		ACCDET_DEBUG("[Accdet]PIN recognition micbias always on!\n");
-				 ACCDET_DEBUG("[Accdet]before adc read, pin_adc_value = %d mv!\n", pin_adc_value);
-				 msleep(1000);
-				 current_status = ((pmic_pwrap_read(ACCDET_STATE_RG) & 0xc0)>>6); //A=bit1; B=bit0
-				 if (current_status == 0 && show_icon_delay != 0)
-				 {
-					accdet_auxadc_switch(1);//switch on when need to use auxadc read voltage
-					pin_adc_value = PMIC_IMM_GetOneChannelValue(8,10,1);
-					ACCDET_DEBUG("[Accdet]pin_adc_value = %d mv!\n", pin_adc_value);
-					accdet_auxadc_switch(0);			
-					if (200 > pin_adc_value && pin_adc_value> 100) //100mv   ilegal headset
-					{
-						headset_standard_judge_message();
-						mutex_lock(&accdet_eint_irq_sync_mutex);
-						if(1 == eint_accdet_sync_flag) {
+	{
+		ACCDET_DEBUG("gyc4 [Accdet]     accdet_status = %d,  current_status =%d \n",accdet_status,current_status);
+		case PLUG_OUT:
+#ifdef ACCDET_PIN_RECOGNIZATION
+		pmic_pwrap_write(ACCDET_DEBOUNCE1, cust_headset_settings->debounce1);
+#endif
+	        if(current_status == 0)
+	        {	        			
+#ifdef ACCDET_PIN_RECOGNIZATION
+			//micbias always on during detected PIN recognition
+			pmic_pwrap_write(ACCDET_PWM_WIDTH, cust_headset_settings->pwm_width);
+			pmic_pwrap_write(ACCDET_PWM_THRESH, cust_headset_settings->pwm_width);
+			ACCDET_DEBUG("[Accdet]PIN recognition micbias always on!\n");
+			ACCDET_DEBUG("[Accdet]before adc read, pin_adc_value = %d mv!\n", pin_adc_value);
+			msleep(1000);
+			current_status = get_accdet_status();
+			if (current_status == 0 && show_icon_delay != 0)
+			{
+				accdet_auxadc_switch(1);//switch on when need to use auxadc read voltage
+				pin_adc_value = PMIC_IMM_GetOneChannelValue(8,10,1);
+				ACCDET_DEBUG("[Accdet]pin_adc_value = %d mv!\n", pin_adc_value);
+				accdet_auxadc_switch(0);
+				
+				if (200 > pin_adc_value && pin_adc_value> 100) //100mv   ilegal headset
+				{
+					headset_standard_judge_message();
+					mutex_lock(&accdet_eint_irq_sync_mutex);
+					
+					if(1 == eint_accdet_sync_flag) {
+					cable_type = HEADSET_NO_MIC;
+					accdet_status = HOOK_SWITCH;
+					cable_pin_recognition = 1;
+					ACCDET_DEBUG("[Accdet] cable_pin_recognition = %d\n", cable_pin_recognition);
+					}else {
+						ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+					}		
+					mutex_unlock(&accdet_eint_irq_sync_mutex);
+				}
+				else
+				{
+					mutex_lock(&accdet_eint_irq_sync_mutex);
+					if(1 == eint_accdet_sync_flag) {
 						cable_type = HEADSET_NO_MIC;
 						accdet_status = HOOK_SWITCH;
-						cable_pin_recognition = 1;
-						ACCDET_DEBUG("[Accdet] cable_pin_recognition = %d\n", cable_pin_recognition);
-						}else {
-							ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-						}		
-						mutex_unlock(&accdet_eint_irq_sync_mutex);
-					}
-					else
-					{
-						mutex_lock(&accdet_eint_irq_sync_mutex);
-						if(1 == eint_accdet_sync_flag) {
-							cable_type = HEADSET_NO_MIC;
-							accdet_status = HOOK_SWITCH;
-						}else {
-							ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-						}	
-						mutex_unlock(&accdet_eint_irq_sync_mutex);
-					}
-				 }
-				 #else
+					}else {
+						ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+					}	
+					mutex_unlock(&accdet_eint_irq_sync_mutex);
+				}
+			}
+#else
 				  mutex_lock(&accdet_eint_irq_sync_mutex);
 				  if(1 == eint_accdet_sync_flag) {
 					cable_type = HEADSET_NO_MIC;
@@ -870,88 +978,87 @@ static inline void check_cable_type(void)
 					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
 				  }
 				  mutex_unlock(&accdet_eint_irq_sync_mutex);
-           		 #endif
-            }
-			else if(current_status == 1)
-            {
-				mutex_lock(&accdet_eint_irq_sync_mutex);
-				if(1 == eint_accdet_sync_flag) {
-					accdet_status = MIC_BIAS;		
-	         		cable_type = HEADSET_MIC;
-				}else {
-					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-				}
-				mutex_unlock(&accdet_eint_irq_sync_mutex);
-				//ALPS00038030:reduce the time of remote button pressed during incoming call
-                //solution: reduce hook switch debounce time to 0x400
-                pmic_pwrap_write(ACCDET_DEBOUNCE0, button_press_debounce);
-			   //recover polling set AB 00-01
-			   #ifdef ACCDET_PIN_RECOGNIZATION
-				pmic_pwrap_write(ACCDET_PWM_WIDTH, REGISTER_VALUE(cust_headset_settings->pwm_width));
-                pmic_pwrap_write(ACCDET_PWM_THRESH, REGISTER_VALUE(cust_headset_settings->pwm_thresh));
-			   #endif
-				//#ifdef ACCDET_LOW_POWER
-				//wake_unlock(&accdet_timer_lock);//add for suspend disable accdet more than 5S
-				//#endif
-            }
-            else if(current_status == 3)
-            {
-                ACCDET_DEBUG("[Accdet]PLUG_OUT state not change!\n");
-		    	#ifdef ACCDET_MULTI_KEY_FEATURE
-		    		ACCDET_DEBUG("[Accdet] do not send plug out event in plug out\n");
-		    	#else
-				mutex_lock(&accdet_eint_irq_sync_mutex);
-				if(1 == eint_accdet_sync_flag) {
-		    		accdet_status = PLUG_OUT;		
-	           		cable_type = NO_DEVICE;
-				}else {
-					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-				}
-				mutex_unlock(&accdet_eint_irq_sync_mutex);
-		    	#ifdef ACCDET_EINT
-		     		disable_accdet();
-		    	#endif
-		        #endif
-            }
-            else
-            {
-                ACCDET_DEBUG("[Accdet]PLUG_OUT can't change to this state!\n"); 
-            }
-            break;
+#endif
+	        }
+		else if(current_status == 1)
+	        {
+			mutex_lock(&accdet_eint_irq_sync_mutex);
+			if(1 == eint_accdet_sync_flag) {
+				accdet_status = MIC_BIAS;		
+				cable_type = HEADSET_MIC;
+			}else {
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+			}
+			mutex_unlock(&accdet_eint_irq_sync_mutex);
+			//ALPS00038030:reduce the time of remote button pressed during incoming call
+			//solution: reduce hook switch debounce time to 0x400
+			pmic_pwrap_write(ACCDET_DEBOUNCE0, button_press_debounce);
+			//recover polling set AB 00-01
+#ifdef ACCDET_PIN_RECOGNIZATION
+			pmic_pwrap_write(ACCDET_PWM_WIDTH, REGISTER_VALUE(cust_headset_settings->pwm_width));
+			pmic_pwrap_write(ACCDET_PWM_THRESH, REGISTER_VALUE(cust_headset_settings->pwm_thresh));
+#endif
+			//#ifdef ACCDET_LOW_POWER
+			//wake_unlock(&accdet_timer_lock);//add for suspend disable accdet more than 5S
+			//#endif
+	        }
+	        else if(current_status == 3)
+	        {
+			ACCDET_DEBUG("[Accdet]PLUG_OUT state not change!\n");
+#ifdef ACCDET_MULTI_KEY_FEATURE
+			ACCDET_DEBUG("[Accdet] do not send plug out event in plug out\n");
+#else
+			mutex_lock(&accdet_eint_irq_sync_mutex);
+			if(1 == eint_accdet_sync_flag) {
+				accdet_status = PLUG_OUT;		
+				cable_type = NO_DEVICE;
+			}else {
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+			}
+			mutex_unlock(&accdet_eint_irq_sync_mutex);
+#ifdef ACCDET_EINT
+			disable_accdet();
+#endif
+#endif
+		}
+		else
+		{
+		    ACCDET_DEBUG("[Accdet]PLUG_OUT can't change to this state!\n"); 
+		}
+		break;
 
 	    case MIC_BIAS:
-	    //ALPS00038030:reduce the time of remote button pressed during incoming call
-            //solution: resume hook switch debounce time
-            pmic_pwrap_write(ACCDET_DEBOUNCE0, cust_headset_settings->debounce0);
-			
-            if(current_status == 0)
-            {
-            
+		//ALPS00038030:reduce the time of remote button pressed during incoming call
+		//solution: resume hook switch debounce time
+		pmic_pwrap_write(ACCDET_DEBOUNCE0, cust_headset_settings->debounce0);
+
+		if(current_status == 0)
+		{
 			mutex_lock(&accdet_eint_irq_sync_mutex);
 			if(1 == eint_accdet_sync_flag) {
 				while((pmic_pwrap_read(ACCDET_IRQ_STS) & IRQ_STATUS_BIT) && (wait_clear_irq_times<3))
-	        	{
-		          ACCDET_DEBUG("[Accdet]check_cable_type: MIC BIAS clear IRQ on-going1....\n");	
-				  wait_clear_irq_times++;
-				  msleep(5);
-	        	}
+				{
+					ACCDET_DEBUG("[Accdet]check_cable_type: MIC BIAS clear IRQ on-going1....\n");	
+					wait_clear_irq_times++;
+					msleep(5);
+				}
 				irq_temp = pmic_pwrap_read(ACCDET_IRQ_STS);
 				irq_temp = irq_temp & (~IRQ_CLR_BIT);
 				pmic_pwrap_write(ACCDET_IRQ_STS, irq_temp);
-            	IRQ_CLR_FLAG = TRUE;
-		    	accdet_status = HOOK_SWITCH;
+				IRQ_CLR_FLAG = TRUE;
+				accdet_status = HOOK_SWITCH;
 			}else {
-					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
 			}
 			mutex_unlock(&accdet_eint_irq_sync_mutex);
-		    button_status = 1;
+			button_status = 1;
 			if(button_status)
-		    {	
-			#ifdef ACCDET_MULTI_KEY_FEATURE		
+			{	
+#ifdef ACCDET_MULTI_KEY_FEATURE		
 				int multi_key = NO_KEY;		
-			  	//mdelay(10);
-			   	//if plug out don't send key
-			    mutex_lock(&accdet_eint_irq_sync_mutex);
+				//mdelay(10);
+				//if plug out don't send key
+				mutex_lock(&accdet_eint_irq_sync_mutex);
 				if(1 == eint_accdet_sync_flag) {   
 					multi_key = multi_key_detection();
 				}else {
@@ -959,267 +1066,267 @@ static inline void check_cable_type(void)
 				}
 				mutex_unlock(&accdet_eint_irq_sync_mutex);
 				accdet_auxadc_switch(0);
-			//recover  pwm frequency and duty
-                pmic_pwrap_write(ACCDET_PWM_WIDTH, REGISTER_VALUE(cust_headset_settings->pwm_width));
-                pmic_pwrap_write(ACCDET_PWM_THRESH, REGISTER_VALUE(cust_headset_settings->pwm_thresh));
-			switch (multi_key) 
-			{
-			case SHORT_UP:
-				ACCDET_DEBUG("[Accdet] Short press up (0x%x)\n", multi_key);
-                           if(call_status == 0)
-                           {
-                                 notify_sendKeyEvent(ACC_MEDIA_PREVIOUS);
-                           }
-					       else
-						   {
-							     notify_sendKeyEvent(ACC_VOLUMEUP);
-						    }
-				break;
-			case SHORT_MD:
-				ACCDET_DEBUG("[Accdet] Short press middle (0x%x)\n", multi_key);
-                                 notify_sendKeyEvent(ACC_MEDIA_PLAYPAUSE);
-				break;
-			case SHORT_DW:
-				ACCDET_DEBUG("[Accdet] Short press down (0x%x)\n", multi_key);
-                           if(call_status == 0)
-                            {
-                                 notify_sendKeyEvent(ACC_MEDIA_NEXT);
-                            }
-							else
-							{
-							     notify_sendKeyEvent(ACC_VOLUMEDOWN);
-							}
-				break;
-			case LONG_UP:
-				ACCDET_DEBUG("[Accdet] Long press up (0x%x)\n", multi_key);
-                                 send_key_event(UP_KEY, KEYUP_FLAG);
-                            
-				break;
-			case LONG_MD:
-				ACCDET_DEBUG("[Accdet] Long press middle (0x%x)\n", multi_key);
-                                 notify_sendKeyEvent(ACC_END_CALL);
-				break;
-			case LONG_DW:
-				ACCDET_DEBUG("[Accdet] Long press down (0x%x)\n", multi_key);			
-                                 send_key_event(DW_KEY, KEYUP_FLAG);
-							
-				break;
-			default:
-				ACCDET_DEBUG("[Accdet] unkown key (0x%x)\n", multi_key);
-				break;
-			}
-			#else
-                if(call_status != 0) 
-	            {
-	                   if(is_long_press())
-	                   {
-                             ACCDET_DEBUG("[Accdet]send long press remote button event %d \n",ACC_END_CALL);
-                             notify_sendKeyEvent(ACC_END_CALL);
-                       } else {
-                             ACCDET_DEBUG("[Accdet]send short press remote button event %d\n",ACC_ANSWER_CALL);
-                             notify_sendKeyEvent(ACC_MEDIA_PLAYPAUSE);
-                       }
-                 }
-			#endif////end  ifdef ACCDET_MULTI_KEY_FEATURE else
-	     }
-}
-          else if(current_status == 1)
-          {
-          	 mutex_lock(&accdet_eint_irq_sync_mutex);
-			 if(1 == eint_accdet_sync_flag) {
-                accdet_status = MIC_BIAS;		
-	            cable_type = HEADSET_MIC;
-                ACCDET_DEBUG("[Accdet]MIC_BIAS state not change!\n");
-			 }else {
-					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-			 }
-			 mutex_unlock(&accdet_eint_irq_sync_mutex);
-          }
-          else if(current_status == 3)
-          {
-           #ifdef ACCDET_MULTI_KEY_FEATURE
-		   		ACCDET_DEBUG("[Accdet]do not send plug ou in micbiast\n");
-		        mutex_lock(&accdet_eint_irq_sync_mutex);
-		        if(1 == eint_accdet_sync_flag) {
-		   			accdet_status = PLUG_OUT;
-			 	}else {
-					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-			 	}
-			 	mutex_unlock(&accdet_eint_irq_sync_mutex);
-		   #else
-		   		mutex_lock(&accdet_eint_irq_sync_mutex);
-		        if(1 == eint_accdet_sync_flag) {
-		   			accdet_status = PLUG_OUT;		
-	          		cable_type = NO_DEVICE;
-				}else {
-					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-			 	}
-			 	mutex_unlock(&accdet_eint_irq_sync_mutex);
-		   #ifdef ACCDET_EINT
-		   		disable_accdet();
-		   #endif
-		   #endif
-          }
-          else
-           {
-               ACCDET_DEBUG("[Accdet]MIC_BIAS can't change to this state!\n"); 
-           }
-          break;
-
-	case HOOK_SWITCH:
-            if(current_status == 0)
-            {
-				mutex_lock(&accdet_eint_irq_sync_mutex);
-		        if(1 == eint_accdet_sync_flag) {
-					//for avoid 01->00 framework of Headset will report press key info for Audio
-					//cable_type = HEADSET_NO_MIC;
-		        	//accdet_status = HOOK_SWITCH;
-                	ACCDET_DEBUG("[Accdet]HOOK_SWITCH state not change!\n");
-				}else {
-					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-			 	}
-			 	mutex_unlock(&accdet_eint_irq_sync_mutex);
-	    	}
-            else if(current_status == 1)
-            {
-				mutex_lock(&accdet_eint_irq_sync_mutex);
-		        if(1 == eint_accdet_sync_flag) {
-					accdet_status = MIC_BIAS;		
-	        		cable_type = HEADSET_MIC;
-				}else {
-					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-			 	}
-			 	mutex_unlock(&accdet_eint_irq_sync_mutex);
-				#ifdef ACCDET_PIN_RECOGNIZATION
-				cable_pin_recognition = 0;
-				ACCDET_DEBUG("[Accdet] cable_pin_recognition = %d\n", cable_pin_recognition);
+				//recover  pwm frequency and duty
 				pmic_pwrap_write(ACCDET_PWM_WIDTH, REGISTER_VALUE(cust_headset_settings->pwm_width));
-                pmic_pwrap_write(ACCDET_PWM_THRESH, REGISTER_VALUE(cust_headset_settings->pwm_thresh));
-				#endif
-		//ALPS00038030:reduce the time of remote button pressed during incoming call
-         //solution: reduce hook switch debounce time to 0x400
-                pmic_pwrap_write(ACCDET_DEBOUNCE0, button_press_debounce);
-				//#ifdef ACCDET_LOW_POWER
-				//wake_unlock(&accdet_timer_lock);//add for suspend disable accdet more than 5S
-				//#endif
-            }
-            else if(current_status == 3)
-            {
-            	
-             #ifdef ACCDET_PIN_RECOGNIZATION
-			 	cable_pin_recognition = 0;
-			 	ACCDET_DEBUG("[Accdet] cable_pin_recognition = %d\n", cable_pin_recognition);
-			    mutex_lock(&accdet_eint_irq_sync_mutex);
-		        if(1 == eint_accdet_sync_flag) {
-			 	accdet_status = PLUG_OUT;
-				}else {
-					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-			 	}
-			 	mutex_unlock(&accdet_eint_irq_sync_mutex);
-			 #endif
-             #ifdef ACCDET_MULTI_KEY_FEATURE
-			 	ACCDET_DEBUG("[Accdet] do not send plug out event in hook switch\n"); 
-			 	mutex_lock(&accdet_eint_irq_sync_mutex);
-		        if(1 == eint_accdet_sync_flag) {
-			 		accdet_status = PLUG_OUT;
-				}else {
-					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-			 	}
-			 	mutex_unlock(&accdet_eint_irq_sync_mutex);
-			 #else
-			 	mutex_lock(&accdet_eint_irq_sync_mutex);
-		        if(1 == eint_accdet_sync_flag) {
-		      		accdet_status = PLUG_OUT;		
-		      		cable_type = NO_DEVICE;
-				}else {
-					ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-			 	}
-			 	mutex_unlock(&accdet_eint_irq_sync_mutex);
-			 #ifdef ACCDET_EINT
-		       	disable_accdet();
-		     #endif
-		     #endif
-            }
-            else
-            {
-                ACCDET_DEBUG("[Accdet]HOOK_SWITCH can't change to this state!\n"); 
-            }
-            break;
-			
-	case STAND_BY:
-			if(current_status == 3)
-			{
-                 #ifdef ACCDET_MULTI_KEY_FEATURE
-						ACCDET_DEBUG("[Accdet]accdet do not send plug out event in stand by!\n");
-		    	 #else
-				 		mutex_lock(&accdet_eint_irq_sync_mutex);
-		       			 if(1 == eint_accdet_sync_flag) {
-							accdet_status = PLUG_OUT;		
-							cable_type = NO_DEVICE;
-						 }else {
-							ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
-			 			 }
-			 			mutex_unlock(&accdet_eint_irq_sync_mutex);
-				#ifdef ACCDET_EINT
-						disable_accdet();
-			    #endif
-			    #endif
-			 }
-			 else
-			{
-					ACCDET_DEBUG("[Accdet]STAND_BY can't change to this state!\n"); 
+				pmic_pwrap_write(ACCDET_PWM_THRESH, REGISTER_VALUE(cust_headset_settings->pwm_thresh));
+				switch (multi_key) 
+				{
+				case SHORT_UP:
+					ACCDET_DEBUG("[Accdet] Short press up (0x%x)\n", multi_key);
+					if(call_status == 0)
+					{
+					     notify_sendKeyEvent(ACC_MEDIA_PREVIOUS);
+					}
+					else
+					{
+					     notify_sendKeyEvent(ACC_VOLUMEUP);
+					}
+					break;
+				case SHORT_MD:
+					ACCDET_DEBUG("[Accdet] Short press middle (0x%x)\n", multi_key);
+					notify_sendKeyEvent(ACC_MEDIA_PLAYPAUSE);
+					break;
+				case SHORT_DW:
+					ACCDET_DEBUG("[Accdet] Short press down (0x%x)\n", multi_key);
+					if(call_status == 0)
+					{
+					     notify_sendKeyEvent(ACC_MEDIA_NEXT);
+					}
+					else
+					{
+					     notify_sendKeyEvent(ACC_VOLUMEDOWN);
+					}
+					break;
+				case LONG_UP:
+					ACCDET_DEBUG("[Accdet] Long press up (0x%x)\n", multi_key);
+				     	send_key_event(UP_KEY, KEYUP_FLAG);
+				                
+					break;
+				case LONG_MD:
+					ACCDET_DEBUG("[Accdet] Long press middle (0x%x)\n", multi_key);
+					notify_sendKeyEvent(ACC_END_CALL);
+					break;
+				case LONG_DW:
+					ACCDET_DEBUG("[Accdet] Long press down (0x%x)\n", multi_key);			
+					send_key_event(DW_KEY, KEYUP_FLAG);
+								
+					break;
+				default:
+					ACCDET_DEBUG("[Accdet] unkown key (0x%x)\n", multi_key);
+					break;
+				}
+#else
+			    if(call_status != 0) 
+			    {
+			           if(is_long_press())
+			           {
+			                 ACCDET_DEBUG("[Accdet]send long press remote button event %d \n",ACC_END_CALL);
+			                 notify_sendKeyEvent(ACC_END_CALL);
+			           } else {
+			                 ACCDET_DEBUG("[Accdet]send short press remote button event %d\n",ACC_ANSWER_CALL);
+			                 notify_sendKeyEvent(ACC_MEDIA_PLAYPAUSE);
+			           }
+			     }
+#endif////end  ifdef ACCDET_MULTI_KEY_FEATURE else
 			}
-			break;
-			
-			default:
-				ACCDET_DEBUG("[Accdet]check_cable_type: accdet current status error!\n");
-			break;
-						
-}
-			
-		if(!IRQ_CLR_FLAG)
+		}
+		else if(current_status == 1)
 		{
 			mutex_lock(&accdet_eint_irq_sync_mutex);
 			if(1 == eint_accdet_sync_flag) {
-				while((pmic_pwrap_read(ACCDET_IRQ_STS) & IRQ_STATUS_BIT) && (wait_clear_irq_times<3))
-				{
-				  ACCDET_DEBUG("[Accdet]check_cable_type: Clear interrupt on-going2....\n");
-				  wait_clear_irq_times++;
-				  msleep(5);
-				}
+				accdet_status = MIC_BIAS;		
+				cable_type = HEADSET_MIC;
+				ACCDET_DEBUG("[Accdet]MIC_BIAS state not change!\n");
+		 	}else {
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+		 	}
+		 mutex_unlock(&accdet_eint_irq_sync_mutex);
+		}
+		else if(current_status == 3)
+		{
+#ifdef ACCDET_MULTI_KEY_FEATURE
+			ACCDET_DEBUG("[Accdet]do not send plug ou in micbiast\n");
+			mutex_lock(&accdet_eint_irq_sync_mutex);
+			if(1 == eint_accdet_sync_flag) {
+				accdet_status = PLUG_OUT;
+			}else {
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
 			}
-			irq_temp = pmic_pwrap_read(ACCDET_IRQ_STS);
-			irq_temp = irq_temp & (~IRQ_CLR_BIT);
-			pmic_pwrap_write(ACCDET_IRQ_STS, irq_temp);
 			mutex_unlock(&accdet_eint_irq_sync_mutex);
-			IRQ_CLR_FLAG = TRUE;
-			ACCDET_DEBUG("[Accdet]check_cable_type:Clear interrupt:Done[0x%x]!\n", pmic_pwrap_read(ACCDET_IRQ_STS));	
-			
+#else
+			mutex_lock(&accdet_eint_irq_sync_mutex);
+			if(1 == eint_accdet_sync_flag) {
+				accdet_status = PLUG_OUT;		
+				cable_type = NO_DEVICE;
+			}else {
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+			}
+			mutex_unlock(&accdet_eint_irq_sync_mutex);
+#ifdef ACCDET_EINT
+			disable_accdet();
+#endif
+#endif
 		}
 		else
 		{
-			IRQ_CLR_FLAG = FALSE;
+			ACCDET_DEBUG("[Accdet]MIC_BIAS can't change to this state!\n"); 
 		}
+		break;
 
-		ACCDET_DEBUG("[Accdet]cable type:[%s], status switch:[%s]->[%s]\n",
-        accdet_report_string[cable_type], accdet_status_string[pre_status], 
-        accdet_status_string[accdet_status]);
+	case HOOK_SWITCH:
+	        if(current_status == 0)
+	        {
+			mutex_lock(&accdet_eint_irq_sync_mutex);
+			if(1 == eint_accdet_sync_flag) {
+				//for avoid 01->00 framework of Headset will report press key info for Audio
+				//cable_type = HEADSET_NO_MIC;
+				//accdet_status = HOOK_SWITCH;
+				ACCDET_DEBUG("[Accdet]HOOK_SWITCH state not change!\n");
+			}else {
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+			}
+			mutex_unlock(&accdet_eint_irq_sync_mutex);
+	    	}
+		else if(current_status == 1)
+		{
+			mutex_lock(&accdet_eint_irq_sync_mutex);
+			if(1 == eint_accdet_sync_flag) {
+				accdet_status = MIC_BIAS;		
+				cable_type = HEADSET_MIC;
+			}else {
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+			}
+			mutex_unlock(&accdet_eint_irq_sync_mutex);
+#ifdef ACCDET_PIN_RECOGNIZATION
+			cable_pin_recognition = 0;
+			ACCDET_DEBUG("[Accdet] cable_pin_recognition = %d\n", cable_pin_recognition);
+			pmic_pwrap_write(ACCDET_PWM_WIDTH, REGISTER_VALUE(cust_headset_settings->pwm_width));
+			pmic_pwrap_write(ACCDET_PWM_THRESH, REGISTER_VALUE(cust_headset_settings->pwm_thresh));
+#endif
+			//ALPS00038030:reduce the time of remote button pressed during incoming call
+			//solution: reduce hook switch debounce time to 0x400
+			pmic_pwrap_write(ACCDET_DEBOUNCE0, button_press_debounce);
+			//#ifdef ACCDET_LOW_POWER
+			//wake_unlock(&accdet_timer_lock);//add for suspend disable accdet more than 5S
+			//#endif
+		}
+		else if(current_status == 3)
+		{
+
+#ifdef ACCDET_PIN_RECOGNIZATION
+			cable_pin_recognition = 0;
+			ACCDET_DEBUG("[Accdet] cable_pin_recognition = %d\n", cable_pin_recognition);
+			mutex_lock(&accdet_eint_irq_sync_mutex);
+			if(1 == eint_accdet_sync_flag) {
+				accdet_status = PLUG_OUT;
+			}else {
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+			}
+			mutex_unlock(&accdet_eint_irq_sync_mutex);
+#endif
+#ifdef ACCDET_MULTI_KEY_FEATURE
+			ACCDET_DEBUG("[Accdet] do not send plug out event in hook switch\n"); 
+			mutex_lock(&accdet_eint_irq_sync_mutex);
+			if(1 == eint_accdet_sync_flag) {
+				accdet_status = PLUG_OUT;
+			}else {
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+			}
+			mutex_unlock(&accdet_eint_irq_sync_mutex);
+#else
+			mutex_lock(&accdet_eint_irq_sync_mutex);
+			if(1 == eint_accdet_sync_flag) {
+				accdet_status = PLUG_OUT;		
+				cable_type = NO_DEVICE;
+			}else {
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+			}
+			mutex_unlock(&accdet_eint_irq_sync_mutex);
+#ifdef ACCDET_EINT
+			disable_accdet();
+#endif
+#endif
+		}
+		else
+		{
+		    ACCDET_DEBUG("[Accdet]HOOK_SWITCH can't change to this state!\n"); 
+		}
+		break;
+
+	case STAND_BY:
+		if(current_status == 3)
+		{
+#ifdef ACCDET_MULTI_KEY_FEATURE
+			ACCDET_DEBUG("[Accdet]accdet do not send plug out event in stand by!\n");
+#else
+			mutex_lock(&accdet_eint_irq_sync_mutex);
+			if(1 == eint_accdet_sync_flag) {
+				accdet_status = PLUG_OUT;		
+				cable_type = NO_DEVICE;
+			}else {
+				ACCDET_DEBUG("[Accdet] Headset has plugged out\n");
+			}
+			mutex_unlock(&accdet_eint_irq_sync_mutex);
+#ifdef ACCDET_EINT
+			disable_accdet();
+#endif
+#endif
+		}
+		else
+		{
+			ACCDET_DEBUG("[Accdet]STAND_BY can't change to this state!\n"); 
+		}
+		break;
+
+	default:
+		ACCDET_DEBUG("[Accdet]check_cable_type: accdet current status error!\n");
+		break;
+						
+	}
+			
+	if(!IRQ_CLR_FLAG)
+	{
+		mutex_lock(&accdet_eint_irq_sync_mutex);
+		if(1 == eint_accdet_sync_flag) {
+			while((pmic_pwrap_read(ACCDET_IRQ_STS) & IRQ_STATUS_BIT) && (wait_clear_irq_times<3))
+			{
+				ACCDET_DEBUG("[Accdet]check_cable_type: Clear interrupt on-going2....\n");
+				wait_clear_irq_times++;
+				msleep(5);
+			}
+		}
+		irq_temp = pmic_pwrap_read(ACCDET_IRQ_STS);
+		irq_temp = irq_temp & (~IRQ_CLR_BIT);
+		pmic_pwrap_write(ACCDET_IRQ_STS, irq_temp);
+		mutex_unlock(&accdet_eint_irq_sync_mutex);
+		IRQ_CLR_FLAG = TRUE;
+		ACCDET_DEBUG("[Accdet]check_cable_type:Clear interrupt:Done[0x%x]!\n", pmic_pwrap_read(ACCDET_IRQ_STS));	
+		
+	}
+	else
+	{
+		IRQ_CLR_FLAG = FALSE;
+	}
+
+	ACCDET_DEBUG("[Accdet]cable type:[%s], status switch:[%s]->[%s]\n",
+	accdet_report_string[cable_type], accdet_status_string[pre_status], 
+	accdet_status_string[accdet_status]);
 } 
 static void accdet_work_callback(struct work_struct *work)
 {
 
     wake_lock(&accdet_irq_lock);
-    check_cable_type();
+    //check_cable_type();
 	
 	mutex_lock(&accdet_eint_irq_sync_mutex);
-    if(1 == eint_accdet_sync_flag) {
+    /*if(1 == eint_accdet_sync_flag) {
 		switch_set_state((struct switch_dev *)&accdet_data, cable_type);
     }else {
 		ACCDET_DEBUG("[Accdet] Headset has plugged out don't set accdet state\n");
-	}
+	}*/
 	mutex_unlock(&accdet_eint_irq_sync_mutex);
 	ACCDET_DEBUG( " [accdet] set state in cable_type  status\n");
-
+	check_cable_type();
     wake_unlock(&accdet_irq_lock);
 }
 
@@ -1280,7 +1387,10 @@ static inline void accdet_init(void)
 #ifdef FSA8049_V_POWER
     hwPowerOn(FSA8049_V_POWER, VOL_2800, "ACCDET");
 #endif
-
+	mt_set_gpio_mode(GPIO110, GPIO_MODE_00);
+	mt_set_gpio_pull_enable(GPIO110, GPIO_PULL_ENABLE);
+	mt_set_gpio_pull_select(GPIO110, GPIO_PULL_UP);
+	mt_set_gpio_dir(GPIO110, GPIO_DIR_OUT);
 }
 /*-----------------------------------sysfs-----------------------------------------*/
 #if DEBUG_THREAD
@@ -1467,6 +1577,39 @@ static int accdet_create_attr(struct device_driver *driver)
 
 #endif
 
+
+
+static ssize_t show_headset_vol(struct device *dev,struct device_attribute *attr,char *buf)
+{
+	int data[4] = {0,0,0,0};
+	int rawdata=0;
+	int res = 0;
+	int headset_id_vol = 0;
+	
+	 
+		res = IMM_GetOneChannelValue(AUXADC_HEADSET_ID_CHANNEL,data,&rawdata);
+	   if(res < 0)
+	     {
+	        printk("[adc_driver]: get data error\n");
+	        
+	     }
+	   else
+	     {	  
+	        printk("[adc_driver]: channel1   raw =%d\n",rawdata);
+	     }
+	  
+	   //headset_id_vol = (rawdata * 1800 / 4096);
+	   headset_id_vol = data[0]*1000+data[1]*10;
+	   printk("accdet  adc: channel1  headset_id_vol =%d     GPIO110 = %d\n",headset_id_vol,mt_get_gpio_out(GPIO110));
+	 
+	 
+	return sprintf(buf,"%u\n" ,headset_id_vol);
+	return 0;
+
+}
+
+static DEVICE_ATTR(headset_vol,0664, show_headset_vol,NULL);
+
 int mt_accdet_probe(void)	
 {
 	int ret = 0;
@@ -1616,7 +1759,9 @@ int mt_accdet_probe(void)
 	//pmic_pwrap_write(0x0400, 0x1000); 
 	//ACCDET_DEBUG("[Accdet]accdet enable VRF28 power!\n");
 //#endif
-		
+
+device_create_file(accdet_nor_device,&dev_attr_headset_vol);
+
 	    return 0;
 }
 
@@ -1750,8 +1895,9 @@ void mt_accdet_pm_restore_noirq(void)
     pmic_pwrap_write(TOP_CKPDN_CLR, RG_ACCDET_CLK_CLR); 
     enable_accdet(ACCDET_SWCTRL_EN);
 	eint_accdet_sync_flag = 1;
-	current_status_restore = ((pmic_pwrap_read(ACCDET_STATE_RG) & 0xc0)>>6); //AB
-		
+	current_status_restore = get_accdet_status();
+	
+
 	switch (current_status_restore) {
 		case 0:     //AB=0
 			cable_type = HEADSET_NO_MIC;

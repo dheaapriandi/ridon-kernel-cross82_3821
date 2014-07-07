@@ -1,3 +1,5 @@
+
+
 #include <utils/Log.h>
 #include <utils/Errors.h>
 #include <fcntl.h>
@@ -111,6 +113,14 @@ MSDK_SENSOR_INIT_FUNCTION_STRUCT SensorList[] =
 #if defined(OV5648_MIPI_RAW)
     RAW_INFO(OV5648MIPI_SENSOR_ID, SENSOR_DRVNAME_OV5648_MIPI_RAW, NULL),
 #endif
+//begin zhaozhen.wu@tcl.com add for ov5648 compatibility
+#if defined(OV5648QT_MIPI_RAW)
+    RAW_INFO(OV5648QTMIPI_SENSOR_ID, SENSOR_DRVNAME_OV5648QT_MIPI_RAW, NULL),
+#endif
+#if defined(OV5648ST_MIPI_RAW)
+    RAW_INFO(OV5648STMIPI_SENSOR_ID, SENSOR_DRVNAME_OV5648ST_MIPI_RAW, NULL),
+#endif
+//end
 #if defined(OV5693_MIPI_RAW)
     RAW_INFO(OV5693_SENSOR_ID, SENSOR_DRVNAME_OV5693_MIPI_RAW, NULL), 
 #endif

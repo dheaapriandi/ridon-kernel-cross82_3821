@@ -1,9 +1,7 @@
+
 #include "custom_vt_video_enc_type.h"
 
 
-/******************************************************************************
-* The variables to store the customer setting 
-******************************************************************************/
 
 static CUSTOM_VT_VENC_QUALITY_CTRL_TABLE_T _rVtVEncQualityCtrlTable[] =
 {
@@ -120,15 +118,9 @@ static CUSTOM_VT_VENC_QUALITY_CTRL_TABLE_T _rVtVEncQualityCtrlTable[] =
     
 };
 
-/******************************************************************************************
-* If want to use special dynamic range table, set the table here, a array with 511 elements
-*******************************************************************************************/
 static signed short variation_vt[]={0};  
 
 
-/******************************************************************************
-* The functions to get the customer setting 
-******************************************************************************/
 
 bool _Custom_VT_GetFrameRates(int iCodec,int iSensorMode,void* pFrameRates)
 {

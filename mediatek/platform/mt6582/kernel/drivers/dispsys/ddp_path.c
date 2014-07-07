@@ -1302,11 +1302,6 @@ int disp_path_config(struct disp_path_config_struct* pConfig)
 }
 
 DISP_MODULE_ENUM g_dst_module;
-#if defined(MTK_HDMI_SUPPORT)
-extern bool is_hdmi_active(void);
-#endif
-
-
 int disp_path_config_(struct disp_path_config_struct* pConfig, int mutexId)
 {
     unsigned int mutexMode;
@@ -1379,9 +1374,9 @@ int disp_path_config_(struct disp_path_config_struct* pConfig, int mutexId)
 	        } 
 	        else if(pConfig->srcModule==DISP_MODULE_RDMA1)
 	        {
-	            //82 only have 1 rdma, therefore use the same setting as RDMA0
-	            DISP_REG_SET(DISP_REG_CONFIG_MUTEX_MOD(mutexId), (1<<10)|(1<<7)|(1<<9)); //rdma, color, bls
-	            //DISP_REG_SET(DISP_REG_CONFIG_MUTEX_MOD(mutexId), (1<<12)); // RDMA1-->DPI0 for HDMI
+
+	            DISP_REG_SET(DISP_REG_CONFIG_MUTEX_MOD(mutexId), (1<<12)); // RDMA1-->DPI0 for HDMI
+
 	        }
         }
         DISP_REG_SET(DISP_REG_CONFIG_MUTEX_SOF(mutexId), mutexMode);
@@ -1414,11 +1409,7 @@ int disp_path_config_(struct disp_path_config_struct* pConfig, int mutexId)
 
             case DISP_MODULE_DPI0:
 				printk("DISI_MODULE_DPI0\n");
-            	if (DISP_IsDecoupleMode()
-#if defined(MTK_HDMI_SUPPORT)
-            	    || is_hdmi_active()
-#endif
-            	) {
+				if (DISP_IsDecoupleMode()) {
             		DISP_REG_SET(DISP_REG_CONFIG_DISP_OVL_MOUT_EN, 1<<1);  // OVL-->WDMA0
             	} else {
             		DISP_REG_SET(DISP_REG_CONFIG_DISP_OVL_MOUT_EN, 1<<0);  // OVL-->RDMA
@@ -1603,13 +1594,6 @@ int disp_path_config_(struct disp_path_config_struct* pConfig, int mutexId)
         else  //src module is RDMA1
         {
             printk("from rdma1\n");
-#if defined(MTK_HDMI_SUPPORT)
-            disp_bls_init(pConfig->srcROI.width, pConfig->srcROI.height);
-            //=============================config PQ start==================================
-            DpEngine_COLORonInit();
-            DpEngine_COLORonConfig(pConfig->srcROI.width,  //width
-                           pConfig->srcROI.height); //height
-#endif
             ///config RDMA
             RDMAStop(1);
             RDMAReset(1);
@@ -2546,81 +2530,6 @@ int disp_path_clock_on(char* name)
     return 0;
 }
 
-int disp_hdmi_path_clock_on(char* name)
-{
-    if(name != NULL)
-    {
-        DISP_MSG("disp_hdmi_path_clock_on, caller:%s \n", name);
-    }
-
-    enable_clock(MT_CG_DISP0_DISP_OVL  , "DDP");
-    enable_clock(MT_CG_DISP0_DISP_WDMA, "DDP");
-
-    // restore ddp related registers
-    if (strncmp(name, "ipoh_mtkfb", 10))
-    {
-    	if(*pRegBackup != DDP_UNBACKED_REG_MEM)
-    	{
-    		disp_reg_restore();
-
-    		// restore intr enable registers
-    		disp_intr_restore();
-    	}
-    	else
-    	{
-    		DISP_MSG("disp_hdmi_path_clock_on(), dose not call disp_reg_restore, cause mem not inited! \n");
-    	}
-    }
-    else
-    {
-        // reset AAL flags
-        disp_aal_reset();
-    }
-    
-    DISP_MSG("DISP CG:%x\n", DISP_REG_GET(DISP_REG_CONFIG_MMSYS_CG_CON0));
-    return 0;
-}
-
-int disp_hdmi_path_clock_off(char* name)
-{
-    if(name != NULL)
-    {
-        DISP_MSG("disp_hdmi_path_clock_off, caller:%s \n", name);
-    }
-    
-    // disable intr and clear intr status
-    // backup intr enable reg
-    disp_intr_status[DISP_MODULE_OVL] = DISP_REG_GET(DISP_REG_OVL_INTEN);
-    disp_intr_status[DISP_MODULE_WDMA0] = DISP_REG_GET(DISP_REG_WDMA_INTEN);
-    disp_intr_status[DISP_MODULE_RDMA] = DISP_REG_GET(DISP_REG_RDMA_INT_ENABLE);
-    disp_intr_status[DISP_MODULE_MUTEX] = DISP_REG_GET(DISP_REG_CONFIG_MUTEX_INTEN);
-    
-    // disable intr
-    DISP_REG_SET(DISP_REG_OVL_INTEN, 0);
-    DISP_REG_SET(DISP_REG_WDMA_INTEN+0x1000, 0);
-    
-    // clear intr status           
-    DISP_REG_SET(DISP_REG_OVL_INTSTA, 0);    
-    DISP_REG_SET(DISP_REG_WDMA_INTSTA+0x1000, 0);    
-    
-    // backup ddp related registers
-    disp_reg_backup();
-
-    // Better to reset DMA engine before disable their clock
-    RDMAStop(0);
-    RDMAReset(0);
-	
-    WDMAStop(0);
-    WDMAReset(0);
-
-    OVLStop();
-    OVLReset();
-
-    disable_clock(MT_CG_DISP0_DISP_OVL  , "DDP");
-    disable_clock(MT_CG_DISP0_DISP_WDMA, "DDP");
-  
-    return 0;
-}
 
 int disp_path_clock_off(char* name)
 {
@@ -2713,12 +2622,4 @@ int disp_bls_set_max_backlight(unsigned int level)
 {
   return disp_bls_set_max_backlight_(level);
 }
-
-int disp_path_clear_config(int mutexId)
-{
-    DISP_REG_SET(DISP_REG_CONFIG_MUTEX_MOD(mutexId), 0);
-    DISP_REG_SET(DISP_REG_CONFIG_MUTEX_SOF(mutexId), 0);
-    return 0;
-}
-
 

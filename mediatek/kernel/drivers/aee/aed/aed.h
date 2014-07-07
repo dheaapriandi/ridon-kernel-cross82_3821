@@ -22,12 +22,6 @@ typedef enum {
 } AEE_MODE;
 
 typedef enum {
-    AEE_FORCE_DISABLE_RED_SCREEN = 0,
-    AEE_FORCE_RED_SCREEN,
-    AEE_FORCE_NOT_SET
-} AEE_FORCE_RED_SCREEN_VALUE;
-
-typedef enum {
     AE_SUCC, 
     AE_FAIL
 } AE_ERR;
@@ -137,7 +131,6 @@ struct aee_thread_reg {
 /* AED debug support */
 
 #define AEEIOCTL_RT_MON_Kick _IOR('p', 0x0A, int)
-#define AEEIOCTL_SET_FORECE_RED_SCREEN _IOR('p', 0x0B, int)
 #define AED_FILE_OPS(entry) \
   static const struct file_operations proc_##entry##_fops = { \
     .read = proc_##entry##_read, \

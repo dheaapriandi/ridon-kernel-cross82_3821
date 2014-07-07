@@ -1,15 +1,5 @@
-/*===========================================================================*
-*                                                                            *
-*  main.c:  Master Transmitter/Receiver I²C Driver for LPC2138               *
-*  Author:  V. Latapie                                                       *
-*  Date  :  14/06/07                                                         *
-*                                                                            *
-============================================================================*/
 
 
-/*===========================================================================*
-*                           Include Files                                    *
-*============================================================================*/
 
 #include <generated/autoconf.h>
 #include <linux/module.h>
@@ -70,18 +60,6 @@ unsigned char  ptr[255];
 /* Semaphore for I²C access */
 tmdlHdmiTxIWSemHandle_t gI2CSemaphore;
 
-/*===========================================================================*
-*                                                                            *
-*    FUNCTION NAME:    I2C_Init                                              *
-*    DESCRIPTION  :    I²C initialisation                                    *
-*                                                                            *
-*    INPUT   :         none                                                  *
-*    OUTPUT  :         none                                                  *
-*                                                                            *
-*    RETURN  :         none                                                  *
-*                                                                            *
-*    CONTEXT :         SYNCHRONOUS                                           *
-*============================================================================*/
 //SW GPIO I2C
 #if 0
 
@@ -366,22 +344,6 @@ tmErrorCode_t Init_i2c(void)
   return errCode;
 }
 
-/*===========================================================================*
-*                                                                            *
-*    FUNCTION NAME:    I2C_write                                             *
-*    DESCRIPTION  :    Write a series of bytes out the I2C bus to the given  *
-*                      slave address                                         *
-*                                                                            *
-*    INPUT   :         unsigned char Address    -- Address of slave          *
-*                      unsigned char nb_char    -- Nb of data bytes to write *
-*                      unsigned char *ptr       -- Pointer to data to send   *
-*    OUTPUT  :         unsigned char            -- Status of I2C bus at     *
-*                                                   start of write.          *
-*                                                                            *
-*    RETURN  :         none                                                  *
-*                                                                            *
-*    CONTEXT :         SYNCHRONOUS                                           *
-*============================================================================*/
 
 unsigned char Write_i2c(unsigned char address,  unsigned char *ptr, unsigned char nb_char)
 {
@@ -448,23 +410,6 @@ unsigned char Write_i2c(unsigned char address,  unsigned char *ptr, unsigned cha
 
 
 
-/*===========================================================================*
-*                                                                            *
-*    FUNCTION NAME:    I2C_read                                              *
-*    DESCRIPTION  :    Read a series of bytes out the I2C bus from the given *
-*                      slave address                                         *
-*                                                                            *
-*    INPUT   :         unsigned char address    -- Address of slave          *
-*                      unsigned char pos        -- offset in device          *
-*                      unsigned char nb_char    -- Nb of data bytes to read  *
-*                      unsigned char *ptr       -- Pointer to data to receive*
-*    OUTPUT  :         unsigned char            -- Status of I2C bus at      *
-*                                                   start of write.          *
-*                                                                            *
-*    RETURN  :         none                                                  *
-*                                                                            *
-*    CONTEXT :         SYNCHRONOUS                                           *
-*============================================================================*/
                                                                               
 
 unsigned char Read_at_i2c(unsigned char address, unsigned char pos, unsigned char nb_char, unsigned char *ptr)
@@ -523,24 +468,6 @@ unsigned char Read_at_i2c(unsigned char address, unsigned char pos, unsigned cha
 }
 
 
-/*===========================================================================*
-*                                                                              *
-*    FUNCTION NAME:    Read_edid                                               *
-*    DESCRIPTION  :    Read a series of bytes out the I2C bus from the given   *
-*                      slave address                                           *
-*                                                                              *
-*    INPUT   :         unsigned char seg_addr   -- Address of slave            *
-*                      unsigned char seg_ptr    -- offset in device            *
-*                      unsigned char data_addr  -- Nb of data bytes to read    *
-*                      unsigned char word_offset -- Pointer to data to receive *
-*                      unsigned char nb_char  -- Pointer to data to receive    *
-*                      unsigned char *ptr  -- Pointer to data to receive       *
-*    OUTPUT  :         none                                                    *
-*                                                                              *
-*    RETURN  :         unsigned char            -- Status of I2C bus 
-*                                                                              *
-*    CONTEXT :         SYNCHRONOUS                                             *
-*============================================================================*/
 /********************************************/
 /*          R E A D _ E D I D               */
 /*                                          */

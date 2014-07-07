@@ -1429,6 +1429,16 @@ static struct platform_device actuator_dev = {
 	.name		  = "lens_actuator",
 	.id		  = -1,
 };
+
+/*=======================================================================*/
+/* Lens actuator  Backup                                                 */
+/*=======================================================================*/
+static struct platform_device actuator_dev1 = {
+	.name		  = "lens_actuator1",
+	.id		  = -1,
+};
+
+
 /*=======================================================================*/
 /* MT6575 jogball                                                        */
 /*=======================================================================*/
@@ -2003,7 +2013,14 @@ retval = platform_device_register(&dummychar_device);
         return retval;
     }
 #endif
-
+//begin zhaozhen.wu@tcl.com add for ov5648 compatibility
+#if 1  //defined(CONFIG_ACTUATOR)
+    retval = platform_device_register(&actuator_dev1);
+    if (retval != 0){
+        return retval;
+    }	
+#endif
+//end
 
 
 //

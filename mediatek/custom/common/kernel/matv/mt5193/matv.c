@@ -1,25 +1,3 @@
-/* 
- *
- * (C) Copyright 2009 
- * MediaTek <www.mediatek.com>
- * Charlie Lu <charlie.lu@mediatek.com>
- *
- * MATV I2C Device Driver
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
 #if 0
 #include <generated/autoconf.h>
 #include <linux/kernel.h>
@@ -36,13 +14,6 @@
 
 //#include "matv6326_sw.h"
 //#include "mt519xMATV_sw.h" // 20100319
-/*
-#ifdef CONFIG_MATV_DCT
-#include "matv_drv.h"
-#else
-#include "matv_drv_nodct.h"
-#endif
-*/
 #include <mach/mt6516_gpio.h>
 #include <linux/kthread.h>
 #include <linux/wakelock.h>
@@ -61,19 +32,10 @@
 #include "matv.h"
 #endif
 
-/*****************************************************************************
- * Definition
-****************************************************************************/
 #define _NEW_I2C_DRV_
 
-/**
- * _MATV_HIGH_SPEED_    : Set I2C Clock as 400kHz
- **/
 #define _MATV_HIGH_SPEED_
 
-/**
- * _MATV_HIGH_SPEED_DMA_: Set I2C Clock as 400kHz & Enable DMA Mode
- **/
 //#define _MATV_HIGH_SPEED_DMA_
 
 
@@ -103,11 +65,6 @@ int matv_out_data[2] = {1,1};
 int matv_lcdbk_data[1] = {1};
 
 
-/**********************************************************
-  *
-  *   [I2C Slave Setting] 
-  *
-  *********************************************************/
 #define mt519x_SLAVE_ADDR_WRITE	0x82
 #define mt519x_SLAVE_ADDR_Read	0x83
 #define mt519x_SLAVE_ADDR_FW_Update 0xfa
@@ -134,11 +91,6 @@ extern void tpd_switch_normal_mode(void);
 extern int kdCheckSensorPowerOn(void);
 
 
-/**********************************************************
-  *
-  *   [I2C Function For Read/Write MATV]
-  *
-  *********************************************************/
 ssize_t mt519x_read_byte(u8 cmd, u8 *returnData)
 {
     char     cmd_buf[1]={0x00};
@@ -423,12 +375,6 @@ ssize_t mt519x_dma_write_m_byte(u8 cmd, u8 *writeData_va, u32 writeData_pa,U16 l
 
 #endif
 
-/*
-kal_bool Check_MATV_Ready(void)
-{
-	return MATV_Ready;
-}
-*/
 void matv_driver_init(void)
 {
     /* Get MATV6326 ECO version */
@@ -864,9 +810,6 @@ struct i2c_driver matv_i2c_driver = {
 
 
 
-/* 
- * Register platform driver
- */
 static int matv_probe(struct platform_device *dev)
 { 
     MATV_LOGD(KERN_ERR "[MATV] probe done\n");

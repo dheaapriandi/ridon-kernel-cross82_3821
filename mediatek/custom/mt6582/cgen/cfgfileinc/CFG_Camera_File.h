@@ -1,54 +1,4 @@
-/*****************************************************************************
- *
- * Filename:
- * ---------
- *   MSDK_NVRAM_CAMERA_exp.h
- *
- * Project:
- * --------
- *   DUMA
- *
- * Description:
- * ------------
- *   Definition of the data structures of ISP drivers that will be stored into NRVAM
- *
- *
- * Author:
- * -------
- *   PC Huang (MTK02204)
- *
- *============================================================================
- *             HISTORY
- * Below this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- * 11 16 2011 koli.lin
- * [ALPS00030473] [Camera]
- * [Camera] Add two parameters to NVRAM for CCT tuning.
- *
- * 05 17 2010 koli.lin
- * [ALPS00000143][Camera]
- * Synchronize the NVRAM structure and Code gen.
- *
- * 05 14 2010 koli.lin
- * [ALPS00000143][Camera]
- * Add one parameters for AE NVRAM used.
- *
- * Mar 21 2009 mtk80306
- * [DUMA00112158] fix the code convention.
- * fix the codeing convention.
- *
- * Mar 15 2009 mtk80306
- * [DUMA00111629] add camera nvram files
- * add camera nvram file
- *
- *------------------------------------------------------------------------------
- * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *============================================================================
- ****************************************************************************/
+
 
 #ifndef __MSDK_NVRAM_CAMERA_EXP_H
 #define __MSDK_NVRAM_CAMERA_EXP_H
@@ -64,27 +14,18 @@ typedef struct
    UINT8 Data[MAXIMUM_NVRAM_CAMERA_DEFECT_FILE_SIZE];
 } NVRAM_CAMERA_DEFECT_STRUCT, *PNVRAM_CAMERA_DEFECT_STRUCT;
 
-/*******************************************************************************
-* shading
-********************************************************************************/
 
 typedef struct
 {
    	UINT8 CameraData[MAXIMUM_NVRAM_CAMERA_SHADING_FILE_SIZE];
 } NVRAM_CAMERA_SHADING_STRUCT, *PNVRAM_CAMERA_SHADING_STRUCT;
 
-/*******************************************************************************
-* 3A
-********************************************************************************/
 
 typedef struct
 {
     UINT8 Data[MAXIMUM_NVRAM_CAMERA_3A_FILE_SIZE];
 } NVRAM_CAMERA_3A_STRUCT, *PNVRAM_CAMERA_3A_STRUCT;
 
-/*******************************************************************************
-* ISP parameter
-********************************************************************************/
 
 typedef struct
 {
@@ -92,9 +33,6 @@ typedef struct
 } NVRAM_CAMERA_ISP_PARAM_STRUCT, *PNVRAM_CAMERA_ISP_PARAM_STRUCT;
 
 
-/*******************************************************************************
-* Lens
-********************************************************************************/
 
 typedef struct
 {

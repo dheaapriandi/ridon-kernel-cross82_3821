@@ -149,9 +149,11 @@ typedef enum{
 	HDMI_STATE_NO_DEVICE,
 	HDMI_STATE_ACTIVE,
 	HDMI_STATE_CONNECTING,
+	#if defined(MTK_MT8193_HDMI_SUPPORT)
 	HDMI_STATE_PLUGIN_ONLY,
 	HDMI_STATE_EDID_UPDATE,
 	HDMI_STATE_CEC_UPDATE
+	#endif
 }HDMI_STATE;
 
 // ---------------------------------------------------------------------------

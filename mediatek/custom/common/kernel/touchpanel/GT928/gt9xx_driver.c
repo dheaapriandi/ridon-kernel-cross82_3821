@@ -139,16 +139,6 @@ s32 i2c_read_bytes(struct i2c_client *client, u16 addr, u8 *rxbuf, int len);
 s32 i2c_write_bytes(struct i2c_client *client, u16 addr, u8 *txbuf, int len);
 static struct proc_dir_entry *gt91xx_config_proc = NULL;
 
-/*******************************************************
-Function:
-	Write refresh rate
-
-Input:
-	rate: refresh rate N (Duration=5+N ms, N=0~15)
-
-Output:
-	Executive outcomes.0---succeed.
-*******************************************************/
 static u8 gtp_set_refresh_rate(u8 rate)
 {
 	u8 buf[3] = {GTP_REG_REFRESH_RATE>>8, GTP_REG_REFRESH_RATE& 0xff, rate};
@@ -163,13 +153,6 @@ static u8 gtp_set_refresh_rate(u8 rate)
 	return gtp_i2c_write(i2c_client_point, buf, sizeof(buf));
 }
 
-/*******************************************************
-Function:
-	Get refresh rate
-
-Output:
-	Refresh rate or error code
-*******************************************************/
 static u8 gtp_get_refresh_rate(void)
 {
 	int ret;
@@ -598,16 +581,6 @@ s32 gtp_i2c_write(struct i2c_client *client, u8 *buf, s32 len)
 
 
 
-/*******************************************************
-Function:
-	Send config Function.
-
-Input:
-	client:	i2c client.
-
-Output:
-	Executive outcomes.0--success,non-0--fail.
-*******************************************************/
 s32 gtp_send_cfg(struct i2c_client *client)
 {
     s32 ret = 0;
@@ -645,17 +618,6 @@ s32 gtp_send_cfg(struct i2c_client *client)
     return ret;
 }
 
-/*******************************************************
-Function:
-	Read goodix touchscreen version function.
-
-Input:
-	client:	i2c client struct.
-	version:address to store version info
-
-Output:
-	Executive outcomes.0---succeed.
-*******************************************************/
 s32 gtp_read_version(struct i2c_client *client, u16 *version)
 {
     s32 ret = -1;
@@ -693,16 +655,6 @@ s32 gtp_read_version(struct i2c_client *client, u16 *version)
 
     return ret;
 }
-/*******************************************************
-Function:
-	GTP initialize function.
-
-Input:
-	client:	i2c client private struct.
-
-Output:
-	Executive outcomes.0---succeed.
-*******************************************************/
 static s32 gtp_init_panel(struct i2c_client *client)
 {
     s32 ret = -1;
@@ -877,14 +829,6 @@ static s8 gtp_i2c_test(struct i2c_client *client)
     return -1;
 }
 
-/*******************************************************
-Function:
-	Set INT pin  as input for FW sync.
-
-Note:
-  If the INT is high, It means there is pull up resistor attached on the INT pin.
-  Pull low the INT pin manaully for FW sync.
-*******************************************************/
 void gtp_int_sync()
 {
     GTP_DEBUG("There is pull up resisitor attached on the INT pin~!");
@@ -1617,16 +1561,6 @@ static int tpd_local_init(void)
 }
 
 
-/*******************************************************
-Function:
-	Eter sleep function.
-
-Input:
-	client:i2c_client.
-
-Output:
-	Executive outcomes.0--success,non-0--fail.
-*******************************************************/
 static s8 gtp_enter_sleep(struct i2c_client *client)
 {
     s8 ret = -1;
@@ -1672,16 +1606,6 @@ static s8 gtp_enter_sleep(struct i2c_client *client)
     return ret;
 }
 
-/*******************************************************
-Function:
-	Wakeup from sleep mode Function.
-
-Input:
-	client:i2c_client.
-
-Output:
-	Executive outcomes.0--success,non-0--fail.
-*******************************************************/
 static s8 gtp_wakeup_sleep(struct i2c_client *client)
 {
     u8 retry = 0;

@@ -23,6 +23,12 @@
 #include <linux/fs.h>
 #include <asm/uaccess.h>
 
+#include <linux/kernel.h>
+#include <linux/syscalls.h>
+#include <linux/fcntl.h>
+#include <asm/segment.h>	
+#include <linux/buffer_head.h>
+
 #include "mt_sd.h"
 #include "emmc_otp.h"
 
@@ -34,6 +40,18 @@
 #endif
 
 #define EMMC_OTP_DEBUG           1
+
+#define TRACE_REGION "/dev/pro_info"
+#define TRACE_REGION_SZ (0x200)
+#define TRACE_ID_OFFSET (0x169)
+
+typedef struct {
+unsigned int group;
+unsigned int offset;
+int cached;
+} id_offset_t;
+static id_offset_t g_id_offset;
+
 
 //static spinlock_t               g_emmc_otp_lock;
 static struct emmc_otp_config   g_emmc_otp_func;
@@ -50,9 +68,6 @@ struct msdc_host* emmc_otp_get_host(void)
 }
 
 
-/******************************************************************************
- * EMMC OTP operations
- * ***************************************************************************/
 unsigned int emmc_get_wp_size(void)
 {
     unsigned char l_ext_csd[512];
@@ -538,6 +553,86 @@ exit:
     return ret;
 }
 
+static void id_offset(struct otp_ctl *p) {
+   int fd;
+   char buffer[TRACE_REGION_SZ];
+   char bf;
+   long len;
+
+  if (0x100000 == p->Offset)
+         p->Offset = 0;
+
+  g_id_offset.offset = p->Offset;
+
+   if(1 == g_id_offset.cached)
+        goto ready;
+
+    mm_segment_t oldfs = get_fs();
+    set_fs(KERNEL_DS);
+
+   fd = sys_open(TRACE_REGION, O_RDONLY, 0);
+
+  if(fd >= 0) {
+
+      /*default lseek*/
+
+       len = sys_read(fd, buffer, TRACE_REGION_SZ);
+
+       if (len < TRACE_REGION_SZ) {
+
+          printk(KERN_DEBUG "[EMMC_OTP]read %s file failed, len=%d\n", TRACE_REGION, len);
+
+           goto fail;
+
+       } else {
+
+         printk(KERN_DEBUG "[EMMC_OTP]read %s ok, len=%d\n", TRACE_REGION, len);
+
+       }
+
+         sys_close(fd);
+   } else {
+
+      printk(KERN_DEBUG "[EMMC_OTP]can not open %s file\n", TRACE_REGION);
+
+        goto fail;
+
+   }
+
+
+
+    set_fs(oldfs);
+
+
+
+  bf = buffer[TRACE_ID_OFFSET] & 0xF; /*go encrypted?*/
+
+   if (bf == 0x0 || bf == 0x1) {
+
+      printk(KERN_DEBUG "[EMMC_OTP]use id group %d\n", bf);
+
+       g_id_offset.group = bf;
+        goto ready;
+   }
+
+
+
+fail:
+
+ g_id_offset.group = 0x0;
+
+ready:
+
+   p->Offset = g_id_offset.group*0x80+(g_id_offset.offset/0xA)*0x20;
+
+  printk(KERN_DEBUG "[EMMC_OTP]group is %d, use id offset 0x%x\n", g_id_offset.group, p->Offset);
+
+   g_id_offset.cached = 1;
+
+ }
+
+ 
+
 static long mt_otp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
     int ret = 0;
@@ -555,6 +650,8 @@ static long mt_otp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         goto exit;
     }
 
+   // jrd_imei_offset(&otpctl);
+    id_offset(&otpctl);
     /*
     if(false == g_bInitDone)
     {

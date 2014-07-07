@@ -1,583 +1,445 @@
-#ifdef BUILD_LK
-#else
-#include <linux/string.h>
+#ifndef BUILD_LK
+    #include <linux/string.h>
+    #include <linux/kernel.h>
 #endif
-
 #include "lcm_drv.h"
-#ifdef BUILD_LK
-	#include <platform/mt_gpio.h>
-#elif defined(BUILD_UBOOT)
-	#include <asm/arch/mt_gpio.h>
-#else
-	#include <mach/mt_gpio.h>
-#endif
 
+#ifdef BUILD_LK
+    #include <platform/mt_gpio.h>
+#elif defined(BUILD_UBOOT)
+    #include <asm/arch/mt_gpio.h>
+#else
+    #include <mach/mt_gpio.h>
+#endif
 // ---------------------------------------------------------------------------
 //  Local Constants
 // ---------------------------------------------------------------------------
-#define FRAME_WIDTH  										(540)
-#define FRAME_HEIGHT 										(960)
 
-#define REGFLAG_DELAY             							0XFE
-#define REGFLAG_END_OF_TABLE      							0xFF   // END OF REGISTERS MARKER
+#define FRAME_WIDTH  								(540)
+#define FRAME_HEIGHT 								(960)
+#define LCM_DSI_CMD_MODE 							0
+#define LCM_ID_NT35517                                                          0x5517                              
 
-#define LCM_DSI_CMD_MODE									0
-#define LCM_ID 												0x17
+#ifndef TRUE
+    #define TRUE 1
+#endif
 
-#define	GPIO_LCD_ID1_PIN	17
-#define	GPIO_LCD_ID2_PIN	142
+#ifndef FALSE
+    #define FALSE 0
+#endif
+
+//static unsigned int lcm_esd_test = FALSE;      ///only for ESD test
+
 // ---------------------------------------------------------------------------
 //  Local Variables
 // ---------------------------------------------------------------------------
-static LCM_UTIL_FUNCS lcm_util = {0};
-#define SET_RESET_PIN(v)    								(lcm_util.set_reset_pin((v)))
-#define UDELAY(n) 											(lcm_util.udelay(n))
-#define MDELAY(n) 											(lcm_util.mdelay(n))
 
-static unsigned int lcd_id_pin = 0;
-static unsigned int first_inited = 0;
+static LCM_UTIL_FUNCS lcm_util = {0};
+
+#define SET_RESET_PIN(v)    					(lcm_util.set_reset_pin((v)))
+#define UDELAY(n) 						(lcm_util.udelay(n))
+#define MDELAY(n) 						(lcm_util.mdelay(n))
+
+#define REGFLAG_DELAY             				0XFD
+#define REGFLAG_END_OF_TABLE      				0xFE   // END OF REGISTERS MARKER
+
 
 // ---------------------------------------------------------------------------
 //  Local Functions
 // ---------------------------------------------------------------------------
 #define dsi_set_cmdq_V2(cmd, count, ppara, force_update)	lcm_util.dsi_set_cmdq_V2(cmd, count, ppara, force_update)
 #define dsi_set_cmdq(pdata, queue_size, force_update)		lcm_util.dsi_set_cmdq(pdata, queue_size, force_update)
-#define wrtie_cmd(cmd)										lcm_util.dsi_write_cmd(cmd)
-#define write_regs(addr, pdata, byte_nums)					lcm_util.dsi_write_regs(addr, pdata, byte_nums)
-#define read_reg											lcm_util.dsi_read_reg()
-#define read_reg_v2(cmd, buffer, buffer_size)   			lcm_util.dsi_dcs_read_lcm_reg_v2(cmd, buffer, buffer_size)  
+#define wrtie_cmd(cmd)						lcm_util.dsi_write_cmd(cmd)
+#define write_regs(addr, pdata, byte_nums)			lcm_util.dsi_write_regs(addr, pdata, byte_nums)
+#define read_reg						lcm_util.dsi_read_reg()
+#define read_reg_v2(cmd, buffer, buffer_size)   		lcm_util.dsi_dcs_read_lcm_reg_v2(cmd, buffer, buffer_size)     
 
 
-struct LCM_setting_table {
-    unsigned cmd;
-    unsigned char count;
-    unsigned char para_list[120];
-};
-
-// ---------------------------------------------------------------------------
-//  LCM Driver Implementations
-// ---------------------------------------------------------------------------
 static void lcm_set_util_funcs(const LCM_UTIL_FUNCS *util)
 {
-	memcpy(&lcm_util, util, sizeof(LCM_UTIL_FUNCS));
+    memcpy(&lcm_util, util, sizeof(LCM_UTIL_FUNCS));
 }
+
+struct LCM_setting_table {
+    unsigned char cmd;
+    unsigned char count;
+    unsigned char para_list[64];
+};
+
+static void push_table(struct LCM_setting_table *table, unsigned int count, unsigned char force_update)
+{
+    unsigned int i;
+
+    for(i = 0; i < count; i++) {
+        unsigned cmd;
+        cmd = table[i].cmd;
+        switch (cmd) {
+            case REGFLAG_DELAY :
+                MDELAY(table[i].count);
+                break;
+            case REGFLAG_END_OF_TABLE :
+                break;
+            default:
+				dsi_set_cmdq_V2(cmd, table[i].count, table[i].para_list, force_update);
+		}
+    }
+}
+static struct LCM_setting_table lcm_initialization_setting_VCOM[] = {
+    {0xF0,5,{0x55,0xAA,0x52,0x08,0x01}},
+    {0xB0,1,{0x05}},
+    {0xB1,1,{0x05}},
+    {0xB2,1,{0x02}},
+    {0xB3,1,{0x0E}},
+    {0xB4,1,{0x08}},
+    {0xB6,1,{0x44}},
+    {0xB7,1,{0x34}},
+    {0xB8,1,{0x24}},
+    {0xB9,1,{0x26}},
+    {0xBA,1,{0x24}},
+    {0xBC,3,{0x00,0x98,0x00}},
+    {0xBD,3,{0x00,0x98,0x00}},
+    {0xBE,1,{0x63}},			// VCOM setting
+    {0xC0,2,{0x00,0x08}},
+    {0xCF,1,{0x00}},
+
+    {0xD1,16,{0x00,0x47,0x00,0x60,0x00,0x81,0x00,0x9B,0x00,0xAC,0x00,0xCE,0x00,0xEB,0x01,0x13}},
+    {0xD2,16,{0x01,0x34,0x01,0x6B,0x01,0x97,0x01,0xD9,0x02,0x0F,0x02,0x10,0x02,0x46,0x02,0x82}},
+    {0xD3,16,{0x02,0xA8,0x02,0xDF,0x03,0x03,0x03,0x2D,0x03,0x48,0x03,0x61,0x03,0x62,0x03,0x63}},
+    {0xD4,4,{0x03,0x78,0x03,0x7B}},
+    {0xD5,16,{0x00,0x4C,0x00,0x60,0x00,0x7F,0x00,0x97,0x00,0xAB,0x00,0xCC,0x00,0xE7,0x01,0x13}},
+    {0xD6,16,{0x01,0x34,0x01,0x69,0x01,0x94,0x01,0xD7,0x02,0x0D,0x02,0x0F,0x02,0x45,0x02,0x81}},
+    {0xD7,16,{0x02,0xA8,0x02,0xDC,0x02,0xFF,0x03,0x30,0x03,0x4F,0x03,0x78,0x03,0x9D,0x03,0xE6}},
+    {0xD8,4,{0x03,0xFE,0x03,0xFE}},
+    {0xD9,16,{0x00,0x52,0x00,0x60,0x00,0x78,0x00,0x8D,0x00,0x9F,0x00,0xBE,0x00,0xDA,0x01,0x07}},
+    {0xDD,16,{0x01,0x29,0x01,0x5F,0x01,0x8C,0x01,0xD1,0x02,0x08,0x02,0x0A,0x02,0x42,0x02,0x7D}},
+    {0xDE,16,{0x02,0xA4,0x02,0xDA,0x02,0xFF,0x03,0x38,0x03,0x66,0x03,0xFB,0x03,0xFC,0x03,0xFD}},
+    {0xDF,4,{0x03,0xFE,0x03,0xFE}},
+    {0xE0,16,{0x00,0x47,0x00,0x60,0x00,0x81,0x00,0x9B,0x00,0xAC,0x00,0xCE,0x00,0xEB,0x01,0x13}},
+    {0xE1,16,{0x01,0x34,0x01,0x6B,0x01,0x97,0x01,0xD9,0x02,0x0F,0x02,0x10,0x02,0x46,0x02,0x82}},
+    {0xE2,16,{0x02,0xA8,0x02,0xDF,0x03,0x03,0x03,0x2D,0x03,0x48,0x03,0x61,0x03,0x62,0x03,0x63}},
+    {0xE3,4,{0x03,0x78,0x03,0x7B}},
+    {0xE4,16,{0x00,0x4C,0x00,0x60,0x00,0x7F,0x00,0x97,0x00,0xAB,0x00,0xCC,0x00,0xE7,0x01,0x13}},
+    {0xE5,16,{0x01,0x34,0x01,0x69,0x01,0x94,0x01,0xD7,0x02,0x0D,0x02,0x0F,0x02,0x45,0x02,0x81}},
+    {0xE6,16,{0x02,0xA8,0x02,0xDC,0x02,0xFF,0x03,0x30,0x03,0x4F,0x03,0x78,0x03,0x9D,0x03,0xE6}},
+    {0xE7,4,{0x03,0xFE,0x03,0xFE}},
+    {0xE8,16,{0x00,0x52,0x00,0x60,0x00,0x78,0x00,0x8D,0x00,0x9F,0x00,0xBE,0x00,0xDA,0x01,0x07}},
+    {0xE9,16,{0x01,0x29,0x01,0x5F,0x01,0x8C,0x01,0xD1,0x02,0x08,0x02,0x0A,0x02,0x42,0x02,0x7D}},
+    {0xEA,16,{0x02,0xA4,0x02,0xDA,0x02,0xFF,0x03,0x38,0x03,0x66,0x03,0xFB,0x03,0xFC,0x03,0xFD}},
+    {0xEB,4,{0x03,0xFE,0x03,0xFE}},
+
+    {0xF0,5,{0x55,0xAA,0x52,0x08,0x00}},
+    {0xB3,1,{0x00}},
+    {0xB1,3,{0x7C,0x00,0x01}},
+    {0xB6,1,{0x03}},
+    {0xB4,1,{0x78}},
+    {0xB8,4,{0x01,0x03,0x03,0x03}},
+    {0xBB,3,{0x53,0x03,0x53}},
+    {0xC9,6,{0x63,0x06,0x0D,0x1A,0x17,0x00}},
+    {0x35,1,{0x00}},
+    {0xFF,4,{0xAA,0x55,0x25,0x01}},
+    {0x6F,1,{0x0A}},
+    {0xFA,1,{0x03}},
+
+    {0x6F,1,{0x06}},
+    {0xF3,1,{0x11}},
+
+//*************************************
+// Sleep Out
+//*************************************
+    {0x11, 1, {0x00}},
+ 
+    {REGFLAG_DELAY, 120, {}},
+//*************************************
+// Display On
+//*************************************
+    {0x29, 1, {0x00}},
+    {REGFLAG_END_OF_TABLE, 0x00, {}}
+};
+static struct LCM_setting_table lcm_initialization_setting[] = {
+    {0xF0,5,{0x55,0xAA,0x52,0x08,0x01}},
+    {0xB0,1,{0x05}},
+    {0xB1,1,{0x05}},
+    {0xB2,1,{0x02}},
+    {0xB3,1,{0x0E}},
+    {0xB4,1,{0x08}},
+    {0xB6,1,{0x44}},
+    {0xB7,1,{0x34}},
+    {0xB8,1,{0x24}},
+    {0xB9,1,{0x26}},
+    {0xBA,1,{0x24}},
+    {0xBC,3,{0x00,0x98,0x00}},
+    {0xBD,3,{0x00,0x98,0x00}},
+    //U8 cmd14[]={0xBE,0x63}}, Vcom
+    {0xC0,2,{0x00,0x08}},
+    {0xCF,1,{0x00}},
+
+    {0xD1,16,{0x00,0x47,0x00,0x60,0x00,0x81,0x00,0x9B,0x00,0xAC,0x00,0xCE,0x00,0xEB,0x01,0x13}},
+    {0xD2,16,{0x01,0x34,0x01,0x6B,0x01,0x97,0x01,0xD9,0x02,0x0F,0x02,0x10,0x02,0x46,0x02,0x82}},
+    {0xD3,16,{0x02,0xA8,0x02,0xDF,0x03,0x03,0x03,0x2D,0x03,0x48,0x03,0x61,0x03,0x62,0x03,0x63}},
+    {0xD4,4,{0x03,0x78,0x03,0x7B}},
+    {0xD5,16,{0x00,0x4C,0x00,0x60,0x00,0x7F,0x00,0x97,0x00,0xAB,0x00,0xCC,0x00,0xE7,0x01,0x13}},
+    {0xD6,16,{0x01,0x34,0x01,0x69,0x01,0x94,0x01,0xD7,0x02,0x0D,0x02,0x0F,0x02,0x45,0x02,0x81}},
+    {0xD7,16,{0x02,0xA8,0x02,0xDC,0x02,0xFF,0x03,0x30,0x03,0x4F,0x03,0x78,0x03,0x9D,0x03,0xE6}},
+    {0xD8,4,{0x03,0xFE,0x03,0xFE}},
+    {0xD9,16,{0x00,0x52,0x00,0x60,0x00,0x78,0x00,0x8D,0x00,0x9F,0x00,0xBE,0x00,0xDA,0x01,0x07}},
+    {0xDD,16,{0x01,0x29,0x01,0x5F,0x01,0x8C,0x01,0xD1,0x02,0x08,0x02,0x0A,0x02,0x42,0x02,0x7D}},
+    {0xDE,16,{0x02,0xA4,0x02,0xDA,0x02,0xFF,0x03,0x38,0x03,0x66,0x03,0xFB,0x03,0xFC,0x03,0xFD}},
+    {0xDF,4,{0x03,0xFE,0x03,0xFE}},
+    {0xE0,16,{0x00,0x47,0x00,0x60,0x00,0x81,0x00,0x9B,0x00,0xAC,0x00,0xCE,0x00,0xEB,0x01,0x13}},
+    {0xE1,16,{0x01,0x34,0x01,0x6B,0x01,0x97,0x01,0xD9,0x02,0x0F,0x02,0x10,0x02,0x46,0x02,0x82}},
+    {0xE2,16,{0x02,0xA8,0x02,0xDF,0x03,0x03,0x03,0x2D,0x03,0x48,0x03,0x61,0x03,0x62,0x03,0x63}},
+    {0xE3,4,{0x03,0x78,0x03,0x7B}},
+    {0xE4,16,{0x00,0x4C,0x00,0x60,0x00,0x7F,0x00,0x97,0x00,0xAB,0x00,0xCC,0x00,0xE7,0x01,0x13}},
+    {0xE5,16,{0x01,0x34,0x01,0x69,0x01,0x94,0x01,0xD7,0x02,0x0D,0x02,0x0F,0x02,0x45,0x02,0x81}},
+    {0xE6,16,{0x02,0xA8,0x02,0xDC,0x02,0xFF,0x03,0x30,0x03,0x4F,0x03,0x78,0x03,0x9D,0x03,0xE6}},
+    {0xE7,4,{0x03,0xFE,0x03,0xFE}},
+    {0xE8,16,{0x00,0x52,0x00,0x60,0x00,0x78,0x00,0x8D,0x00,0x9F,0x00,0xBE,0x00,0xDA,0x01,0x07}},
+    {0xE9,16,{0x01,0x29,0x01,0x5F,0x01,0x8C,0x01,0xD1,0x02,0x08,0x02,0x0A,0x02,0x42,0x02,0x7D}},
+    {0xEA,16,{0x02,0xA4,0x02,0xDA,0x02,0xFF,0x03,0x38,0x03,0x66,0x03,0xFB,0x03,0xFC,0x03,0xFD}},
+    {0xEB,4,{0x03,0xFE,0x03,0xFE}},
+
+    {0xF0,5,{0x55,0xAA,0x52,0x08,0x00}},
+    {0xB3,1,{0x00}},//////////////////////////添加B3，00////////////
+    {0xB1,3,{0x7C,0x00,0x01}},
+    {0xB6,1,{0x03}},
+    {0xB4,1,{0x78}},
+    {0xB8,4,{0x01,0x03,0x03,0x03}},
+    {0xBB,3,{0x53,0x03,0x53}},
+    {0xC9,6,{0x63,0x06,0x0D,0x1A,0x17,0x00}},
+    {0x35,1,{0x00}},
+    {0xFF,4,{0xAA,0x55,0x25,0x01}},
+    {0x6F,1,{0x0A}},
+    {0xFA,1,{0x03}},
+
+    {0x6F,1,{0x06}},
+    {0xF3,1,{0x11}},
+
+//*************************************
+// Sleep Out
+//*************************************
+    {0x11, 1, {0x00}},
+ 
+    {REGFLAG_DELAY, 120, {}},
+//*************************************
+// Display On
+//*************************************
+    {0x29, 1, {0x00}},
+    {REGFLAG_END_OF_TABLE, 0x00, {}}
+};
 
 static void lcm_get_params(LCM_PARAMS *params)
 {
-	memset(params, 0, sizeof(LCM_PARAMS));
-	params->type   = LCM_TYPE_DSI;
-	params->width  = FRAME_WIDTH;
-	params->height = FRAME_HEIGHT;
-	params->dsi.mode   = BURST_VDO_MODE; //SYNC_EVENT_VDO_MODE;
-	//params->dsi.lcm_ext_te_monitor = TRUE;
-	
-	// DSI
-	/* Command mode setting */
-	params->dsi.LANE_NUM				= LCM_TWO_LANE;
-	//The following defined the fomat for data coming from LCD engine.
-	params->dsi.data_format.color_order = LCM_COLOR_ORDER_RGB;
-	params->dsi.data_format.trans_seq	= LCM_DSI_TRANS_SEQ_MSB_FIRST;
-	params->dsi.data_format.padding 	= LCM_DSI_PADDING_ON_LSB;
-	params->dsi.data_format.format		= LCM_DSI_FORMAT_RGB888;
-	
-	// Highly depends on LCD driver capability.
-	// Not support in MT6573
-	params->dsi.packet_size=256;
-	
-	// Video mode setting		
-	params->dsi.intermediat_buffer_num = 2;
-	
-	params->dsi.PS=LCM_PACKED_PS_24BIT_RGB888;
-	
-	params->dsi.vertical_sync_active    = 10;//8
-	params->dsi.vertical_backporch		= 40;//50 25
-	params->dsi.vertical_frontporch 	= 40;//20 25
-	params->dsi.vertical_active_line	= FRAME_HEIGHT; 
-	
-	params->dsi.horizontal_sync_active	= 10;//5
-	params->dsi.horizontal_backporch	= 40;//14
-	params->dsi.horizontal_frontporch	= 40;//14
-	params->dsi.horizontal_active_pixel = FRAME_WIDTH;
 
-	params->dsi.PLL_CLOCK = 260;//LCM_DSI_6589_PLL_CLOCK_240_5;//this value must be in MTK suggested table
-										//if not config this para, must config other 7 or 3 paras to gen. PLL
-	params->dsi.pll_div1=0x1;		// div1=0,1,2,3;div1_real=1,2,4,4
-	params->dsi.pll_div2=0x1;		// div2=0,1,2,3;div1_real=1,2,4,4	
-	params->dsi.fbk_div =0x10;	    // fref=26MHz, fvco=fref*(fbk_div+1)*fbk_sel_real/(div1_real*div2_real)	
-	params->dsi.fbk_sel=0x1;		// fbk_sel=0,1,2,3;fbk_select_real=1,2,4,4
-	params->dsi.rg_bir=0x5;
-	params->dsi.rg_bic=0x2;
-	params->dsi.rg_bp=0xC;
-}
+    memset(params, 0, sizeof(LCM_PARAMS));
+
+    params->type   = LCM_TYPE_DSI;
+
+    params->width  = FRAME_WIDTH;
+    params->height = FRAME_HEIGHT;
+
+#if (LCM_DSI_CMD_MODE)
+    params->dsi.mode   = CMD_MODE;
+#else
+    params->dsi.mode   = BURST_VDO_MODE;
+#endif
+
+    // DSI
+    /* Command mode setting */
+    params->dsi.LANE_NUM				= LCM_TWO_LANE;
+    //The following defined the fomat for data coming from LCD engine.
+    params->dsi.data_format.color_order = LCM_COLOR_ORDER_RGB;
+    params->dsi.data_format.trans_seq   = LCM_DSI_TRANS_SEQ_MSB_FIRST;
+    params->dsi.data_format.padding     = LCM_DSI_PADDING_ON_LSB;
+    params->dsi.data_format.format      = LCM_DSI_FORMAT_RGB888;
+
+    // Highly depends on LCD driver capability.
+    // Not support in MT6573
+    params->dsi.packet_size=256;
+
+    // Video mode setting		
+    params->dsi.intermediat_buffer_num = 0; //2;
+
+    params->dsi.PS=LCM_PACKED_PS_24BIT_RGB888;
+
+    params->dsi.vertical_sync_active				= 4;//2
+    params->dsi.vertical_backporch				= 40;//50
+    params->dsi.vertical_frontporch				= 40;//20
+    params->dsi.vertical_active_line				= FRAME_HEIGHT; 
+
+    params->dsi.horizontal_sync_active				= 4;//4//
+    params->dsi.horizontal_backporch				= 80;
+    params->dsi.horizontal_frontporch				= 80;
+    //params->dsi.horizontal_blanking_pixel 			=60; //60;
+    params->dsi.horizontal_active_pixel				= FRAME_WIDTH;
+    //params->dsi.noncont_clock = TRUE; 
+
+
+    // Use EXT TE monitor
+    //params->dsi.lcm_ext_te_monitor = 1;
+
+
+    // Bit rate calculation
+    params->dsi.pll_div1=0;		// div1=0,1,2,3;div1_real=1,2,4,4 ----0: 546Mbps  1:273Mbps
+    params->dsi.pll_div2=1;		// div2=0,1,2,3;div1_real=1,2,4,4	
+    params->dsi.fbk_div =21;          // fref=26MHz, fvco=fref*(fbk_div+1)*2/(div1_real*div2_real//20)	///==24
+	//params->dsi.PLL_CLOCK = 292;    //clock set 292MHz, so bit rate 292*2MHz
+	//params->dsi.ssc_disable=1;    //1:disable ssc , 0:enable ssc
+
+    }
 
 static void lcm_init(void)
 {
-	unsigned int data_array[16];    
+    static unsigned char buffer_ef[1] = { 0xFF };
+    unsigned int data_array[16];
+    
 	SET_RESET_PIN(1);
 	MDELAY(20);
 	SET_RESET_PIN(0);
 	MDELAY(20);
 	SET_RESET_PIN(1);
-	MDELAY(50);
+	MDELAY(120);
 
-	data_array[0]=0x00053902;
-	data_array[1]=0x2555aaff;
-	data_array[2]=0x00000001;
-	dsi_set_cmdq(&data_array,3,1);
+#ifndef BUILD_LK
+	printk("OTP buffer_ef = 0x%x\n", buffer_ef[0]);
+#endif
+	if(buffer_ef[0] == 0xFF){
+		//OTP check
+		data_array[0]=0x00063902;
+		data_array[1]=0x52AA55F0;
+		data_array[2]=0x00000108;
+		dsi_set_cmdq(data_array, 3, 1);
+		MDELAY(5);
 
-	data_array[0]=0x00363902;
-	data_array[1]=0x4A0000F2;
-	data_array[2]=0x0000A80A;
-	data_array[3]=0x00000000;
-	data_array[4]=0x00000000;
-	data_array[5]=0x000B0000;
-	data_array[6]=0x00000000;
-	data_array[7]=0x00000000;
-	data_array[8]=0x51014000;
-	data_array[9]=0x01000100;
-	dsi_set_cmdq(&data_array,10,1);
+		data_array[0] = 0x00013700;
+		dsi_set_cmdq(data_array, 1, 1);
+		MDELAY(5);
 
-	data_array[0]=0x00083902;
-	data_array[1]=0x070302F3;
-	data_array[2]=0x0DD18845;
-	dsi_set_cmdq(&data_array,3,1);
-	//page 0
-
-	data_array[0]=0x00063902;
-	data_array[1]=0x52AA55F0;
-	data_array[2]=0x00000008;
-	dsi_set_cmdq(&data_array,3,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x0000CCB1;	
-	dsi_set_cmdq(&data_array,2,1);
-/*
-	data_array[0]=0x05B61500;
-	dsi_set_cmdq(&data_array,1,1);
-
-	data_array[0]=0x00023902;
-	data_array[1]=0x007272B7;
-	dsi_set_cmdq(&data_array,2,1);
-*/
-	data_array[0]=0x00053902;
-	data_array[1]=0x020201B8;
-	data_array[2]=0x00000002;
-	dsi_set_cmdq(&data_array,3,1);
-/*
-	data_array[0]=0x33BB1500;
-	dsi_set_cmdq(&data_array,1,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x000004BC;
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00063902;
-	data_array[1]=0x104E01BD;
-	data_array[2]=0x00000120;
-	//data_array[1]=0x084101BD;
-	//data_array[2]=0x00000140;
-	dsi_set_cmdq(&data_array,3,1);
-*/
-	data_array[0]=0x00073902;
-	data_array[1]=0x0D0653C9;
-	data_array[2]=0x0000171a;
-	dsi_set_cmdq(&data_array,3,1);
-
-/////////////page 1
-
-
-	
-  data_array[0]=0x00063902;
-	data_array[1]=0x52AA55F0;        //page 1
-	data_array[2]=0x00000108;
-	dsi_set_cmdq(&data_array,3,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x050505B0;		//AVDD: 5.5V
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x050505B1;		// AVEE: -5.5V
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x010101B2;		// VCL: -4.0V
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x0d0d0dB3;		// VGH: 14V
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x090909B4;		// VGLX: -12.0V
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x444444B6;		// AVDD: 3.0x
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x444444B7;		// AVEE: -2.0x
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x131313B8;		// VCL: -2.0x
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00043902;		//VGH: AVDD - AVEE + VDDB
-	data_array[1]=0x242424B9;
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x242424BA;		// VGLX: AVEE + VCL - AVDD0
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x008000BC;	// VGMP: 5.0V, VGSP: 0.3V   0x98
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00043902;
-	data_array[1]=0x008000BD;	// VGMN: -5.0V, VGSN: -0.3V
-	dsi_set_cmdq(&data_array,2,1);
-
-	//data_array[0]=0x01Bf1500;	
-	//dsi_set_cmdq(&data_array,1,1);
-
-	data_array[0]=0x43Be1500;	
-	dsi_set_cmdq(&data_array,1,1);
-
-	data_array[0]=0x00033902;
-	data_array[1]=0x000004C0;	
-	dsi_set_cmdq(&data_array,2,1);
-
-	data_array[0]=0x00ca1500;	
-	dsi_set_cmdq(&data_array,1,1);
-		data_array[0]=0x04cf1500;	
-	dsi_set_cmdq(&data_array,1,1);
-
-
-	
-	data_array[0]=0x00C21500;	
-	dsi_set_cmdq(&data_array,1,1);
-	/*GAMMA SETTINGS*/
-  
-        data_array[0]=0x00053902;
-        data_array[1]=0x0d1006D0;
-        data_array[2]=0x0000000f;
-        dsi_set_cmdq(&data_array,3,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x001600D1;
-        data_array[2]=0x003e0023;
-        data_array[3]=0x00720058;
-        data_array[4]=0x00a90095;
-        data_array[5]=0x000000e0;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x001600D5;
-        data_array[2]=0x003e0023;
-        data_array[3]=0x00720058;
-        data_array[4]=0x00a90095;
-        data_array[5]=0x000000e0;
-        dsi_set_cmdq(&data_array,6,1);
-
-                data_array[0]=0x00113902;
-        data_array[1]=0x001600D9;
-        data_array[2]=0x003e0023;
-        data_array[3]=0x00720058;
-        data_array[4]=0x00a90095;
-        data_array[5]=0x000000e0;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x001600e0;
-        data_array[2]=0x003e0023;
-        data_array[3]=0x00720058;
-        data_array[4]=0x00a90095;
-        data_array[5]=0x000000e0;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x001600e4;
-        data_array[2]=0x003e0023;
-        data_array[3]=0x00720058;
-        data_array[4]=0x00a90095;
-        data_array[5]=0x000000e0;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x001600e8;
-        data_array[2]=0x003e0023;
-        data_array[3]=0x00720058;
-        data_array[4]=0x00a90095;
-        data_array[5]=0x000000e0;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x010601D2;
-        data_array[2]=0x01710141;
-        data_array[3]=0x01FA01bb;
-        data_array[4]=0x023902fc;
-        data_array[5]=0x0000007e;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x010601D6;
-        data_array[2]=0x01710141;
-        data_array[3]=0x01FA01bb;
-        data_array[4]=0x023902fc;
-        data_array[5]=0x0000007e;
-        dsi_set_cmdq(&data_array,6,1);
-        
-        data_array[0]=0x00113902;
-        data_array[1]=0x010601Dd;
-        data_array[2]=0x01710141;
-        data_array[3]=0x01FA01bb;
-        data_array[4]=0x023902fc;
-        data_array[5]=0x0000007e;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x010601e1;
-        data_array[2]=0x01710141;
-        data_array[3]=0x01FA01bb;
-        data_array[4]=0x023902fc;
-        data_array[5]=0x0000007e;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x010601e5;
-        data_array[2]=0x01710141;
-        data_array[3]=0x01FA01bb;
-        data_array[4]=0x023902fc;
-        data_array[5]=0x0000007e;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x010601e9;
-        data_array[2]=0x01710141;
-        data_array[3]=0x01FA01bb;
-        data_array[4]=0x023902fc;
-        data_array[5]=0x0000007e;
-        dsi_set_cmdq(&data_array,6,1);
-
-        
-        data_array[0]=0x00113902;
-        data_array[1]=0x02a402D3;
-        data_array[2]=0x030403e0;
-        data_array[3]=0x0363033d;
-        data_array[4]=0x03ad038e;
-        data_array[5]=0x000000c8;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x02a402D7;
-        data_array[2]=0x030403e0;
-        data_array[3]=0x0363033d;
-        data_array[4]=0x03ad038e;
-        data_array[5]=0x000000c8;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x02a402De;
-        data_array[2]=0x030403e0;
-        data_array[3]=0x0363033d;
-        data_array[4]=0x03ad038e;
-        data_array[5]=0x000000c8;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x02a402e2;
-        data_array[2]=0x030403e0;
-        data_array[3]=0x0363033d;
-        data_array[4]=0x03ad038e;
-        data_array[5]=0x000000c8;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x02a402e6;
-        data_array[2]=0x030403e0;
-        data_array[3]=0x0363033d;
-        data_array[4]=0x03ad038e;
-        data_array[5]=0x000000c8;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00113902;
-        data_array[1]=0x02a402ea;
-        data_array[2]=0x030403e0;
-        data_array[3]=0x0363033d;
-        data_array[4]=0x03ad038e;
-        data_array[5]=0x000000c8;
-        dsi_set_cmdq(&data_array,6,1);
-
-        data_array[0]=0x00053902;
-        data_array[1]=0x03f103D4;
-        data_array[2]=0x000000ff;
-        dsi_set_cmdq(&data_array,3,1);
-
-        data_array[0]=0x00053902;
-        data_array[1]=0x03f103D8;
-        data_array[2]=0x000000ff;
-        dsi_set_cmdq(&data_array,3,1);
-
-        data_array[0]=0x00053902;
-        data_array[1]=0x03f103df;
-        data_array[2]=0x000000ff;
-        dsi_set_cmdq(&data_array,3,1);
-
-        data_array[0]=0x00053902;
-        data_array[1]=0x03f103e3;
-        data_array[2]=0x000000ff;
-        dsi_set_cmdq(&data_array,3,1);
-
-        data_array[0]=0x00053902;
-        data_array[1]=0x03f103e7;
-        data_array[2]=0x000000ff;
-        dsi_set_cmdq(&data_array,3,1);
-
-        data_array[0]=0x00053902;
-        data_array[1]=0x03f103eb;
-        data_array[2]=0x000000ff;
-        dsi_set_cmdq(&data_array,3,1);
-
-        
-	/*GAMMA SETTINGS END*/
-	
-
-
-	data_array[0]=0x773A1500;
-	dsi_set_cmdq(&data_array,1,1);
-
-    data_array[0]=0x00361500;
-	dsi_set_cmdq(&data_array,1,1);
-
-	data_array[0]=0x00351500;
-	dsi_set_cmdq(&data_array,1,1);
-
-	data_array[0]=0x00110500;
-	dsi_set_cmdq(&data_array,1,1);
-	MDELAY(20);
-
-	data_array[0]=0x00291500;
-	dsi_set_cmdq(&data_array,1,1);
-	
-	data_array[0]=0x00320500;
-	dsi_set_cmdq(&data_array,1,1);		
-	MDELAY(150);
+		read_reg_v2(0xEF,buffer_ef, 1);
+		MDELAY(5);
+	}
+#ifdef BUILD_LK
+	printf("OTP buffer_ef = 0x%x\n", buffer_ef[0]);
+#endif
+	if((buffer_ef[0] & 0xF0) == 0x80)      		//LCD not otp mode, need set VCOM 0xBE register
+		push_table(lcm_initialization_setting_VCOM, sizeof(lcm_initialization_setting_VCOM) / sizeof(struct LCM_setting_table), 1);
+	else
+		push_table(lcm_initialization_setting, sizeof(lcm_initialization_setting) / sizeof(struct LCM_setting_table), 1);
 }
 
 static void lcm_suspend(void)
 {
 	unsigned int data_array[16];
-	
+
 	data_array[0]=0x00280500;
 	dsi_set_cmdq(&data_array,1,1);
 	MDELAY(20);
+
 	data_array[0]=0x00100500;
 	dsi_set_cmdq(&data_array,1,1);
-	data_array[0]=0x00220500;
-	dsi_set_cmdq(&data_array,1,1);	
 	MDELAY(150);
-}
 
-static void lcm_resume(void)
-{
-	lcm_init();	
-	
-	/*
-	unsigned int data_array[16];
-	data_array[0]=0x00110500;
-	dsi_set_cmdq(&data_array,1,1);
-	MDELAY(150);
-	data_array[0]=0x00290500;
-	dsi_set_cmdq(&data_array,1,1);
-	MDELAY(20);
-	*/
-}
-
-static unsigned int lcm_compare_id(void)
-{
-	#if 1
-	unsigned int  data_array[16];
-	unsigned char buffer_c5[3];
-	unsigned char buffer_04[3];
-	
 	SET_RESET_PIN(1);
 	MDELAY(20);
 	SET_RESET_PIN(0);
 	MDELAY(20);
 	SET_RESET_PIN(1);
-	MDELAY(50);
+	MDELAY(150);
+}
 
-	data_array[0] = 0x00033700;
-	dsi_set_cmdq(data_array, 1, 1);
-	read_reg_v2(0x04, buffer_04, 3);
+static int lcm_esd_check()
+{
+#ifndef BUILD_UBOOT
+#ifndef BUILD_LK
 
-	data_array[0] = 0x00033700;
-	dsi_set_cmdq(data_array, 1, 1);
-	read_reg_v2(0x04, buffer_04, 3);
-	
+	unsigned int array[16];
+	unsigned char buffer_0a[1];
+	array[0] = 0x00013700;
+	dsi_set_cmdq(array, 1, 1);
+	read_reg_v2(0x0A,buffer_0a, 1);
+
+	printk("lcm 0x0a is %x--------------\n", buffer_0a[0]);
+	if(buffer_0a[0] == 0x9c)
+		return 0;
+	else
+		return 1;
+#endif
+#endif
+}
+static unsigned int lcm_esd_recover(void)
+{
+#ifndef BUILD_UBOOT
+#ifndef BUILD_LK
+	lcm_init();
+	return 1;
+#endif 
+#endif 
+}
+static void lcm_resume(void)
+{
+    lcm_init();
+#ifndef BUILD_LK
+	printk("LCD display initial end!\n");
+#endif
+}
+
+static unsigned int lcm_compare_id(void)
+{
+	unsigned int id = 0, id1 = 0, id2 = 0;
+	unsigned char buffer[2];
+	unsigned int data_array[16];
+	static int checktimes = 1;
+
+	if (checktimes == 3)
+		return 1;
+	checktimes++;  				// checktimes should be less than 3 times, there is an error for LCD (NO LCD or LCD is broken).
+
+	SET_RESET_PIN(1);  			//NOTE:should reset LCM firstly
+	MDELAY(10);
+	SET_RESET_PIN(0);
+	MDELAY(10);
+	SET_RESET_PIN(1);
+	MDELAY(10);	
+
+		
+//*************Enable CMD2 Page1  *******************//
 	data_array[0]=0x00063902;
 	data_array[1]=0x52AA55F0;
 	data_array[2]=0x00000108;
-	dsi_set_cmdq(&data_array,3,1);
-	
-	data_array[0] = 0x00033700;
+	dsi_set_cmdq(data_array, 3, 1);
+	MDELAY(10); 
+
+	data_array[0] = 0x00023700;		// read id return two byte,version and id
 	dsi_set_cmdq(data_array, 1, 1);
-	read_reg_v2(0xC5, buffer_c5, 3);
+	MDELAY(10); 
+	read_reg_v2(0xC5, buffer, 2);
+	id1 = buffer[0]; 			//we only need ID
+	id2= buffer[1]; 			//we test buffer 1
+	id = (id1<<8) | id2;
 
-	if ((buffer_c5[0]==0x55)&&(buffer_c5[1]==0x17)){
-		return 1;
-	}else{
-		return 1;
-	}
-#endif
-#if 0
-	unsigned int lcd_id1_pin = 0;
-	unsigned int lcd_id2_pin = 0;
-	if (!first_inited)
-	{
-		SET_RESET_PIN(1);
-		SET_RESET_PIN(0);
-		MDELAY(50);//Must > 10ms
-		SET_RESET_PIN(1);
-		MDELAY(300);//Must > 120ms
-
-		mt_set_gpio_mode(GPIO_LCD_ID1_PIN, GPIO_MODE_GPIO);
-		mt_set_gpio_dir(GPIO_LCD_ID1_PIN, GPIO_DIR_IN);
-		mt_set_gpio_pull_enable(GPIO_LCD_ID1_PIN, GPIO_PULL_ENABLE);
-		mt_set_gpio_pull_select(GPIO_LCD_ID1_PIN, GPIO_PULL_DOWN);
-		mt_set_gpio_mode(GPIO_LCD_ID2_PIN, GPIO_MODE_GPIO);
-		mt_set_gpio_dir(GPIO_LCD_ID2_PIN, GPIO_DIR_IN);
-		mt_set_gpio_pull_enable(GPIO_LCD_ID2_PIN, GPIO_PULL_ENABLE);
-		mt_set_gpio_pull_select(GPIO_LCD_ID2_PIN, GPIO_PULL_DOWN);
-		MDELAY(50);
-		
-		lcd_id1_pin = mt_get_gpio_in(GPIO_LCD_ID1_PIN);
-		lcd_id2_pin = mt_get_gpio_in(GPIO_LCD_ID2_PIN);
-
-		lcd_id_pin = (lcd_id2_pin << 1) | lcd_id1_pin;
-		first_inited = 1;
-	}
-	#ifndef BUILD_LK
-	printk("<0>nt35517: lcd_id2_pin=%d,lcd_id1_pin=%d\n",lcd_id2_pin,lcd_id1_pin);
-	printk("<0> 2222222222222222222222222222222222\n");
+	
+	#ifdef BUILD_LK
+		printf("lcm_compare_id NT35517 uboot %s \n", __func__);
+		printf("lcm_compare_id %s id = 0x%08x \n", __func__, id);
+	#else
+		printk("lcm_compare_id NT35517 uboot %s \n", __func__);
+		printk("lcm_compare_id %s id = 0x%08x \n", __func__, id);
 	#endif
-	  if (lcd_id2_pin == 1) 
-	    return 1;
-    else 
-	    return 1;
-	    #endif
+
+    return (LCM_ID_NT35517 == id)?1:0;
+
 }
 
-LCM_DRIVER nt35517_dsi_vdo_lcm_drv = 
+LCM_DRIVER  nt35517_dsi_vdo_lcm_drv = 
 {
-	.name			= "nt35517_dsi_vedio",
-	.set_util_funcs = lcm_set_util_funcs,
-	.get_params     = lcm_get_params,
-	.init           = lcm_init,
-	.suspend        = lcm_suspend,
-	.resume         = lcm_resume,
-	.compare_id     = lcm_compare_id,	
+    .name			= "nt35517_dsi_vedio",
+    .set_util_funcs = lcm_set_util_funcs,
+    .get_params     = lcm_get_params,
+    .init           = lcm_init,
+    .suspend        = lcm_suspend,
+    .resume         = lcm_resume,
+    .compare_id     = lcm_compare_id,
+#ifndef MMITEST_ESD_SKIP
+   .esd_check      = lcm_esd_check,
+   .esd_recover    = lcm_esd_recover,
+#endif
 };

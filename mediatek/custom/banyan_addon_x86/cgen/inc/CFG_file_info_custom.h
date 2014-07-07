@@ -1,23 +1,3 @@
-/*****************************************************************************
- *
- * Filename:
- * ---------
- *   CFG_file_info_custom.h
- *
- * Project:
- * --------
- *   YuSu
- *
- * Description:
- * ------------
- *   Configuration File List for Customer
- *
- *
- * Author:
- * -------
- *   Nick Huang (mtk02183)
- *
- ****************************************************************************/
 
 #ifndef __CFG_FILE_INFO_CUSTOM_H__
 #define __CFG_FILE_INFO_CUSTOM_H__

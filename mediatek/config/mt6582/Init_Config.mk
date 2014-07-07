@@ -53,7 +53,6 @@ PRODUCT_COPY_FILES += $(strip \
                          ) \
                        )
 
-
 ifeq ($(strip $(HAVE_SRSAUDIOEFFECT_FEATURE)),yes)
   PRODUCT_COPY_FILES += $(MTK_ROOT_CONFIG_OUT)/srs_processing.cfg:system/data/srs_processing.cfg
 endif
@@ -98,5 +97,81 @@ endif
 _throttle_sh := $(MTK_ROOT_CONFIG_OUT)/configs/throttle.sh
 ifneq ($(wildcard $(_throttle_sh)),)
 PRODUCT_COPY_FILES += $(_throttle_sh):system/etc/throttle.sh
+endif
+
+##### INSTALL rio_5_compass ##########
+_rio_5_compass_cfg := $(MTK_ROOT_CONFIG_OUT)/configs/accel_nvm
+ifneq ($(wildcard $(_rio_5_compass_cfg)),)
+PRODUCT_COPY_FILES += $(_rio_5_compass_cfg):system/etc/accel_nvm
+endif
+
+##### rio5 AAL ###################
+ifeq ($(MTK_AAL_SUPPORT),yes)
+PRODUCT_COPY_FILES += \
+    $(MTK_PATH_PLATFORM)/hardware/aal/inc/cust_labc_map.txt:system/etc/cust_labc_map.txt \
+    $(MTK_PATH_PLATFORM)/hardware/aal/inc/mtk_aal_config.txt:system/etc/mtk_aal_config.txt
+endif
+##################################
+
+##### INSTALL jrdcom ##########
+PRODUCT_COPY_FILES += \
+	$(TOP)/vendor/jrdcom/etc/rspermtcl.xml:etc/permissions/rspermtcl.xml
+
+PRODUCT_COPY_FILES += \
+                  $(TOP)/vendor/jrdcom/libs/libSwypeCore.3.26.92.39261.so:system/lib/libSwypeCore.3.26.92.39261.so \
+                  $(TOP)/vendor/jrdcom/libs/libpsrntcl.so:system/lib/libpsrntcl.so \
+                  $(TOP)/vendor/jrdcom/libs/libjzlibtcl.so:system/lib/libjzlibtcl.so \
+                  $(TOP)/vendor/jrdcom/libs/libsuapp_d_native.so:system/lib/libsuapp_d_native.so \
+                  $(TOP)/vendor/jrdcom/libs/libstlport_shared.so:system/lib/libstlport_shared.so
+
+## Added for CR371771 by xiangrui.huang-001 begin
+ifeq ($(JRD_CU_SUPPORT),no)
+   PRODUCT_COPY_FILES += \
+	$(TOP)/vendor/jrdcom/audio/alarms/Band.mp3:system/media/audio/alarms/Band.mp3 \
+	$(TOP)/vendor/jrdcom/audio/alarms/Buzzer.mp3:system/media/audio/alarms/Buzzer.mp3 \
+	$(TOP)/vendor/jrdcom/audio/alarms/By.mp3:system/media/audio/alarms/By.mp3 \
+	$(TOP)/vendor/jrdcom/audio/alarms/Flute.mp3:system/media/audio/alarms/Flute.mp3 \
+	$(TOP)/vendor/jrdcom/audio/alarms/Guitar.mp3:system/media/audio/alarms/Guitar.mp3 \
+	$(TOP)/vendor/jrdcom/audio/alarms/Revival.mp3:system/media/audio/alarms/Revival.mp3 \
+	$(TOP)/vendor/jrdcom/audio/alarms/Sight.mp3:system/media/audio/alarms/Sight.mp3 \
+	$(TOP)/vendor/jrdcom/audio/alarms/Sober.mp3:system/media/audio/alarms/Sober.mp3 \
+	$(TOP)/vendor/jrdcom/audio/alarms/Tinkle.mp3:system/media/audio/alarms/Tinkle.mp3 \
+	$(TOP)/vendor/jrdcom/audio/alarms/Treat.mp3:system/media/audio/alarms/Treat.mp3 \
+	$(TOP)/vendor/jrdcom/audio/notifications/Bell.mp3:system/media/audio/notifications/Bell.mp3 \
+	$(TOP)/vendor/jrdcom/audio/notifications/Ceramic.mp3:system/media/audio/notifications/Ceramic.mp3 \
+	$(TOP)/vendor/jrdcom/audio/notifications/Digitek.mp3:system/media/audio/notifications/Digitek.mp3 \
+	$(TOP)/vendor/jrdcom/audio/notifications/Doorbell.mp3:system/media/audio/notifications/Doorbell.mp3 \
+	$(TOP)/vendor/jrdcom/audio/notifications/Drop.mp3:system/media/audio/notifications/Drop.mp3 \
+	$(TOP)/vendor/jrdcom/audio/notifications/Mallets.mp3:system/media/audio/notifications/Mallets.mp3 \
+	$(TOP)/vendor/jrdcom/audio/notifications/Message7.mp3:system/media/audio/notifications/Message7.mp3 \
+	$(TOP)/vendor/jrdcom/audio/notifications/Message10.mp3:system/media/audio/notifications/Message10.mp3 \
+	$(TOP)/vendor/jrdcom/audio/notifications/Paillette.mp3:system/media/audio/notifications/Paillette.mp3 \
+	$(TOP)/vendor/jrdcom/audio/notifications/Sign_default.mp3:system/media/audio/notifications/Sign_default.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/Buoy.mp3:system/media/audio/ringtones/Buoy.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/Crunchy_Step.mp3:system/media/audio/ringtones/Crunchy_Step.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/Domino.mp3:system/media/audio/ringtones/Domino.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/Luminosity.mp3:system/media/audio/ringtones/Luminosity.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/Metallic.mp3:system/media/audio/ringtones/Metallic.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/MidTown.mp3:system/media/audio/ringtones/MidTown.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/Modern_Funk.mp3:system/media/audio/ringtones/Modern_Funk.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/NeverSimple.mp3:system/media/audio/ringtones/NeverSimple.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/NotN2It.mp3:system/media/audio/ringtones/NotN2It.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/Poltergeist.mp3:system/media/audio/ringtones/Poltergeist.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/Punky.mp3:system/media/audio/ringtones/Punky.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/Reactive.mp3:system/media/audio/ringtones/Reactive.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/Rockin_Roll.mp3:system/media/audio/ringtones/Rockin_Roll.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/SlappedUp.mp3:system/media/audio/ringtones/SlappedUp.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/SwingYourBody.mp3:system/media/audio/ringtones/SwingYourBody.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/TonePoems.mp3:system/media/audio/ringtones/TonePoems.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/Trot.mp3:system/media/audio/ringtones/Trot.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/WalkingCat.mp3:system/media/audio/ringtones/WalkingCat.mp3 \
+	$(TOP)/vendor/jrdcom/audio/ringtones/X-Ray.mp3:system/media/audio/ringtones/X-Ray.mp3
+endif
+
+_rio_5_compass_cfg := $(MTK_ROOT_CONFIG_OUT)/configs/accel_nvm
+ifeq ("rio_5","$(TARGET_PRODUCT)")
+ifneq ($(wildcard $(_rio_5_compass_cfg)),)
+PRODUCT_COPY_FILES += $(_rio_5_compass_cfg):system/etc/accel_nvm
+endif
 endif
 

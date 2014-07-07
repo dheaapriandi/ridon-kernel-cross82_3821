@@ -1,9 +1,8 @@
+
+
 #ifndef _CAMERA_FEATURE_TYPES_H
 #define _CAMERA_FEATURE_TYPES_H
 
-/*******************************************************************************
-*
-*******************************************************************************/
 #include "camera_custom_types.h"
 
 namespace NSFeature

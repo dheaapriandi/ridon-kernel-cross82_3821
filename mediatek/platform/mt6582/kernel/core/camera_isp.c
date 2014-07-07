@@ -1,12 +1,3 @@
-/******************************************************************************
- * camera_isp.c - Linux ISP Device Driver
- *
- * Copyright 2008-2009 MediaTek Co.,Ltd.
- *
- * DESCRIPTION:
- *     This file provid the other drivers ISP relative functions
- *
- ******************************************************************************/
 
 #include <linux/types.h>
 #include <linux/device.h>
@@ -39,9 +30,6 @@
 #include "../dispsys/ddp_cmdq.h"
 #include <mach/m4u_port.h>
 
-/*******************************************************************************
-* common type define
-********************************************************************************/
 typedef unsigned char       MUINT8;
 typedef unsigned short      MUINT16;
 typedef unsigned int        MUINT32;
@@ -65,9 +53,6 @@ typedef int                 MBOOL;
     #define MFALSE              0
 #endif
 
-/*******************************************************************************
-* LOG marco
-********************************************************************************/
 //#define LOG_MSG(fmt, arg...)    printk(KERN_ERR "[ISP][%s]" fmt,__FUNCTION__, ##arg)
 //#define LOG_DBG(fmt, arg...)    printk(KERN_ERR  "[ISP][%s]" fmt,__FUNCTION__, ##arg)
 //#define LOG_WRN(fmt, arg...)    printk(KERN_ERR "[ISP][%s]Warning" fmt,__FUNCTION__, ##arg)
@@ -80,9 +65,6 @@ typedef int                 MBOOL;
 #define LOG_ERR(format, args...)    xlog_printk(ANDROID_LOG_ERROR  , "ISP", "[%s, line%04d] ERROR: " format, __FUNCTION__, __LINE__, ##args)
 #define LOG_AST(format, args...)    xlog_printk(ANDROID_LOG_ASSERT , "ISP", "[%s, line%04d] ASSERT: " format, __FUNCTION__, __LINE__, ##args)
 
-/*******************************************************************************
-* defined marco
-********************************************************************************/
 
 #define ISP_WR32(addr, data)    iowrite32(data, addr) // For other projects.
 //#define ISP_WR32(addr, data)    mt65xx_reg_sync_writel(data, addr)    // For 89 Only.NEED_TUNING_BY_PROJECT
@@ -92,9 +74,6 @@ typedef int                 MBOOL;
 
 #define OVERRUN_AEE_WARNING
 
-/*******************************************************************************
-* defined value
-********************************************************************************/
 ///////////////////////////////////////////////////////////////////
 //for restricting range in mmap function
 //isp driver
@@ -116,6 +95,8 @@ typedef int                 MBOOL;
 #define GPIO_RANGE          (0x1000)
 #define EFUSE_BASE_ADDR      0x10206000
 #define EFUSE_RANGE          (0x1000)   //0x400,the same with the value in seninf_drv.cpp and page-aligned
+//security concern
+#define ISP_RANGE         (0x10000)
 ///////////////////////////////////////////////////////////////////
 
 
@@ -333,9 +314,6 @@ typedef int                 MBOOL;
                                             ISP_IRQ_DMAX_INT_TG1_GBERR_ST |\
                                             ISP_IRQ_DMAX_INT_TG2_GBERR_ST)
 
-/*******************************************************************************
-* struct & enum
-********************************************************************************/
 
 #define ISP_BUF_SIZE            (4096)
 #define ISP_BUF_SIZE_WRITE      1024
@@ -414,9 +392,6 @@ typedef struct
     ISP_CALLBACK_STRUCT     Callback[ISP_CALLBACK_AMOUNT];
 }ISP_INFO_STRUCT;
 
-/*******************************************************************************
-* internal global data
-********************************************************************************/
 
 // pointer to the kmalloc'd area, rounded up to a page boundary
 static MINT32 *g_pTbl_RTBuf = NULL;
@@ -480,9 +455,6 @@ typedef struct
 
 static SENINF_DEBUG g_seninfDebug[30];
 
-/*******************************************************************************
-*
-********************************************************************************/
 
 //test flag
 #define ISP_KERNEL_MOTIFY_SINGAL_TEST
@@ -547,25 +519,16 @@ int ret = 0;
 
 #endif  // ISP_KERNEL_MOTIFY_SINGAL_TEST
 
-/*******************************************************************************
-* transfer ms to jiffies
-********************************************************************************/
 static __inline MUINT32 ISP_MsToJiffies(MUINT32 Ms)
 {
     return ((Ms * HZ + 512) >> 10);
 }
 
-/*******************************************************************************
-* transfer jiffies to ms
-********************************************************************************/
 static __inline MUINT32 ISP_JiffiesToMs(MUINT32 Jiffies)
 {
     return ((Jiffies*1000)/HZ);
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static __inline MUINT32 ISP_GetIRQState(MUINT32 type, MUINT32 stus)
 {
     MUINT32 ret;
@@ -578,9 +541,6 @@ static __inline MUINT32 ISP_GetIRQState(MUINT32 type, MUINT32 stus)
     return ret;
 }
 
-/*******************************************************************************
-* get kernel time
-********************************************************************************/
 static void ISP_GetTime(MUINT32 *pSec, MUINT32 *pUSec)
 {
     ktime_t Time;
@@ -593,9 +553,6 @@ static void ISP_GetTime(MUINT32 *pSec, MUINT32 *pUSec)
     *pSec = (MUINT64)TimeSec;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_DumpReg(MVOID)
 {
     MINT32 Ret = 0;
@@ -1093,74 +1050,6 @@ static MINT32 ISP_DumpReg(MVOID)
     return Ret;
 }
 
-/*********************************************************************
-1.
-0x4160 = 0x9000, look 0x4164 , it is imgo status 
-0x4160 = 0x9001, look 0x4164 , it is imgo line / pix cnt with sync
-0x4160 = 0x9002, look 0x4164 , it is imgo line / pix cnt without sync
-
-0x4160 = 0x9003, look 0x4164 , it is imgi status
-0x4160 = 0x9004, look 0x4164, it is imgi line / pix cnt with sync
-0x4160 = 0x9005, look 0x4164, it is imgi line / pix cnt without sync
-
-0x4160 = 0x9006, look 0x4164, it is raw_cfa status
-0x4160 = 0x9007, look 0x4164, it is raw_cfa line / pix cnt with sync
-0x4160 = 0x9008, look 0x4164, it is raw_cfa line / pix cnt without sync
-
-0x4160 = 0x9009, look 0x4164, it is rgb_yuv status
-0x4160 = 0x900a, look 0x4164, it is rgb_yuv a line / pix cnt with sync
-0x4160 = 0x900b, look 0x4164, it is rgb_yuv line / pix cnt without sync
-
-0x4160 = 0x900c, look 0x4164, it is yuv_out status
-0x4160 = 0x900d, look 0x4164, it is yuv_out line / pix cnt with sync
-0x4160 = 0x900e, look 0x4164, it is yuv_out line / pix cnt without sync
-
-Status :
-Bit 31:28 ? {sot_reg, eol_reg, eot_reg, sof} , reg means status record
-Bit 27:24 ?{eot, eol,eot, req}
-Bit 23 : rdy
-
-Rdy should be 1    at idle or end of tile, if not 0, 很可能是mdp 沒回rdy 
-Req  should be 0   at idle or end of tile
-
-sot_reg, eol_reg, eot_reg should be 1  at idle or end of tile
-you can also line / pix cnt without sync , to check if 
-
-line count  : bit 31:16
-pix count  :  bit 15:0
-
-
-2. 0x4044 / 0x4048 status
-      It is 無須 enable, 
-It is clear by 0x4020[31] write or read clear,
-It has many information on it,
-You can look coda
-
-3. read CQ status status
-     0x4160 = 0x6000
-     Dump 0x4164 full register
-     Bit 3:0 : cq1 , 1 means idle
-     Bit 7:4 : cq2 , 1 means idle
-    Bit 11:8 : cq3 , 1 means idle
-   Bit 13:12 : apb status , 1 means idle
-
-
-#define ISP_REG_ADDR_CTL_DBG_SET_IMGI_STS                  (0x9003)
-#define ISP_REG_ADDR_CTL_DBG_SET_IMGI_SYNC                (0x9004)
-#define ISP_REG_ADDR_CTL_DBG_SET_IMGI_NO_SYNC          (0x9005)
-
-#define ISP_REG_ADDR_CTL_DBG_SET_CFA_STS                  (0x9006)
-#define ISP_REG_ADDR_CTL_DBG_SET_CFA_SYNC                (0x9007)
-#define ISP_REG_ADDR_CTL_DBG_SET_CFA_NO_SYNC          (0x9008)
-
-#define ISP_REG_ADDR_CTL_DBG_SET_YUV_STS                  (0x9009)
-#define ISP_REG_ADDR_CTL_DBG_SET_YUV_SYNC                (0x900a)
-#define ISP_REG_ADDR_CTL_DBG_SET_YUV_NO_SYNC          (0x900b)
-
-#define ISP_REG_ADDR_CTL_DBG_SET_OUT_STS                  (0x900c)
-#define ISP_REG_ADDR_CTL_DBG_SET_OUT_SYNC                (0x900d)
-#define ISP_REG_ADDR_CTL_DBG_SET_OUT_NO_SYNC          (0x900e)
-*********************************************************************/
 static int ISPDbgPortDump(int params)
 {
     MINT32 Ret = 0;
@@ -1602,9 +1491,6 @@ int MDPReset_Process(int params)
     ISPResetPass2(params);
     return 0;
 }
-/*******************************************************************************
-*
-********************************************************************************/
 static MVOID ISP_EnableClock(MBOOL En)
 {
 #if 0  // using LDVT. Temp solution for LDVT
@@ -1655,9 +1541,6 @@ static MVOID ISP_EnableClock(MBOOL En)
     LOG_DBG("-");
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static inline MVOID ISP_Reset(MVOID)
 {
     // ensure the view finder is disabe. 0: take_picture
@@ -1810,9 +1693,6 @@ static inline MVOID ISP_Reset(MVOID)
     LOG_DBG("-");
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_ReadReg(ISP_REG_IO_STRUCT *pRegIo)
 {
     MUINT32 *pData = (MUINT32 *)pRegIo->Data;
@@ -1832,8 +1712,15 @@ static MINT32 ISP_ReadReg(ISP_REG_IO_STRUCT *pRegIo)
             goto EXIT;
         }
         pData++;
-        
+        if((ISP_ADDR_CAMINF + reg.Addr >= ISP_ADDR) && (ISP_ADDR_CAMINF + reg.Addr < (ISP_ADDR_CAMINF+ISP_RANGE)))
+        {
         reg.Val = ISP_RD32((void *)(ISP_ADDR_CAMINF + reg.Addr));
+        }
+        else
+        {
+            LOG_ERR("Wrong address(0x%x)",(unsigned int)(ISP_ADDR_CAMINF + reg.Addr));
+            reg.Val = 0;
+        }
         if(0 != put_user(reg.Val, pData))
         {
             LOG_ERR("put_user failed");
@@ -1847,9 +1734,6 @@ EXIT:
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_WriteRegToHw(ISP_REG_STRUCT *pReg,MUINT32 Count)
 {
     MINT32 Ret = 0;
@@ -1867,36 +1751,20 @@ static MINT32 ISP_WriteRegToHw(ISP_REG_STRUCT *pReg,MUINT32 Count)
         {
             LOG_DBG("Addr(0x%08X), Val(0x%08X)", (MUINT32)(ISP_ADDR_CAMINF + pReg[i].Addr), (MUINT32)(pReg[i].Val));
         }
+        if(((ISP_ADDR_CAMINF + pReg[i].Addr) >= ISP_ADDR) && ((ISP_ADDR_CAMINF + pReg[i].Addr) < (ISP_ADDR_CAMINF+ISP_RANGE)))
+        {
         ISP_WR32((void *)(ISP_ADDR_CAMINF + pReg[i].Addr), pReg[i].Val);
+        }
+        else
+        {
+            LOG_ERR("wrong address(0x%x)",(unsigned int)(ISP_ADDR_CAMINF + pReg[i].Addr));
+        }
     }
     spin_unlock(&(g_IspInfo.SpinLockIsp));
     
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************
-static void ISP_BufWrite_Init(void)    //Vent@20121106: Marked to remove build warning: 'ISP_BufWrite_Init' defined but not used [-Wunused-function]
-{
-    MUINT32 i;
-    //
-    if(g_IspInfo.DebugMask & ISP_DBG_BUF_WRITE)
-    {
-        LOG_DBG("- E.");
-    }
-    //
-    for(i=0; i<ISP_BUF_WRITE_AMOUNT; i++)
-    {
-        g_IspInfo.BufInfo.Write[i].Status = ISP_BUF_STATUS_EMPTY;
-        g_IspInfo.BufInfo.Write[i].Size = 0;
-        g_IspInfo.BufInfo.Write[i].pData = NULL;
-    }
-}
-
-*******************************************************************************
-*
-********************************************************************************/
 static MVOID ISP_BufWrite_Dump(MVOID)
 {
     MUINT32 i;
@@ -1912,9 +1780,6 @@ static MVOID ISP_BufWrite_Dump(MVOID)
     }
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MVOID ISP_BufWrite_Free(MVOID)
 {
     MUINT32 i;
@@ -1937,9 +1802,6 @@ static MVOID ISP_BufWrite_Free(MVOID)
     }
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MBOOL ISP_BufWrite_Alloc(MVOID)
 {
     MUINT32 i;
@@ -1965,9 +1827,6 @@ static MBOOL ISP_BufWrite_Alloc(MVOID)
     return MTRUE;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MVOID ISP_BufWrite_Reset(MVOID)
 {
     MUINT32 i;
@@ -1984,9 +1843,6 @@ static MVOID ISP_BufWrite_Reset(MVOID)
     }
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static __inline MUINT32 ISP_BufWrite_GetAmount(MVOID)
 {
     MUINT32 i;
@@ -2008,9 +1864,6 @@ static __inline MUINT32 ISP_BufWrite_GetAmount(MVOID)
     return Count;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MBOOL ISP_BufWrite_Add(MUINT32 Size,MUINT8 *pData)
 {
     MUINT32 i;
@@ -2079,9 +1932,6 @@ static MBOOL ISP_BufWrite_Add(MUINT32 Size,MUINT8 *pData)
     LOG_ERR("All write buffer are full of data!");
     return MFALSE;
 }
-/*******************************************************************************
-*
-********************************************************************************/
 static MVOID ISP_BufWrite_SetReady(MVOID)
 {
     MUINT32 i;
@@ -2104,9 +1954,6 @@ static MVOID ISP_BufWrite_SetReady(MVOID)
     }
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MBOOL ISP_BufWrite_Get(
     MUINT32 *pIndex,
     MUINT32 *pSize,
@@ -2143,9 +1990,6 @@ static MBOOL ISP_BufWrite_Get(
     return MFALSE;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MBOOL ISP_BufWrite_Clear(MUINT32  Index)
 {
     if(g_IspInfo.DebugMask & ISP_DBG_BUF_WRITE)
@@ -2171,9 +2015,6 @@ static MBOOL ISP_BufWrite_Clear(MUINT32  Index)
     }
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MVOID ISP_BufWrite_WriteToHw(MVOID)
 {
     MUINT8 *pBuf;
@@ -2202,9 +2043,6 @@ static MVOID ISP_BufWrite_WriteToHw(MVOID)
 }
 
 
-/*******************************************************************************
-*
-********************************************************************************/
 MVOID ISP_ScheduleWork_VD(struct work_struct *data)
 {
     if(g_IspInfo.DebugMask & ISP_DBG_SCHEDULE_WORK)
@@ -2220,9 +2058,6 @@ MVOID ISP_ScheduleWork_VD(struct work_struct *data)
     }
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 MVOID ISP_ScheduleWork_EXPDONE(struct work_struct *data)
 {
     if(g_IspInfo.DebugMask & ISP_DBG_SCHEDULE_WORK)
@@ -2238,9 +2073,6 @@ MVOID ISP_ScheduleWork_EXPDONE(struct work_struct *data)
     }
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 MVOID ISP_ScheduleWork_SENINF(struct work_struct *data)
 {
     if(g_IspInfo.DebugMask & ISP_DBG_SCHEDULE_WORK)
@@ -2257,9 +2089,6 @@ MVOID ISP_ScheduleWork_SENINF(struct work_struct *data)
 }
 
 
-/*******************************************************************************
-*
-********************************************************************************/
 MVOID ISP_Tasklet_VD(unsigned long Param)
 {
     if(g_IspInfo.DebugMask & ISP_DBG_TASKLET)
@@ -2281,9 +2110,6 @@ MVOID ISP_Tasklet_VD(unsigned long Param)
 }
 DECLARE_TASKLET(IspTaskletVD, ISP_Tasklet_VD, 0);
 
-/*******************************************************************************
-*
-********************************************************************************/
 void ISP_Tasklet_EXPDONE(unsigned long Param)
 {
     if(g_IspInfo.DebugMask & ISP_DBG_TASKLET)
@@ -2305,9 +2131,6 @@ void ISP_Tasklet_EXPDONE(unsigned long Param)
 }
 DECLARE_TASKLET(IspTaskletEXPDONE, ISP_Tasklet_EXPDONE, 0);
 
-/*******************************************************************************
-*
-********************************************************************************/
 void ISP_Tasklet_SENINF(unsigned long Param)
 {
     MUINT32 i;
@@ -2330,9 +2153,6 @@ void ISP_Tasklet_SENINF(unsigned long Param)
 DECLARE_TASKLET(IspTaskletSENIF, ISP_Tasklet_SENINF, 0);
 
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_WriteReg(ISP_REG_IO_STRUCT *pRegIo)
 {
     MINT32 Ret = 0;
@@ -2396,9 +2216,6 @@ EXIT:
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_SetHoldTime(ISP_HOLD_TIME_ENUM HoldTime)
 {
     LOG_DBG("HoldTime(%d)", HoldTime);
@@ -2407,9 +2224,6 @@ static MINT32 ISP_SetHoldTime(ISP_HOLD_TIME_ENUM HoldTime)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_ResetBuf(MVOID)
 {
     LOG_DBG("hold_reg(%d), BufAmount(%d)", atomic_read(&(g_IspInfo.HoldInfo.HoldEnable)), ISP_BufWrite_GetAmount());
@@ -2422,9 +2236,6 @@ static MINT32 ISP_ResetBuf(MVOID)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_EnableHoldReg(MBOOL En)
 {
     MINT32 Ret = 0;
@@ -2488,9 +2299,6 @@ EXIT:
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static long ISP_REF_CNT_CTRL_FUNC(MUINT32 Param)
 {
     MINT32 Ret = 0;
@@ -2592,9 +2400,6 @@ static long ISP_REF_CNT_CTRL_FUNC(MUINT32 Param)
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_RTBC_ENQUE(MINT32 dma)
 {
     MINT32 Ret = 0;
@@ -2750,9 +2555,6 @@ static MINT32 ISP_RTBC_ENQUE(MINT32 dma)
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_RTBC_DEQUE(MINT32 dma)
 {
     MINT32 Ret = 0;
@@ -2850,9 +2652,6 @@ static MINT32 ISP_RTBC_DEQUE(MINT32 dma)
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static long ISP_Buf_CTRL_FUNC(MUINT32 Param)
 {
     MINT32 Ret = 0;
@@ -3294,9 +3093,6 @@ LOG_DBG("+LARB in DEQUE,BWL(0x%08X)/(0x%08X)/(0x%08X)/(0x%08X),220(0x%08X)/(0x%0
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_SOF_Buf_Get(unsigned long long sec,unsigned long usec)
 {
 #if defined(_rtbc_use_cq0c_)
@@ -3531,9 +3327,6 @@ static MINT32 ISP_SOF_Buf_Get(unsigned long long sec,unsigned long usec)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 #ifndef _rtbc_use_cq0c_
 static MINT32 ISP_DONE_Buf_Time(unsigned long long sec,unsigned long usec)
 {
@@ -3687,9 +3480,6 @@ static MINT32 ISP_DONE_Buf_Time(unsigned long long sec,unsigned long usec)
 
 #endif
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_WaitIrq(ISP_WAIT_IRQ_STRUCT WaitIrq)
 {
     MINT32 Ret = 0, Timeout = WaitIrq.Timeout;
@@ -3911,9 +3701,6 @@ static void DMAErrHandler(void)
 }
 #endif
 
-/*******************************************************************************
-*
-********************************************************************************/
 static __tcmfunc irqreturn_t ISP_Irq(MINT32  Irq, MVOID *DeviceId)
 {
     //LOG_DBG("- E.");
@@ -4166,9 +3953,6 @@ static __tcmfunc irqreturn_t ISP_Irq(MINT32  Irq, MVOID *DeviceId)
     return IRQ_HANDLED;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static long ISP_ioctl(struct file *pFile,MUINT32 Cmd,unsigned long Param)
 {
     MINT32 Ret = 0;    
@@ -4435,9 +4219,6 @@ static long ISP_ioctl(struct file *pFile,MUINT32 Cmd,unsigned long Param)
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_open(struct inode *pInode, struct file *pFile)
 {
     MINT32 Ret = 0;
@@ -4539,9 +4320,6 @@ EXIT:
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_release(struct inode *pInode, struct file *pFile)
 {
     ISP_USER_INFO_STRUCT* pUserInfo;
@@ -4593,9 +4371,6 @@ EXIT:
     return 0;
 }
 
-/*******************************************************************************
-* helper function, mmap's the kmalloc'd area which is physically contiguous
-********************************************************************************/
 static MINT32 mmap_kmem(struct file *filp, struct vm_area_struct *vma)
 {
     MINT32 ret;
@@ -4628,9 +4403,6 @@ static MINT32 mmap_kmem(struct file *filp, struct vm_area_struct *vma)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_mmap(struct file *pFile, struct vm_area_struct *pVma)
 {
     //LOG_DBG("+");
@@ -4713,9 +4485,6 @@ static MINT32 ISP_mmap(struct file *pFile, struct vm_area_struct *pVma)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static const struct file_operations g_IspFileOper =
 {
     .owner   = THIS_MODULE,
@@ -4726,9 +4495,6 @@ static const struct file_operations g_IspFileOper =
     .unlocked_ioctl   = ISP_ioctl
 };
 
-/*******************************************************************************
-*
-********************************************************************************/
 inline static MVOID ISP_UnregCharDev(MVOID)
 {
     LOG_DBG("+");
@@ -4743,9 +4509,6 @@ inline static MVOID ISP_UnregCharDev(MVOID)
     unregister_chrdev_region(g_IspDevNo, 1);
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 inline static MINT32 ISP_RegCharDev(MVOID)
 {
     MINT32 Ret = 0;
@@ -4790,9 +4553,6 @@ EXIT:
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_probe(struct platform_device *pDev)
 {
     MINT32 Ret = 0;
@@ -4906,9 +4666,6 @@ EXIT:
     return Ret;
 }
 
-/*******************************************************************************
-* Called when the device is being detached from the driver
-********************************************************************************/
 static MINT32 ISP_remove(struct platform_device *pDev)
 {
     struct resource *pRes;
@@ -4940,9 +4697,6 @@ static MINT32 ISP_remove(struct platform_device *pDev)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_suspend(struct platform_device *pDev,pm_message_t Mesg)
 {
     // TG_VF_CON[0] (0x15004414[0]): VFDATA_EN. TG1 Take Picture Request.
@@ -4974,9 +4728,6 @@ static MINT32 ISP_suspend(struct platform_device *pDev,pm_message_t Mesg)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_resume(struct platform_device *pDev)
 {
     // TG_VF_CON[0] (0x15004414[0]): VFDATA_EN. TG1 Take Picture Request.
@@ -4994,9 +4745,6 @@ static MINT32 ISP_resume(struct platform_device *pDev)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 #ifdef CONFIG_PM
 MINT32 ISP_pm_suspend(struct device *device)
 {
@@ -5049,9 +4797,6 @@ struct dev_pm_ops ISP_pm_ops = {
     .restore_noirq = ISP_pm_restore_noirq,
 };
 
-/*******************************************************************************
-*
-********************************************************************************/
 static struct platform_driver IspDriver =
 {
     .probe   = ISP_probe,
@@ -5067,9 +4812,6 @@ static struct platform_driver IspDriver =
     }
 };
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 ISP_DumpRegToProc(
     char  *pPage,
     char **ppStart,
@@ -5166,9 +4908,6 @@ static MINT32 ISP_DumpRegToProc(
     return ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32  ISP_RegDebug(
     struct file *pFile,
     const char *pBuffer,
@@ -5238,9 +4977,6 @@ static MINT32 CAMIO_DumpRegToProc(
     return ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32  CAMIO_RegDebug(
     struct file *pFile,
     const char *pBuffer,
@@ -5276,9 +5012,6 @@ static MINT32  CAMIO_RegDebug(
     return Count;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MINT32 __init ISP_Init(MVOID)
 {
     MINT32 i;
@@ -5340,9 +5073,6 @@ static MINT32 __init ISP_Init(MVOID)
     return Ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static MVOID __exit ISP_Exit(MVOID)
 {
     MINT32 i;
@@ -5360,9 +5090,6 @@ static MVOID __exit ISP_Exit(MVOID)
     kfree(g_pBuf_kmalloc);    
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 bool ISP_RegCallback(ISP_CALLBACK_STRUCT *pCallback)
 {
     if(pCallback == NULL)
@@ -5383,9 +5110,6 @@ bool ISP_RegCallback(ISP_CALLBACK_STRUCT *pCallback)
     return true;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 bool ISP_UnregCallback(ISP_CALLBACK_ENUM Type)
 {
     if(Type > ISP_CALLBACK_AMOUNT)
@@ -5400,9 +5124,6 @@ bool ISP_UnregCallback(ISP_CALLBACK_ENUM Type)
     return true;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 void ISP_MCLK1_EN(bool En)
 {
 	MUINT32 temp=0;
@@ -5432,9 +5153,6 @@ int m4u_reclaim_mva_callback_CAM(int moduleID, unsigned int va, unsigned int siz
     }
     return true;
 }
-/*******************************************************************************
-*
-********************************************************************************/
 module_init(ISP_Init);
 module_exit(ISP_Exit);
 MODULE_DESCRIPTION("Camera ISP driver");

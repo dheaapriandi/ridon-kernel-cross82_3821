@@ -31,6 +31,15 @@ else
     endif
 endif
 
+ifeq ($(MTK_THERMAL_PA_VIA_ATCMD),yes)
+    #obj-$(CONFIG_THERMAL) += mtk_cooler_mdulthro.o
+    obj-$(CONFIG_THERMAL) += mtk_cooler_mdtxpwr.o
+    #obj-$(CONFIG_THERMAL) += mtk_cooler_mddtxpwr.o
+    obj-$(CONFIG_THERMAL) += mtk_cooler_amdtxctrl.o
+    obj-$(CONFIG_THERMAL) += mtk_cooler_amddulthro.o
+    obj-$(CONFIG_THERMAL) += mtk_cooler_mddulthro.o
+endif
+
 obj-y += mtk_ts_cpu.o
 
 ifeq ($(CONFIG_THERMAL),y)

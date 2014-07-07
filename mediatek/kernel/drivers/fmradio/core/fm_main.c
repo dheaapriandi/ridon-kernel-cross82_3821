@@ -1,25 +1,3 @@
-/* fm_main.c
- *
- * (C) Copyright 2011
- * MediaTek <www.MediaTek.com>
- * Hongcheng <hongcheng.xia@MediaTek.com>
- *
- * FM Radio Driver -- main functions
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
 #include <linux/kernel.h>
 #include <asm/uaccess.h>
 #include <linux/slab.h>
@@ -297,29 +275,6 @@ fm_s32 fm_close(struct fm *fmp)
 
     return ret;
 }
-/*
-fm_s32 fm_flush(struct fm *fmp)
-{
-    fm_s32 ret = 0;
-
-    FMR_ASSERT(fmp);
-    if (FM_LOCK(fm_ops_lock)) return (-FM_ELOCK);
-
-    if (FM_PWR_OFF == fm_pwr_state_get(fmp)) 
-    {
-        WCN_DBG(FM_NTC | MAIN, "should power off combo!\n");
-        if (fmp->chipon == fm_true) 
-        {
-            fm_low_ops.bi.pwroff(0);
-            fmp->chipon = fm_false;
-        }
-    }
-    WCN_DBG(FM_NTC | MAIN, "fm_flush done\n");
-    FM_UNLOCK(fm_ops_lock);
-
-    return ret;
-}
-*/
 fm_s32 fm_rds_read(struct fm *fmp, fm_s8 *dst, fm_s32 len)
 {
     fm_s32 copy_len = 0, left = 0;
@@ -425,9 +380,6 @@ out:
     return ret;
 }
 
-/*
- *  fm_powerup_tx
- */
 fm_s32 fm_powerup_tx(struct fm *fm, struct fm_tune_parm *parm)
 {
     fm_s32 ret = 0;
@@ -652,16 +604,6 @@ out:
     return ret;
 }
 
-/***********************************************************
-Function: 	fm_tx_scan()
-
-Description: 	get the valid channels for fm tx function
-
-Para: 		fm--->fm driver global info
-			parm--->input/output paramater
-			
-Return: 		0, if success; error code, if failed
-***********************************************************/
 fm_s32 fm_tx_scan(struct fm *fm, struct fm_tx_scan_parm *parm)
 {
     fm_s32 ret = 0;
@@ -1123,11 +1065,6 @@ out:
 }
 
 
-/*  fm_is_dese_chan -- check if gived channel is a de-sense channel or not
-  *  @pfm - fm driver global DS
-  *  @freq - gived channel
-  *  return value: 0, not a dese chan; 1, a dese chan; else error NO.
-  */
 fm_s32 fm_is_dese_chan(struct fm *pfm, fm_u16 freq)
 {
     fm_s32 ret = 0;
@@ -1143,11 +1080,6 @@ fm_s32 fm_is_dese_chan(struct fm *pfm, fm_u16 freq)
 }
 
 
-/*  fm_is_dese_chan -- check if gived channel is a de-sense channel or not
-  *  @pfm - fm driver global DS
-  *  @freq - gived channel
-  *  return value: 0, not a dese chan; 1, a dese chan; else error NO.
-  */
 fm_s32 fm_desense_check(struct fm *pfm, fm_u16 freq,fm_s32 rssi)
 {
     fm_s32 ret = 0;
@@ -1173,11 +1105,6 @@ fm_s32 fm_dump_reg(void)
     return ret;
 }
 
-/*  fm_get_hw_info -- hw info: chip id, ECO version, DSP ROM version, Patch version
-  *  @pfm - fm driver global DS
-  *  @freq - target buffer
-  *  return value: 0, success; else error NO.
-  */
 fm_s32 fm_get_hw_info(struct fm *pfm, struct fm_hw_info *req)
 {
     fm_s32 ret = 0;
@@ -1217,11 +1144,6 @@ fm_s32 fm_get_aud_info(fm_audio_info_t *data)
         return 0;
     }
 }
-/*  fm_get_i2s_info -- i2s info: on/off, master/slave, sample rate
-  *  @pfm - fm driver global DS
-  *  @req - target buffer
-  *  return value: 0, success; else error NO.
-  */
 fm_s32 fm_get_i2s_info(struct fm *pfm, struct fm_i2s_info *req)
 {
     FMR_ASSERT(fm_low_ops.bi.i2s_get);
@@ -1257,11 +1179,6 @@ fm_s32  fm_hwscan_stop(struct fm *fm)
     return ret;
 }
 
-/* fm_ana_switch -- switch antenna to long/short
- * @fm - fm driver main data structure
- * @antenna - 0, long; 1, short
- * If success, return 0; else error code
- */
 fm_s32 fm_ana_switch(struct fm *fm, fm_s32 antenna)
 {
     fm_s32 ret = 0;
@@ -1463,11 +1380,6 @@ fm_s32 fm_monostereo_get(struct fm *fm, fm_u16 *ms)
     return ret;
 }
 
-/*
- * Force set to stero/mono mode
- * @MonoStereo -- 0, auto; 1, mono
- * If success, return 0; else error code
- */
 fm_s32 fm_monostereo_set(struct fm *fm, fm_s32 ms)
 {
     fm_s32 ret = 0;
@@ -1715,9 +1627,6 @@ fm_s32 fm_i2s_set(struct fm *fm, fm_s32 onoff, fm_s32 mode, fm_s32 sample)
     return ret;
 }
 
-/*
- *  fm_tune_tx
- */
 fm_s32 fm_tune_tx(struct fm *fm, struct fm_tune_parm *parm)
 {
     fm_s32 ret = 0;
@@ -1747,9 +1656,6 @@ fm_s32 fm_tune_tx(struct fm *fm, struct fm_tune_parm *parm)
     return ret;
 }
 
-/*
- *  fm_tune
- */
 fm_s32 fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 {
     fm_s32 ret = 0;
@@ -2205,17 +2111,6 @@ out:
     return;
 } 
 
-/*
-************************************************************************************
-Function:         fm_get_gps_rtc_info()
-
-Description:     get GPS RTC drift info, and this function should not block
-
-Date:              2011/04/10
-
-Return Value:   success:0, failed: error coe
-************************************************************************************
-*/
 fm_s32 fm_get_gps_rtc_info(struct fm_gps_rtc_info *src)
 {
     fm_s32 ret = 0;
@@ -3061,12 +2956,6 @@ fm_s32 fm_env_destroy(void)
     return ret;
 }
 
-/*
- * GetChannelSpace - get the spcace of gived channel
- * @freq - value in 760~1080 or 7600~10800
- *
- * Return 0, if 760~1080; return 1, if 7600 ~ 10800, else err code < 0
- */
 fm_s32 fm_get_channel_space(fm_s32 freq)
 {
     if ((freq >= 640) && (freq <= 1080)) {

@@ -1011,7 +1011,7 @@ typedef UINT_32             KAL_WAKE_LOCK_T, *P_KAL_WAKE_LOCK_T;
 #define TX_TEMP_LOGDUMP8(x, y)
 
 #define RX_ERROR_LOGFUNC(_Fmt...)
-#define RX_WARN_LOGFUNC(_Fmt...) xlog_printk(ANDROID_LOG_WARN, XLOG_TAG, _Fmt)
+#define RX_WARN_LOGFUNC(_Fmt...)
 #define RX_INFO_LOGFUNC(_Fmt...)
 #define RX_STATE_LOGFUNC(_Fmt...)
 #define RX_EVENT_LOGFUNC(_Fmt...)

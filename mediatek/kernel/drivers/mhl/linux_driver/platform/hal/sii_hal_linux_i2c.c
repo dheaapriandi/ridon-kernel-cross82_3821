@@ -10,6 +10,7 @@
 #include <cust_gpio_usage.h>
 #include <cust_eint.h>
 
+#define HDMI_I2C_CHANNEL 2
 
 /******************************software I2C demo code**********************************/
 //------------------------------------------------------------------------------
@@ -572,9 +573,7 @@ uint8_t I2C_ReadByte(uint8_t deviceID, uint8_t offset)
     gMhlDevice.pI2cClient->addr = (accessI2cAddr & I2C_MASK_FLAG)|I2C_WR_FLAG ;
 
 #if 1
-#ifdef MHL_SET_EXT_GPIO
-    gMhlDevice.pI2cClient->ext_flag |= I2C_DIRECTION_FLAG;
-#endif
+    ///gMhlDevice.pI2cClient->ext_flag |= I2C_DIRECTION_FLAG;
     status = i2c_master_send(gMhlDevice.pI2cClient, &buf, 0x101);
 
     ///gMhlDevice.pI2cClient->ext_flag |= I2C_DIRECTION_FLAG;
@@ -644,9 +643,7 @@ void I2C_WriteByte(uint8_t deviceID, uint8_t offset, uint8_t value)
             0, I2C_SMBUS_WRITE, offset, I2C_SMBUS_BYTE_DATA,
             &data);
 #else
-#ifdef MHL_SET_EXT_GPIO
-    gMhlDevice.pI2cClient->ext_flag |= I2C_DIRECTION_FLAG;
-#endif
+    ///gMhlDevice.pI2cClient->ext_flag |= I2C_DIRECTION_FLAG;
     buf[0] = offset;
     buf[1] = value;
     status = i2c_master_send( gMhlDevice.pI2cClient, (const char*)buf, 2 /*sizeof(buf)*/);
@@ -701,9 +698,7 @@ uint8_t I2C_ReadBlock(uint8_t deviceID, uint8_t offset,uint8_t *buf, uint8_t len
 #else
         u8 tmp;
         tmp = offset + i;
-#ifdef MHL_SET_EXT_GPIO
-        gMhlDevice.pI2cClient->ext_flag |= I2C_DIRECTION_FLAG;
-#endif
+        ///gMhlDevice.pI2cClient->ext_flag |= I2C_DIRECTION_FLAG;
         status = i2c_master_send(gMhlDevice.pI2cClient, (const char*)&tmp, 1);
         if (status < 0)
         {
@@ -759,9 +754,7 @@ void I2C_WriteBlock(uint8_t deviceID, uint8_t offset, uint8_t *buf, uint8_t len)
 #else
         tmp[0] = offset + i;
         tmp[1] = *buf;
-#ifdef MHL_SET_EXT_GPIO
-        gMhlDevice.pI2cClient->ext_flag |= I2C_DIRECTION_FLAG;
-#endif
+        ///gMhlDevice.pI2cClient->ext_flag |= I2C_DIRECTION_FLAG;
         status = i2c_master_send( gMhlDevice.pI2cClient, (const char*)tmp, 2);
 
 #endif

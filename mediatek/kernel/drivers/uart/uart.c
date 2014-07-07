@@ -1,28 +1,3 @@
-/* mediatek/kernel/drivers/uart/uart.c
- *
- * (C) Copyright 2008 
- * MediaTek <www.mediatek.com>
- * MingHsien Hsieh <minghsien.hsieh@mediatek.com>
- *
- * MTK UART Driver
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
-/******************************************************************************
- * Dependency
-******************************************************************************/
 #if defined(CONFIG_MTK_SERIAL_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
 #define SUPPORT_SYSRQ   /*used in serial_core.h*/
 #endif
@@ -111,9 +86,6 @@ static struct mtk_uart mtk_uarts[UART_NR];
 /*---------------------------------------------------------------------------*/
 static int  mtk_uart_init_ports(void);
 static void mtk_uart_stop_tx(struct uart_port *port);
-/******************************************************************************
- * SYSFS support
-******************************************************************************/
 #if defined(ENABLE_SYSFS)
 /*---------------------------------------------------------------------------*/
 /*define sysfs entry for configuring debug level and sysrq*/
@@ -734,9 +706,6 @@ static int __init mtk_late_console_init(void)
 late_initcall(mtk_late_console_init);
 /*---------------------------------------------------------------------------*/
 #endif /* CONFIG_MTK_SERIAL_CONSOLE */
-/******************************************************************************
- * Virtual FIFO implementation
-******************************************************************************/
 #if defined(ENABLE_VFIFO) 
 /*---------------------------------------------------------------------------*/
 static int mtk_uart_vfifo_del_dbgbuf(struct mtk_uart_vfifo *vfifo)
@@ -1383,9 +1352,6 @@ static unsigned int mtk_uart_tx_empty(struct uart_port *port)
 }
 /*---------------------------------------------------------------------------*/
 /* FIXME */
-/* stop transmitting characters 
- * Note: this function is call with interrupt disabled
- */
 static void mtk_uart_stop_tx(struct uart_port *port)
 {
     struct mtk_uart *uart = (struct mtk_uart *)port;
@@ -1403,9 +1369,6 @@ static void mtk_uart_stop_tx(struct uart_port *port)
 }
 /*---------------------------------------------------------------------------*/
 /* FIXME */
-/* start transmitting characters.
- * Note: this function is call with interrupt disabled
- */
 static void mtk_uart_start_tx(struct uart_port *port)
 {
     struct mtk_uart *uart = (struct mtk_uart *)port;
@@ -1572,9 +1535,6 @@ static int mtk_uart_startup(struct uart_port *port)
     return 0;
 }
 /*---------------------------------------------------------------------------*/
-/* disable the port, disable any break condition that may be in effect, and
- * free any interrupt resources
- */
 static void mtk_uart_shutdown(struct uart_port *port)
 {
     struct mtk_uart *uart = (struct mtk_uart *)port;
@@ -1610,9 +1570,6 @@ static void	mtk_uart_flush_buffer(struct uart_port *port)
     //mtk_uart_fifo_flush(uart);
 }
 /*---------------------------------------------------------------------------*/
-/* 
- * For stability test 
- */
 void mtk_uart_update_sysclk(void)
 {
 	int i;
@@ -1635,10 +1592,6 @@ void mtk_uart_update_sysclk(void)
 }
 EXPORT_SYMBOL(mtk_uart_update_sysclk);
 /*---------------------------------------------------------------------------*/
-/* change the port parameters, including word length, parity, stop bits.
- * update read_status_mask and ignore_status_mask to indicate the types of
- * events we are interrested in receiving
- */
 static void mtk_uart_set_termios(struct uart_port *port,
                                    struct ktermios *termios, struct ktermios *old)
 {
@@ -1790,9 +1743,6 @@ static int mtk_uart_request_port(struct uart_port *port)
     return 0;
 }
 /*---------------------------------------------------------------------------*/
-/* perform any autoconfiguration steps required by the port.
- * it's expected to claim the resources and map the port.
- */
 static void mtk_uart_config_port(struct uart_port *port, int flags)
 { 
     struct mtk_uart* uart = (struct mtk_uart*)port;

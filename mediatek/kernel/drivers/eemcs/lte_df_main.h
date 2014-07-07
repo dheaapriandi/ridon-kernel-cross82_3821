@@ -15,10 +15,14 @@
 #define FORMAL_DL_FLOW_CONTROL       1 
 #define FORMAL_DL_FLOW_CONTROL_TEST  0 
 
+#define BUFFER_POOL_FOR_EACH_QUE     1 
+
 
 //#define DEV_MAX_PKT_SIZE		(65536) 
-#define DEV_MAX_PKT_SIZE		(4096) 
-
+//#define DEV_MAX_PKT_SIZE		(4096)
+ 
+/* Change PKT SIZE to 3584Byte due to AP skb allocate way & page size issue  */
+#define DEV_MAX_PKT_SIZE		(3584)
 
 /* TX Q Threshold */
 #define MT_LTE_TX_SWQ_Q0_TH			(32)
@@ -103,7 +107,13 @@ struct mtlte_df_core {
     MTLTE_DF_TO_DEV_CALLBACK cb_wd_timeout;
 	
 	/* For Down Link path */	
+#if BUFFER_POOL_FOR_EACH_QUE
+	struct sk_buff_head dl_buffer_pool_queue[RXQ_NUM];
+    KAL_UINT32 df_skb_alloc_size[RXQ_NUM];
+    KAL_UINT32 df_buffer_pool_depth[RXQ_NUM];
+#else
 	struct sk_buff_head dl_buffer_pool_queue;
+#endif
 	struct workqueue_struct *dl_reload_work_queue;
 	struct work_struct dl_reload_work;
 	
@@ -148,7 +158,11 @@ int mtlte_df_deinit(void) ;
 
 int mtlte_df_probe(void) ;
 
-int mtlte_df_remove(void) ;
+//int mtlte_df_remove(void) ;
+
+int mtlte_df_remove_phase1(void) ;
+int mtlte_df_remove_phase2(void) ;
+
 
 
 
@@ -170,7 +184,11 @@ unsigned int mtlte_df_UL_deswq_buf(MTLTE_DF_TX_QUEUE_TYPE qno , void *buf_ptr) ;
 /******************************************************
 *					DL data traffic APIs	
 ******************************************************/
+#if BUFFER_POOL_FOR_EACH_QUE
+int mtlte_df_DL_pkt_in_buff_pool(MTLTE_DF_TX_QUEUE_TYPE qno);
+#else
 int mtlte_df_DL_pkt_in_buff_pool(void);
+#endif
 
 void mtlte_df_DL_try_reload_swq(void);
 
@@ -187,13 +205,11 @@ int mtlte_df_register_df_to_hif_callback(void *func_ptr , unsigned int data) ;
 ******************************************************/
 int mtlte_df_swint_handle(unsigned int swint_status);
 
-#if IMMEDIATE_RELOAD_DL_SKB
-/* temp API for dataflow performance test */
-void  mtlte_df_DL_prepare_skb_for_swq_immediate(void);
-#endif
-
+#if BUFFER_POOL_FOR_EACH_QUE
+void  mtlte_df_DL_prepare_skb_for_swq_short(unsigned int target_num, MTLTE_DF_TX_QUEUE_TYPE qno);
+#else
 void  mtlte_df_DL_prepare_skb_for_swq_short(unsigned int target_num);
-
+#endif
 
 /******************************************************
 *
@@ -236,6 +252,10 @@ void mtlte_df_DL_try_dispatch_rx(void);
 
 #if DISPATCH_AFTER_ALL_SKB_DONE
 void mtlte_df_DL_rx_callback(MTLTE_DF_RX_QUEUE_TYPE qno);
+#endif
+
+#if BUFFER_POOL_FOR_EACH_QUE
+void mtlte_df_DL_set_skb_alloc_size_depth(MTLTE_DF_TX_QUEUE_TYPE qno, unsigned int alloc_size, unsigned int pool_depth);
 #endif
 
 /******************************************************

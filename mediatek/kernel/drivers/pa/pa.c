@@ -16,8 +16,8 @@
 
 #include <linux/jiffies.h>
 
-#include "../../../kernel/sched/sched.h"
-#include "../../../arch/arm/include/asm/topology.h"
+#include "../../kernel/sched/sched.h"
+#include "../../arch/arm/include/asm/topology.h"
 
 MODULE_DESCRIPTION("Power-aware Scheduler Controller");
 MODULE_AUTHOR("Ted Hu");

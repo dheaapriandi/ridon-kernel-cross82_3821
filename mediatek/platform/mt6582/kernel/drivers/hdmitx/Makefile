@@ -4,20 +4,24 @@
 #
 
 ccflags-y += -I$(MTK_PATH_PLATFORM)/drivers/hdmitx/  \
+             -I$(MTK_PATH_SOURCE)/drivers/hdmitx/    \
              -I$(MTK_PATH_PLATFORM)/drivers/video/   \
-             -I$(MTK_PATH_PLATFORM)/drivers/videox/  \
-             -I$(MTK_PATH_PLATFORM)/drivers/dispsys/ \
-             -I$(MTK_PATH_PLATFORM)/../../common/kernel/drivers/video/ \
              -I$(MTK_PATH_SOURCE)/drivers/video/     \
-             -I$(MTK_PATH_SOURCE)/drivers/sync/ \
-             -I$(MTK_PATH_SOURCE)/drivers/mhl/driver/mhl_tx_drv/ \
-             -I$(MTK_ROOT_CUSTOM_OUT)/kernel/hdmi/inc/ 
-
+             -I$(MTK_PATH_PLATFORM)/drivers/hdmitx/  \
+             -I$(MTK_PATH_SOURCE)/drivers/hdmitx/    \
+             -I$(MTK_PATH_PLATFORM)/drivers/dispsys/ \
+            -I$(MTK_PATH_SOURCE)/../hardware/dpframework/inc             
+ifeq ($(MTK_INTERNAL_HDMI_SUPPORT), yes)
+ccflags-y += -I$(MTK_PATH_PLATFORM)/drivers/hdmi/
+endif  
+ifeq ($(MTK_INTERNAL_MHL_SUPPORT), yes)
+ccflags-y += -I$(MTK_PATH_PLATFORM)/drivers/mhltx/
+endif  
 ifeq ($(CUSTOM_KERNEL_HDMI),nxp_tda19989)
 	ccflags-y += 	-DHDMI_TDA19989
 endif
+obj-y	:= hdmitx.o debug.o  hdmitx_test.o
 
-ccflags-y += 	-DMTK_HDMI_FENCE_SUPPORT
-ccflags-y += 	-DMTK_HDMI_ION_SUPPORT
 
-obj-y	:= hdmi_buffers_manager.o hdmi_dpi_config.o hdmitx_platform.o hdmitx.o debug.o hdmitx_test.o
+
+

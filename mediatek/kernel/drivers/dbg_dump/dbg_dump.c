@@ -6,12 +6,42 @@
 #include <mach/dbg_dump.h>
 #include <linux/kallsyms.h>
 
-/* Some chip do not have reg dump, define a weak to avoid build error */
-int __weak reg_dump_platform(char *buf) { return 1; }
-
-
+unsigned int is_reg_dump_device_registered = 0;
+unsigned int mcu_reg_base;
 int dbg_reg_dump_probe(struct platform_device *pdev);
 
+int mt_reg_dump(char *buf)
+{
+  /* Get core numbers */
+	int ret = -1, cnt = num_possible_cpus();
+	char *ptr = buf;
+	unsigned int pc_value;
+	unsigned int fp_value;
+	unsigned int sp_value;
+	unsigned long size = 0;
+	unsigned long offset = 0;
+	char str[KSYM_SYMBOL_LEN];
+	int i;
+	
+  if(cnt < 0)
+    return ret;
+  
+  if(is_reg_dump_device_registered)
+  {
+    /* Get PC, FP, SP and save to buf */
+	  for (i = 0; i < cnt; i++) {
+	    pc_value = readl(IOMEM(mcu_reg_base + (i << 4)));
+	    fp_value = readl(IOMEM((mcu_reg_base+0x4) + (i << 4)));
+	    sp_value = readl(IOMEM((mcu_reg_base+0x8) + (i << 4)));
+	    kallsyms_lookup((unsigned long)pc_value, &size, &offset, NULL, str);	  
+	    ptr += sprintf(ptr, "CORE_%d PC = 0x%x(%s + 0x%lx), FP = 0x%x, SP = 0x%x\n", i, pc_value, str, offset, fp_value, sp_value);
+	    //printk("CORE_%d PC = 0x%x(%s), FP = 0x%x, SP = 0x%x\n", i, pc_value, str, fp_value, sp_value);
+	  }
+	  return 0;	
+  }  
+		
+	return -1;
+}
 
 static struct platform_driver dbg_reg_dump_driver =
 {
@@ -22,13 +52,7 @@ static struct platform_driver dbg_reg_dump_driver =
 		.owner = THIS_MODULE,
 	},
 };
-int mt_reg_dump(char *buf)
-{
-    if(reg_dump_platform(buf) == 0)
-        return 0;
-    else
-        return -1;
-}
+
 
 static ssize_t last_pc_dump_show(struct device_driver *driver, char *buf)
 {
@@ -51,13 +75,20 @@ int dbg_reg_dump_probe(struct platform_device *pdev)
 {
   int ret;
   
-  ret = driver_create_file(&dbg_reg_dump_driver.driver,
-          &driver_attr_last_pc_dump);
-  if (ret) {
-      pr_err("Fail to create mt_reg_dump_drv sysfs files");
-  }
+  struct reg_dump_driver_data *data = dev_get_platdata(&pdev->dev);
+  mcu_reg_base = data->mcu_regs;
+  
+  
+  is_reg_dump_device_registered = 1;  
+	
 
-  return 0;
+	ret = driver_create_file(&dbg_reg_dump_driver.driver,
+			       &driver_attr_last_pc_dump);
+	if (ret) {
+		pr_err("Fail to create mt_reg_dump_drv sysfs files");
+	}
+	
+	return 0;
 }
 
 

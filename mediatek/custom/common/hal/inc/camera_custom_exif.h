@@ -2,13 +2,15 @@
 #define _CAMERA_CUSTOM_EXIF_
 //
 #include "camera_custom_types.h"
+//PR587530-599064-Li-Zhao begin
+#define LOG_TAG "custm_SetExif"
+#include <utils/Log.h>
+#include <cutils/properties.h>
+//PR587530-599064-Li-Zhao end
 
 //
 namespace NSCamCustom
 {
-/*******************************************************************************
-* Custom EXIF: Imgsensor-related.
-*******************************************************************************/
 typedef struct SensorExifInfo_S
 {
     MUINT32 uFLengthNum;
@@ -27,10 +29,7 @@ getParamSensorExif()
 }
 
 
-/*******************************************************************************
-* Custom EXIF
-******************************************************************************/
-//#define EN_CUSTOM_EXIF_INFO
+#define EN_CUSTOM_EXIF_INFO //PR587530-599064-Li-Zhao
 #define SET_EXIF_TAG_STRING(tag,str) \
     if (strlen((const char*)str) <= 32) { \
         strcpy((char *)pexifApp1Info->tag, (const char*)str); }
@@ -44,10 +43,31 @@ typedef struct customExifInfo_s {
 MINT32 custom_SetExif(void **ppCustomExifTag)
 {
 #ifdef EN_CUSTOM_EXIF_INFO
-#define CUSTOM_EXIF_STRING_MAKE  "custom make"
-#define CUSTOM_EXIF_STRING_MODEL "custom model"
-#define CUSTOM_EXIF_STRING_SOFTWARE "custom software"
-static customExifInfo_t exifTag = {CUSTOM_EXIF_STRING_MAKE,CUSTOM_EXIF_STRING_MODEL,CUSTOM_EXIF_STRING_SOFTWARE};
+//PR587530-599064-Li-Zhao begin
+//#define CUSTOM_EXIF_STRING_MAKE  "custom make"
+//#define CUSTOM_EXIF_STRING_MODEL "custom model"
+//#define CUSTOM_EXIF_STRING_SOFTWARE "custom software"
+//static customExifInfo_t exifTag = {CUSTOM_EXIF_STRING_MAKE,CUSTOM_EXIF_STRING_MODEL,CUSTOM_EXIF_STRING_SOFTWARE};
+    char model[32];
+    char manufacturer[32];
+    property_get("ro.product.display.model", model, "default");
+    ALOGI("custom_SetExif model = %s", model);
+    property_get("ro.product.manufacturer", manufacturer, "default");
+    ALOGI("custom_SetExif manufacturer = %s", manufacturer);
+    static customExifInfo_t exifTag = { 0 };
+    for (int i = 0; i < 32; i++) {
+        if (model[i] != '\0' && i < strlen(model)) {
+            exifTag.strModel[i] = (unsigned char) model[i];
+        } else {
+            exifTag.strModel[i] = '\0';
+        }
+        if (manufacturer[i] != '\0' && i < strlen(manufacturer)) {
+            exifTag.strMake[i] = (unsigned char) manufacturer[i];
+        } else {
+            exifTag.strMake[i] = '\0';
+        }
+    }
+//PR587530-599064-Li-Zhao end
     if (0 != ppCustomExifTag) {
         *ppCustomExifTag = (void*)&exifTag;
     }
@@ -58,9 +78,6 @@ static customExifInfo_t exifTag = {CUSTOM_EXIF_STRING_MAKE,CUSTOM_EXIF_STRING_MO
 }
 
 
-/*******************************************************************************
-* Custom EXIF: Exposure Program
-******************************************************************************/
 typedef struct customExif_s
 {
     MBOOL   bEnCustom;

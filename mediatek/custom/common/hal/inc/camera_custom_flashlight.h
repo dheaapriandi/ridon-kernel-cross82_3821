@@ -1,39 +1,4 @@
-/*****************************************************************************
- *
- * Filename:
- * ---------
- *   MSDK_lens_exp.h
- *
- * Project:
- * --------
- *   DUMA
- *
- * Description:
- * ------------
- *   Definition and declaration of the interface of Lens module
- *
- *
- * Author:
- * -------
- *   PC Huang (MTK02204)
- *
- *============================================================================
- *             HISTORY
- * Below this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- * Jul 28 2009 mtk02204
- * [DUMA00009824] [Camera Driver] Check in customized driver of flash light
- * 
- *
- *
- *------------------------------------------------------------------------------
- * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *============================================================================
- ****************************************************************************/
+
 
 #ifndef __CAMERA_CUSTOM_FLASHLIGHT_H_
 #define __CAMERA_CUSTOM_FLASHLIGHT_H_
@@ -60,9 +25,6 @@ typedef enum
 }   FLASH_LIGHT_FEATURE_ENUM;
 
 /* flash light interface */
-/* function pointer that provided to MSDK, all return value are declared as UINT32 are
-   reserved for returing error code if necessary. Currently, it is not necessary, please return
-   ERROR_NONE. */
 typedef struct
 {
    UINT32 (* FlashLightOpen)(void);

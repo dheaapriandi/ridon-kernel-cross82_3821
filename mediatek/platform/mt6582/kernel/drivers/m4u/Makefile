@@ -2,7 +2,7 @@ ccflags-y += -I$(MTK_PATH_PLATFORM)/drivers/dispsys/
 ccflags-y += -I$(MTK_PATH_PLATFORM)/drivers/smi/
 ccflags-y += -I$(MTK_PATH_PLATFORM)/drivers/gud/MobiCoreKernelApi/public
 ccflags-y += -I$(MTK_PATH_PLATFORM)/drivers/gud/MobiCoreKernelApi/include
-ccflags-y += -I$(MTK_PATH_PLATFORM)/core/include/trustzone/m4u
+ccflags-y += -I$(MTK_PATH_SOURCE)/../trustzone/vendor/trustonic/t-base/trustlets
 
 
 #$(warning hahaha)

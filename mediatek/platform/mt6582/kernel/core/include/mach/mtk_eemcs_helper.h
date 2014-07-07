@@ -51,6 +51,10 @@ enum {
     EXT_MD_RF_TEMPERATURE_3G = 0x104,
     EXT_MD_GET_BATTERY_INFO = 0x105,
     EXT_MD_SIM_TYPE = 0x107,
+    //0x108 for ICUSB notify
+    //0x109 for md legacy use to crystal_thermal_change
+    EXT_MD_LOW_BATTERY_LEVEL = 0x10A,
+    EXT_MD_TX_PWR_REDU_REQ = 0x10B,
 };
 
 typedef enum {

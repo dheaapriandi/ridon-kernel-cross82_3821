@@ -1,9 +1,3 @@
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- */
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -30,9 +24,6 @@
 #include "mach/mt_emifreq.h"
 #include "mach/upmu_common.h"
 
-/***************************
-* debug message
-****************************/
 #define dprintk(fmt, args...)                                           \
 do {                                                                    \
     if (mt_emifreq_debug) {                                             \
@@ -49,20 +40,11 @@ static struct early_suspend mt_emifreq_early_suspend_handler =
 };
 #endif
 
-/**************************
-* Global variable
-***************************/
 static bool mt_emifreq_debug = false;
 static bool mt_emifreq_pause = true;
 
-/******************************
-* Extern Function Declaration
-*******************************/
 
 
-/******************************
-* show current EMI DFS stauts
-*******************************/
 static int mt_emifreq_state_read(char *buf, char **start, off_t off, int count, int *eof, void *data)
 {
     int len = 0;
@@ -77,9 +59,6 @@ static int mt_emifreq_state_read(char *buf, char **start, off_t off, int count, 
     return len;
 }
 
-/****************************************
-* set EMI DFS stauts by sysfs interface
-*****************************************/
 static ssize_t mt_emifreq_state_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {
     int enabled = 0;
@@ -107,9 +86,6 @@ static ssize_t mt_emifreq_state_write(struct file *file, const char *buffer, uns
     return count;
 }
 
-/***************************
-* show current debug status
-****************************/
 static int mt_emifreq_debug_read(char *buf, char **start, off_t off, int count, int *eof, void *data)
 {
     int len = 0;
@@ -124,9 +100,6 @@ static int mt_emifreq_debug_read(char *buf, char **start, off_t off, int count, 
     return len;
 }
 
-/***********************
-* enable debug message
-************************/
 static ssize_t mt_emifreq_debug_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {
     int debug = 0;
@@ -157,9 +130,6 @@ static ssize_t mt_emifreq_debug_write(struct file *file, const char *buffer, uns
 }
 
 
-/*********************************
-* early suspend callback function
-**********************************/
 void mt_emifreq_early_suspend(struct early_suspend *h)
 {
     if(mt_emifreq_pause == false)
@@ -169,9 +139,6 @@ void mt_emifreq_early_suspend(struct early_suspend *h)
     }
 }
 
-/*******************************
-* late resume callback function
-********************************/
 void mt_emifreq_late_resume(struct early_suspend *h)
 {
     if(mt_emifreq_pause == false)
@@ -181,9 +148,6 @@ void mt_emifreq_late_resume(struct early_suspend *h)
     }
 }
 
-/**********************************
-* mediatek emifreq initialization
-***********************************/
 static int __init mt_emifreq_init(void)
 {
     struct proc_dir_entry *mt_entry = NULL;

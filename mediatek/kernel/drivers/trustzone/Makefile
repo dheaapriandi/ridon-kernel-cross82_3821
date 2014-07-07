@@ -1,6 +1,6 @@
 # TZ KREE driver makefile.
 
-ccflags-y += -I$(srctree)/../mediatek/kernel/include/trustzone/ -Werror
+ccflags-y += -I$(srctree)/../mediatek/trustzone/mtk/include/ -Werror
 
 # Build as module
 #obj-m += tz_module.o

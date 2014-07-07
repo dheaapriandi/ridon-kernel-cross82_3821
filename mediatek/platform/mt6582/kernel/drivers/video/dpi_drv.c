@@ -64,7 +64,7 @@ static struct hrtimer hrtimer_vsync_dpi;
 #endif
 
 static PDPI_REGS const DPI_REG = (PDPI_REGS)(DPI_BASE);
-static PDSI_PHY_REGS const DSI_PHY_REG_DPI = (PDSI_PHY_REGS)(MIPI_CONFIG_BASE);
+static PDSI_PHY_REGS const DSI_PHY_REG_DPI = (PDSI_PHY_REGS)(MIPI_CONFIG_BASE + 0x800);
 //static UINT32 const PLL_SOURCE = APMIXEDSYS_BASE + 0x44;
 static BOOL s_isDpiPowerOn = FALSE;
 static DPI_REGS regBackup;
@@ -807,25 +807,6 @@ DPI_STATUS DPI_DisableClk()
 }
 EXPORT_SYMBOL(DPI_DisableClk);
 
-DPI_STATUS DPI_DisableMipiClk()
-{
-    // disable mipi clock
-    OUTREGBIT(MIPITX_DSI_PLL_CON0_REG,DSI_PHY_REG_DPI->MIPITX_DSI_PLL_CON0,RG_DSI0_MPPLL_PLL_EN,0);
-    mdelay(1);
-    OUTREGBIT(MIPITX_DSI_PLL_TOP_REG, DSI_PHY_REG_DPI->MIPITX_DSI_PLL_TOP, RG_MPPLL_PRESERVE_L, 0);
-    mdelay(1);
-
-    OUTREGBIT(MIPITX_DSI_PLL_PWR_REG, DSI_PHY_REG_DPI->MIPITX_DSI_PLL_PWR, DA_DSI0_MPPLL_SDM_ISO_EN, 1);
-    OUTREGBIT(MIPITX_DSI_PLL_PWR_REG, DSI_PHY_REG_DPI->MIPITX_DSI_PLL_PWR, DA_DSI0_MPPLL_SDM_PWR_ON, 0);
-
-    OUTREG32(&DSI_PHY_REG_DPI->MIPITX_DSI_PLL_CON1, 0x00000000);
-    OUTREG32(&DSI_PHY_REG_DPI->MIPITX_DSI_PLL_CON2, 0x50000000);
-    mdelay(1);
-
-    return DPI_STATUS_OK;
-}
-EXPORT_SYMBOL(DPI_DisableMipiClk);
-
 DPI_STATUS DPI_EnableSeqOutput(BOOL enable)
 {
     return DPI_STATUS_OK;
@@ -858,26 +839,16 @@ EXPORT_SYMBOL(DPI_ConfigPixelClk);
 
 DPI_STATUS DPI_ConfigLVDS(LCM_PARAMS *lcm_params)
 {
-	//DPI_REG_CLKCNTL ctrl = DPI_REG->CLK_CNTL;
+	DPI_REG_CLKCNTL ctrl = DPI_REG->CLK_CNTL;
 //	DPI_REG_EMBSYNC_SETTING embsync;
 //	ctrl.EMBSYNC_EN = lcm_params->dpi.embsync;
-    //ctrl.DUAL_EDGE_SEL = (lcm_params->dpi.i2x_en>0)?1:0;
+    ctrl.DUAL_EDGE_SEL = (lcm_params->dpi.i2x_en>0)?1:0;
 	//MASKREG32(DISPSYS_BASE + 0x60, 0x7, (lcm_params->dpi.i2x_en << 1)|(lcm_params->dpi.i2x_edge << 2) | 1);
-    //OUTREG32(&DPI_REG->CLK_CNTL, AS_UINT32(&ctrl));
-
-    return DPI_STATUS_OK;
-}
-EXPORT_SYMBOL(DPI_ConfigLVDS);
-
-DPI_STATUS DPI_ConfigDualEdge(bool enable)
-{
-    DPI_REG_CLKCNTL ctrl = DPI_REG->CLK_CNTL;
-    ctrl.DUAL_EDGE_SEL = enable;
     OUTREG32(&DPI_REG->CLK_CNTL, AS_UINT32(&ctrl));
 
     return DPI_STATUS_OK;
 }
-EXPORT_SYMBOL(DPI_ConfigDualEdge);
+EXPORT_SYMBOL(DPI_ConfigLVDS);
 
 DPI_STATUS DPI_ConfigHDMI()
 {
@@ -885,56 +856,6 @@ DPI_STATUS DPI_ConfigHDMI()
     return DPI_STATUS_OK;
 }
 EXPORT_SYMBOL(DPI_ConfigHDMI);
-
-DPI_STATUS DPI_ConfigBG(BOOL enable, UINT32 BG_W, UINT32 GB_H)
-{
-    if(enable = false)
-    {
-        DPI_REG_CNTL pol = DPI_REG->CNTL;
-        pol.DPI_BG_EN = 0;
-        OUTREG32(&DPI_REG->CNTL, AS_UINT32(&pol));
-        return DPI_STATUS_OK;
-    }
-    
-    if((BG_W == 0) || (GB_H == 0))
-    {
-        return DPI_STATUS_OK;
-    }
-        
-    DPI_REG_CNTL pol = DPI_REG->CNTL;
-    pol.DPI_BG_EN = 1;
-    OUTREG32(&DPI_REG->CNTL, AS_UINT32(&pol));
-
-    DPI_REG_BG_HCNTL pol2 = DPI_REG->BG_HCNTL;
-    pol2.BG_RIGHT = BG_W/2;
-    pol2.BG_LEFT = BG_W/2;
-    OUTREG32(&DPI_REG->BG_HCNTL, AS_UINT32(&pol2));
-
-    DPI_REG_BG_VCNTL pol3 = DPI_REG->BG_VCNTL;
-    pol3.BG_BOT = GB_H/2;
-    pol3.BG_TOP = GB_H/2;
-    OUTREG32(&DPI_REG->BG_VCNTL, AS_UINT32(&pol3));
-
-    DPI_REG_BG_COLOR pol4 = DPI_REG->BG_COLOR;
-    pol4.BG_B = 0;
-    pol4.BG_G = 0;
-    pol4.BG_R = 0;
-    OUTREG32(&DPI_REG->BG_COLOR, AS_UINT32(&pol4));
-    
-    return DPI_STATUS_OK;
-}
-EXPORT_SYMBOL(DPI_ConfigBG);
-
-DPI_STATUS DPI_ConfigInRBSwap(BOOL enable)
-{
-    DPI_REG_CNTL pol = DPI_REG->CNTL;
-	 
-    pol.IN_RB_SWAP = enable ? 1 : 0;
-    OUTREG32(&DPI_REG->CNTL, AS_UINT32(&pol));
-    
-    return DPI_STATUS_OK;
-}
-EXPORT_SYMBOL(DPI_ConfigInRBSwap);
 
 DPI_STATUS DPI_ConfigDataEnable(DPI_POLARITY polarity)
 {

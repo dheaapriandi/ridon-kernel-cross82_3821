@@ -1,12 +1,3 @@
-/******************************************************************************
- * mt_gpio_base.c - MTKLinux GPIO Device Driver
- * 
- * Copyright 2008-2009 MediaTek Co.,Ltd.
- * 
- * DESCRIPTION:
- *     This file provid the other drivers GPIO relative functions
- *
- ******************************************************************************/
 
 #include <mach/sync_write.h>
 #include <mach/mt_reg_base.h>
@@ -184,8 +175,8 @@ int mt_set_gpio_pull_enable_base(unsigned long pin, unsigned long enable)
 /*---------------------------------------------------------------------------*/
 int mt_get_gpio_pull_enable_base(unsigned long pin)
 {
-    unsigned long pos=0;
-    unsigned long bit=0;
+    unsigned long pos;
+    unsigned long bit;
     unsigned long data=0;
 	unsigned long i,j;
     GPIO_REGS *reg = gpio_reg;
@@ -316,8 +307,8 @@ int mt_set_gpio_pull_select_base(unsigned long pin, unsigned long select)
 /*---------------------------------------------------------------------------*/
 int mt_get_gpio_pull_select_base(unsigned long pin)
 {
-    unsigned long pos=0;
-    unsigned long bit=0;
+    unsigned long pos;
+    unsigned long bit;
     unsigned long data=0;
 	unsigned long i,j;
     GPIO_REGS *reg = gpio_reg;

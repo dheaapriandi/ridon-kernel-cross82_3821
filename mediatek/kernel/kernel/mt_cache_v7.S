@@ -1,4 +1,4 @@
-       .text 
+       .text
        .global __inner_flush_dcache_all
        .global __inner_flush_dcache_L1
        .global __inner_flush_dcache_L2
@@ -14,10 +14,8 @@
        .global __disable_dcache
        .global __disable_icache
        .global __disable_cache
-.equ C1_IBIT ,  0x00001000
-.equ C1_CBIT ,  0x00000004
-.equ PSR_F_BIT, 0x00000040
-.equ PSR_I_BIT, 0x00000080
+.equ C1_IBIT ,0x00001000
+.equ C1_CBIT ,0x00000004
 
 __enable_icache:
     MRC p15,0,r0,c1,c0,0
@@ -70,7 +68,8 @@ This erratum can be avoided by inserting both of the following after the SCTLR.C
 
 
 __inner_flush_dcache_all:
-        push    {r0,r1,r2,r3,r4,r5,r7,r8,r9,r10,r11,r14}
+        push    {r0,r1,r2,r3,r4,r5,r7,r9,r10,r11,r14}
+        @push    {r4,r5,r7,r9,r10,r11}
         dmb                                     @ ensure ordering with previous memory accesses
         mrc     p15, 1, r0, c0, c0, 1           @ read clidr
         ands    r3, r0, #0x7000000              @ extract loc from clidr
@@ -98,18 +97,14 @@ all_loop2:
 all_loop3:
         orr     r11, r10, r9, lsl r5            @ factor way and cache number into r11
         orr     r11, r11, r7, lsl r2            @ factor index number into r11
-#ifdef CONFIG_L1C_OPT
-#replace DCCISW by DCISW+DCCSW
+#if 0        
+        mcr     p15, 0, r11, c7, c14, 2         @ clean & invalidate by set/way
+#endif        
+#if 1
         cmp     r10, #2
-        mrsne   r1, cpsr                      @disable IRQ and save flag to make clean and invalidate atomic
-	orrne   r8, r1, #PSR_I_BIT | PSR_F_BIT
-	msrne   cpsr_c, r8 
         mcrne   p15, 0, r11, c7, c10, 2         @ clean by set/way
         mcrne   p15, 0, r11, c7, c6, 2         @ invalidate by set/way
-	msrne   cpsr_c, r1
         mcreq   p15, 0, r11, c7, c14, 2         @ clean & invalidate by set/way
-#else
-        mcr     p15, 0, r11, c7, c14, 2         @ clean & invalidate by set/way
 #endif
         subs    r9, r9, #1                      @ decrement the way
         bge     all_loop3
@@ -124,11 +119,13 @@ all_finished:
         mcr     p15, 2, r10, c0, c0, 0          @ select current cache level in cssr
         dsb
         isb
-        pop     {r0,r1,r2,r3,r4,r5,r7,r8,r9,r10,r11,r14}
+        @pop     {r4,r5,r7,r9,r10,r11}
+        pop     {r0,r1,r2,r3,r4,r5,r7,r9,r10,r11,r14}
         bx      lr
 
 __inner_flush_dcache_L1:
-        push    {r0,r1,r2,r3,r4,r5,r7,r8,r9,r10,r11,r14}
+        push    {r0,r1,r2,r3,r4,r5,r7,r9,r10,r11,r14}
+        @push    {r4,r5,r7,r9,r10,r11}
         dmb                                     @ ensure ordering with previous memory accesses
         mrc     p15, 1, r0, c0, c0, 1           @ read clidr
         ands    r3, r0, #0x7000000              @ extract loc from clidr
@@ -156,15 +153,12 @@ L1_loop2:
 L1_loop3:
         orr     r11, r10, r9, lsl r5            @ factor way and cache number into r11
         orr     r11, r11, r7, lsl r2            @ factor index number into r11
-#ifdef CONFIG_L1C_OPT
-#replace DCCISW by DCISW+DCCSW
-        mrs   	r1, cpsr                      @disable IRQ and save flag to make clean and invalidate atomic
-	orr     r8, r1, #PSR_I_BIT | PSR_F_BIT
-	msr     cpsr_c, r8 
+#if 1
         mcr     p15, 0, r11, c7, c10, 2         @ clean by set/way
         mcr     p15, 0, r11, c7, c6, 2         @ invalidate by set/way
-	msr   	cpsr_c, r1
-#else
+#endif
+
+#if 0
         mcr     p15, 0, r11, c7, c14, 2         @ clean & invalidate by set/way
 #endif
         subs    r9, r9, #1                      @ decrement the way
@@ -180,7 +174,8 @@ L1_finished:
         mcr     p15, 2, r10, c0, c0, 0          @ select current cache level in cssr
         dsb
         isb
-        pop     {r0,r1,r2,r3,r4,r5,r7,r8,r9,r10,r11,r14}
+        @pop     {r4,r5,r7,r9,r10,r11}
+        pop     {r0,r1,r2,r3,r4,r5,r7,r9,r10,r11,r14}
         bx      lr
 
 __inner_flush_dcache_L2:

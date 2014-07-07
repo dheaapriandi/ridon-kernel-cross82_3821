@@ -1,32 +1,6 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- *   CFG_SIM_FILE.h
- *
- * Project:
- * --------
- *   DUMA
- *
- * Description:
- * ------------
- *    header file of SIM config struct
- *
- * Author:
- * -------
- *    Liwen Chang (MTK02556)
- *
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- *    mtk02556
- * [DUMA00128675] [NVRAM] Add NVRAM SIM struct
- * NVRAM SIM new struct add
- *
- *
- *******************************************************************************/
+
+
+
 
 #ifndef _CFG_SIM_FILE_H
 #define _CFG_SIM_FILE_H

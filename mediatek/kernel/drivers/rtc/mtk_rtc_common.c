@@ -1,37 +1,4 @@
-/*
- * Copyright (C) 2010 MediaTek, Inc.
- *
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
  
-/*****************************************************************************
- *
- * Filename:
- * ---------
- *    rtc_common.c
- *
- * Project:
- * --------
- *   Android_Software
- *
- * Description:
- * ------------
- *   This Module defines functions of rtc basic operation.
- *
- * Author:
- * -------
- * Owen Chen
- *
- ****************************************************************************/
 #include <linux/delay.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -73,68 +40,14 @@
 #define RTC_MIN_YEAR_OFFSET	(RTC_MIN_YEAR - 1900)
 #define AUTOBOOT_ON 1
 #define AUTOBOOT_OFF 0
-/*
- * RTC_PDN1:
- *     bit 0 - 3  : Android bits
- *     bit 4 - 5  : Recovery bits (0x10: factory data reset)
- *     bit 6      : Bypass PWRKEY bit
- *     bit 7      : Power-On Time bit
- *     bit 8      : RTC_GPIO_USER_WIFI bit
- *     bit 9      : RTC_GPIO_USER_GPS bit
- *     bit 10     : RTC_GPIO_USER_BT bit
- *     bit 11     : RTC_GPIO_USER_FM bit
- *     bit 12     : RTC_GPIO_USER_PMIC bit
- *     bit 13     : Fast Boot
- *     bit 14	  : Kernel Power Off Charging
- *     bit 15     : Debug bit
- */
-
-/*
- * RTC_PDN2:
- *     bit 0 - 3 : MTH in power-on time
- *     bit 4     : Power-On Alarm bit
- *     bit 5 - 6 : UART bits
- *     bit 7     : POWER DROP AUTO BOOT bit
- *     bit 8 - 14: YEA in power-on time
- *     bit 15    : Power-On Logo bit
- */
-
-/*
- * RTC_SPAR0:
- *     bit 0 - 5 : SEC in power-on time
- *     bit 6 	 : 32K less bit. True:with 32K, False:Without 32K
- *     bit 7     : Low power detected in preloader
- *     bit 8 - 15: reserved bits
- */
-
-/*
- * RTC_SPAR1:
- *     bit 0 - 5  : MIN in power-on time
- *     bit 6 - 10 : HOU in power-on time
- *     bit 11 - 15: DOM in power-on time
- */
 
 
-/*
- * RTC_NEW_SPARE0: RTC_AL_HOU bit8~15
- * 	   bit 8 ~ 14 : Fuel Gauge
- *     bit 15     : reserved bits
- */
 
-/*
- * RTC_NEW_SPARE1: RTC_AL_DOM bit8~15
- * 	   bit 8 ~ 15 : reserved bits
- */
 
-/*
- * RTC_NEW_SPARE2: RTC_AL_DOW bit8~15
- * 	   bit 8 ~ 15 : reserved bits
- */
 
-/*
- * RTC_NEW_SPARE3: RTC_AL_MTH bit8~15
- * 	   bit 8 ~ 15 : reserved bits
- */
+
+
+
 
 #define rtc_xinfo(fmt, args...)		\
 	xlog_printk(ANDROID_LOG_INFO, XLOG_MYTAG, fmt, ##args)
@@ -214,11 +127,6 @@ bool crystal_exist_status(void)
 }
 EXPORT_SYMBOL(crystal_exist_status);
 
-/*
-* Only for GPS to check the status.
-* Others do not use this API
-* This low power detected API is read clear.
-*/
 bool rtc_low_power_detected(void)
 {
 	unsigned long flags;
@@ -698,32 +606,8 @@ static int __init rtc_subsys_init(void)
 	return 0;
 }
 
-/*static int __init rtc_mod_init(void)
-{
-	int r;
-
-	rtc_xinfo("rtc_mod_init");
-
-	r = platform_device_register(&rtc_pdev);
-	if (r) {
-		rtc_xerror("register device failed (%d)\n", r);
-		return r;
-	}
-
-	r = platform_driver_register(&rtc_pdrv);
-	if (r) {
-		rtc_xerror("register driver failed (%d)\n", r);
-		platform_device_unregister(&rtc_pdev);
-		return r;
-	}
-
-	return 0;
-}*/
 
 /* should never be called */
-/*static void __exit rtc_mod_exit(void)
-{
-}*/
 
 
 static int __init rtc_late_init(void)

@@ -1,19 +1,4 @@
-/*
-**
-** Copyright 2008, The Android Open Source Project
-**
-** Licensed under the Apache License, Version 2.0 (the 'License');
-** you may not use this file except in compliance with the License.
-** You may obtain a copy of the License at
-**
-**     http://www.apache.org/licenses/LICENSE-2.0
-**
-** Unless required by applicable law or agreed to in writing, software
-** distributed under the License is distributed on an 'AS IS' BASIS,
-** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-** See the License for the specific language governing permissions and
-** limitations under the License.
-*/
+
 
 #ifndef _CAMERA_AE_PLINETABLE_OV5647RAW_H
 #define _CAMERA_AE_PLINETABLE_OV5647RAW_H
@@ -3202,18 +3187,6 @@ static strAETable g_AE_ModeTable2 =
     NULL,
 };
 
-/*static strAETable g_AE_CaptureISO100Table =
-{
-    AETABLE_CAPTURE_ISO100,    //eAETableID
-    97,    //u4TotalIndex
-    20,    //u4StrobeTrigerBV
-    103,    //i4MaxBV
-    7,    //i4MinBV
-    LIB3A_AE_ISO_SPEED_100, //ISO SPEED
-    sCaptureISO100PLineTable_60Hz,
-    sCaptureISO100PLineTable_50Hz,
-    NULL,
-};*/
 
 static strAETable g_AE_CaptureISO100ZSDTable =
 {

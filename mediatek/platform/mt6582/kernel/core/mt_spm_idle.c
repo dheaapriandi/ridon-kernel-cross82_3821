@@ -421,9 +421,6 @@ static void spm_kick_pcm_to_run(bool cpu_pdn, bool infra_pdn)
     /* enable r0 and r7 to control power */
     spm_write(SPM_PCM_PWR_IO_EN, PCM_PWRIO_EN_R0 | PCM_PWRIO_EN_R7);
 
-    /* SRCLKENA: r7 (PWR_IO_EN[7]=1) */
-    spm_write(SPM_CLK_CON, spm_read(SPM_CLK_CON) | CC_SRCLKENA_MASK);
-
     /* kick PCM to run (only toggle PCM_KICK) */
     con0 = spm_read(SPM_PCM_CON0) & ~(CON0_IM_KICK | CON0_PCM_KICK);
     spm_write(SPM_PCM_CON0, con0 | CON0_CFG_KEY | CON0_PCM_KICK);
@@ -474,9 +471,6 @@ static void spm_clean_after_wakeup(void)
 {
     /* PCM has cleared uart_clk_off_req and now clear it in POWER_ON_VAL1 */
     spm_write(SPM_POWER_ON_VAL1, spm_read(SPM_POWER_ON_VAL1) & ~R7_UART_CLK_OFF_REQ);
-
-    /* SRCLKENA: POWER_ON_VAL1|r7 (PWR_IO_EN[7]=1) */
-    spm_write(SPM_CLK_CON, spm_read(SPM_CLK_CON) & ~CC_SRCLKENA_MASK);
 
     /* re-enable POWER_ON_VAL0/1 to control power */
     spm_write(SPM_PCM_PWR_IO_EN, 0);

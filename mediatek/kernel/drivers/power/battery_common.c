@@ -68,7 +68,7 @@
 #include "cust_battery_meter.h"
 #include <mach/mt_boot.h>
 #include "mach/mtk_rtc.h"
-
+#include "../../../../mediatek/platform/mt6582/kernel/drivers/power/fan5405.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Battery Logging Entry
@@ -77,6 +77,15 @@ int Enable_BATDRV_LOG = BAT_LOG_CRTI;
 //static struct proc_dir_entry *proc_entry;
 char proc_bat_data[32];  
 
+#if defined(RIO_5_CHARGING_TEMPERATURE_PLOICY)
+ int charge_temperature_above_step1 = 0;
+ int charge_temperature_above_step2 = 0;
+ int charge_temperature_above_step3 = 0;
+ int charge_temperature_above_step1_valid = 0;
+ int charge_temperature_above_step2_valid = 0;
+ int charge_temperature_above_step3_valid = 0;
+#endif
+int max_charge_tempertaure = 0;
 ///////////////////////////////////////////////////////////////////////////////////////////
 //// Smart Battery Structure
 ///////////////////////////////////////////////////////////////////////////////////////////
@@ -100,6 +109,7 @@ CHARGING_CONTROL battery_charging_control;
 unsigned int g_BatteryNotifyCode=0x0000;
 unsigned int g_BN_TestMode=0x0000;
 kal_bool g_bat_init_flag = 0;
+kal_bool g_thread_init_flag = 0;
 kal_bool g_call_state = CALL_IDLE;
 kal_bool g_charging_full_reset_bat_meter = KAL_FALSE;
 int g_platform_boot_mode = 0;
@@ -123,6 +133,8 @@ kal_bool battery_suspended = KAL_FALSE;
 #define ADC_CHANNEL_READ _IOW('k', 4, int)
 #define BAT_STATUS_READ _IOW('k', 5, int)
 #define Set_Charger_Current _IOW('k', 6, int)
+#define TURN_OFF_CHARGING_FOR_FACTORY _IOW('k', 7, int)
+#define TURN_ON_CHARGING_FOR_FACTORY _IOW('k', 8, int)
 //add for meta tool-----------------------------------------
 #define Get_META_BAT_VOL _IOW('k', 10, int) 
 #define Get_META_BAT_SOC _IOW('k', 11, int) 
@@ -142,6 +154,21 @@ int charging_level_data[1] = {0};
 kal_bool g_ADC_Cali = KAL_FALSE;
 kal_bool g_ftm_battery_flag = KAL_FALSE;
 static int g_wireless_state = 0;
+int g_factory_charging = 0;
+#ifdef BATT_ID_CHECK_SUPPORT
+#define AUXADC_BATT_ID_CHANNEL 0
+#define CHG_MIN_BYD_BATT_ID  400
+#define CHG_MAX_BYD_BATT_ID  600
+#define CHG_MIN_SCUD_BATT_ID  1300
+#define CHG_MAX_SCUD_BATT_ID  1510
+#define CHG_MAX_LISHEN_BATT_ID 1000
+#define CHG_MIN_LISHEN_BATT_ID 800
+int byd_sucd_batt_id = 1;// 1 BYD 2 SUCD
+extern int IMM_GetOneChannelValue(int dwChannel, int data[4], int* rawdata);
+void check_battery_id(void);
+#define DEFAULT_BATTER_ID 800
+int g_battery_id = DEFAULT_BATTER_ID;
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 //// Thread related 
@@ -248,7 +275,7 @@ static enum power_supply_property battery_props[] = {
 ///////////////////////////////////////////////////////////////////////////////////////////
 //// extern function
 ///////////////////////////////////////////////////////////////////////////////////////////
-//extern void mt_power_off(void);
+extern void mt_power_off(void);
 extern bool mt_usb_is_device(void);
 #if defined(CONFIG_USB_MTK_HDRC) || defined(CONFIG_USB_MU3D_DRV)
 extern void mt_usb_connect(void);
@@ -257,25 +284,86 @@ extern void mt_usb_disconnect(void);
 #define mt_usb_connect() do { } while (0)
 #define mt_usb_disconnect() do { } while (0)
 #endif
+#ifdef BATT_ID_CHECK_SUPPORT
+void check_battery_id(void){
+   int i = 0, bat_id_vol = 0, data[4] = {0,0,0,0};
+   int res =0;
+   int rawdata=0;
+   long tmo1;
+
+  for(i = 0; i < 5; i++)
+  {
+   res = IMM_GetOneChannelValue(AUXADC_BATT_ID_CHANNEL,data,&rawdata);
+   if(res < 0)
+     {
+        printk("[adc_driver]: get data error\n");
+        break;
+     }
+   else
+     {
+        if(Enable_BATDRV_LOG >= 1)
+        printk("[adc_driver]: channel4[%d]raw =%d\n",i,rawdata);
+     }
+   msleep(5);
+   bat_id_vol += (rawdata * 1500 / 4096);
+   //printk("adc: channel4[%d]raw =%d\n",i,rawdata * 2500 / 4096);
+  }
+
+  if(res < 0)  /*get adc value fail*/
+       return;
+
+  bat_id_vol = bat_id_vol/5;
+  //printk("%s: bat_id_vol:%d!\n", __func__, bat_id_vol);
+
+	printk("BAT_ID_CHECK ---------------bat_id_vol == %d\n",bat_id_vol);
+	if((bat_id_vol < CHG_MAX_BYD_BATT_ID)&&(bat_id_vol > CHG_MIN_BYD_BATT_ID))
+	{
+		BMT_status.bat_id_valid = 1;
+		byd_sucd_batt_id=1; //byd
+		printk("battery id BYD %d,between %d and %d !\n", bat_id_vol,CHG_MIN_BYD_BATT_ID,CHG_MAX_BYD_BATT_ID);
+	}
+	else if ((bat_id_vol < CHG_MAX_SCUD_BATT_ID)&&(bat_id_vol > CHG_MIN_SCUD_BATT_ID))
+	{
+		BMT_status.bat_id_valid = 1;
+		byd_sucd_batt_id=2; //sucd
+		printk("battery id SUCD %d,between %d and %d !\n", bat_id_vol,CHG_MIN_SCUD_BATT_ID,CHG_MAX_SCUD_BATT_ID);
+	}
+	else if ((bat_id_vol < CHG_MAX_LISHEN_BATT_ID)&&(bat_id_vol > CHG_MIN_LISHEN_BATT_ID))
+	{
+		BMT_status.bat_id_valid = 1;
+		byd_sucd_batt_id=3; //LISHEN
+		printk("battery id LISHEN %d,between %d and %d !\n", bat_id_vol,CHG_MIN_LISHEN_BATT_ID,CHG_MAX_LISHEN_BATT_ID);
+
+	}
+	else
+	{	
+		byd_sucd_batt_id=1;
+		BMT_status.bat_id_valid = 0;
+		printk("%s:battery id error %d!\n", __func__, bat_id_vol);
+	}
+
+}
+#endif
 //extern int set_rtc_spare_fg_value(int val);
+
 
 int read_tbat_value(void)
 {
     return BMT_status.temperature;
 }
 
-static void get_charging_control(void);
 int get_charger_detect_status(void)
 {
 	kal_bool chr_status;
-
-	if (NULL == battery_charging_control)
-		get_charging_control();
 
 	battery_charging_control(CHARGING_CMD_GET_CHARGER_DET_STATUS,&chr_status);
     return chr_status;
 }
 
+void reset_charging_iocharger(void)
+{
+	fan5405_reg_config_interface(0x04,0x0a);
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 //// PMIC PCHR Related APIs
@@ -1186,6 +1274,23 @@ static ssize_t store_Charging_CallState(struct device *dev,struct device_attribu
 }
 static DEVICE_ATTR(Charging_CallState, 0664, show_Charging_CallState, store_Charging_CallState);
 
+#ifdef BATT_ID_CHECK_SUPPORT
+static ssize_t show_battery_id(struct device *dev,struct device_attribute *attr, char *buf)
+{
+	kal_int32 battery_id=g_battery_id;
+	xlog_printk(ANDROID_LOG_DEBUG, "Power/Battery", "[EM] battery id : %d\n", battery_id);
+	return sprintf(buf, "%u\n", battery_id);
+}
+static ssize_t store_battery_id(struct device *dev,struct device_attribute *attr, const char *buf, size_t size)
+{
+	kal_int32 battery_id=0;
+	int rc=0;
+	rc=kstrtouint(buf,10,&battery_id);
+	g_battery_id=battery_id;
+	return size;
+}
+static DEVICE_ATTR(BATT_ID, 0664, show_battery_id, store_battery_id);
+#endif
 static void mt_battery_update_EM(struct battery_data *bat_data)
 {
 	bat_data->BAT_CAPACITY = BMT_status.UI_SOC;
@@ -1602,7 +1707,7 @@ PMU_STATUS do_batt_temp_state_machine(void)
 		 return PMU_STATUS_FAIL;
 	}
 #ifdef BAT_LOW_TEMP_PROTECT_ENABLE
-	if (BMT_status.temperature < MIN_CHARGE_TEMPERATURE)
+	if (BMT_status.temperature <= MIN_CHARGE_TEMPERATURE)
 	{
 		battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] Battery Under Temperature or NTC fail !!\n\r");
 		g_batt_temp_status = TEMP_POS_LOW;
@@ -1630,7 +1735,7 @@ PMU_STATUS do_batt_temp_state_machine(void)
 	}
 	else if(g_batt_temp_status == TEMP_POS_HIGH)
 	{
-		if (BMT_status.temperature < MAX_CHARGE_TEMPERATURE_MINUS_X_DEGREE) {             
+		if (BMT_status.temperature < MAX_CHARGE_TEMPERATURE_MINUS_X_DEGREE) {
 			battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] Battery Temperature down from %d to %d(%d), allow charging!!\n\r", 
 				MAX_CHARGE_TEMPERATURE,BMT_status.temperature,MAX_CHARGE_TEMPERATURE_MINUS_X_DEGREE); 
 			g_batt_temp_status = TEMP_POS_NORMAL;
@@ -1817,7 +1922,49 @@ void mt_battery_GetBatteryData(void)
 static PMU_STATUS mt_battery_CheckBatteryTemp(void)
 {	
 	PMU_STATUS status = PMU_STATUS_OK;
+#if defined(RIO_5_CHARGING_TEMPERATURE_PLOICY)
+     if(BMT_status.temperature >= CHARGE_TEMPERATURE_STEP1)
+    {
+        charge_temperature_above_step1 = 1;
+    }
 	
+    if(charge_temperature_above_step1 == 1)
+    {
+        if(BMT_status.temperature <(CHARGE_TEMPERATURE_STEP1-2))
+        {
+            charge_temperature_above_step1 = 0;
+            charge_temperature_above_step1_valid = 1;
+	  }
+	  
+    }
+	
+    if(BMT_status.temperature >= CHARGE_TEMPERATURE_STEP2)
+    {
+        charge_temperature_above_step2 = 1;
+    }
+	
+    if(charge_temperature_above_step2 == 1)
+    {
+        if(BMT_status.temperature <(CHARGE_TEMPERATURE_STEP2-2))
+        {
+            charge_temperature_above_step2 = 0;
+            charge_temperature_above_step2_valid = 1;
+	  }
+	  
+    }
+   if(BMT_status.temperature >= CHARGE_TEMPERATURE_STEP3)
+    {
+        charge_temperature_above_step3 = 1;
+    }
+    if(charge_temperature_above_step3 == 1)
+    {
+        if(BMT_status.temperature <(CHARGE_TEMPERATURE_STEP3-2))
+        {
+            charge_temperature_above_step3 = 0;
+            charge_temperature_above_step3_valid = 1;
+	  }
+    }
+#endif
 #if defined(MTK_JEITA_STANDARD_SUPPORT)
 
     battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] support JEITA, temperature=%d\n", BMT_status.temperature);            
@@ -1838,7 +1985,7 @@ static PMU_STATUS mt_battery_CheckBatteryTemp(void)
 	}
 #else
     #ifdef BAT_LOW_TEMP_PROTECT_ENABLE
-    if ((BMT_status.temperature < MIN_CHARGE_TEMPERATURE) || (BMT_status.temperature == ERR_CHARGE_TEMPERATURE))
+    if ((BMT_status.temperature <= MIN_CHARGE_TEMPERATURE) || (BMT_status.temperature == ERR_CHARGE_TEMPERATURE))
     {
         battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] Battery Under Temperature or NTC fail !!\n\r");                
         status = PMU_STATUS_FAIL;       
@@ -1923,6 +2070,14 @@ static PMU_STATUS mt_battery_CheckCallState(void)
 
 static void mt_battery_CheckBatteryStatus(void)
 {
+	#ifdef BATT_ID_CHECK_SUPPORT
+	check_battery_id();
+	if(BMT_status.bat_id_valid==0)
+	{
+		BMT_status.bat_charging_state = CHR_ERROR;
+		return;
+	}
+	#endif
     if(mt_battery_CheckBatteryTemp() != PMU_STATUS_OK)
     {
         BMT_status.bat_charging_state = CHR_ERROR;
@@ -1948,6 +2103,11 @@ static void mt_battery_CheckBatteryStatus(void)
         BMT_status.bat_charging_state = CHR_ERROR;
         return;                  
     }	
+	if (g_factory_charging == 1)
+	{
+		BMT_status.bat_charging_state = CHR_ERROR;
+		return;
+	}
 }
 
 
@@ -2029,12 +2189,12 @@ static void mt_battery_notify_VBatTemp_check(void)
 #if defined(MTK_JEITA_STANDARD_SUPPORT)
 	else if (BMT_status.temperature < TEMP_NEG_10_THRESHOLD)
 	{
-        //g_BatteryNotifyCode |= 0x0020;
+        g//_BatteryNotifyCode |= 0x0020;
         battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] bat_temp(%d) out of range(too low)\n", BMT_status.temperature);
 	}
 #else
 #ifdef BAT_LOW_TEMP_PROTECT_ENABLE
-	else if (BMT_status.temperature < MIN_CHARGE_TEMPERATURE)
+	else if (BMT_status.temperature <= MIN_CHARGE_TEMPERATURE)
     {
         //g_BatteryNotifyCode |= 0x0020;
         battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] bat_temp(%d) out of range(too low)\n", BMT_status.temperature);
@@ -2136,7 +2296,7 @@ static void mt_battery_thermal_check(void)
 #if defined(MTK_JEITA_STANDARD_SUPPORT)
         //ignore default rule
 #else    
-		if(BMT_status.temperature >= 60)
+		if((BMT_status.temperature >= 60) || (BMT_status.temperature <= -20))
         {
             #if defined(CONFIG_POWER_EXT)
             battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] CONFIG_POWER_EXT, no update battery update power down.\n");
@@ -2151,7 +2311,7 @@ static void mt_battery_thermal_check(void)
                     struct battery_data *bat_data = &battery_main;
                     struct power_supply *bat_psy = &bat_data->psy;
 
-                    battery_xlog_printk(BAT_LOG_CRTI, "[Battery] Tbat(%d)>=60, system need power down.\n", BMT_status.temperature);
+                    battery_xlog_printk(BAT_LOG_CRTI, "[Battery] Tbat(%d)>=60 || <=-20, system need power down.\n", BMT_status.temperature);
 
                     bat_data->BAT_CAPACITY = 0;
 
@@ -2232,6 +2392,7 @@ static void mt_battery_charger_detect_check(void)
     else 
     {
         wake_unlock(&battery_suspend_lock);
+		g_factory_charging = 0;
 
 		BMT_status.charger_exist = KAL_FALSE;
 		BMT_status.charger_type = CHARGER_UNKNOWN;
@@ -2243,7 +2404,9 @@ static void mt_battery_charger_detect_check(void)
 		BMT_status.CC_charging_time = 0;
 		BMT_status.TOPOFF_charging_time = 0;
 		BMT_status.POSTFULL_charging_time = 0;
-
+		#ifdef CHARGING_IOCHARGRE_RESET
+		reset_charging_iocharger();
+		#endif
 		battery_xlog_printk(BAT_LOG_CRTI, "[BAT_thread]Cable out \r\n");
 				
         mt_usb_disconnect();          
@@ -2284,7 +2447,7 @@ void update_battery_2nd_info(int status_2nd, int capacity_2nd, int present_2nd)
 
 void do_chrdet_int_task(void)
 {
-    if(g_bat_init_flag == KAL_TRUE)
+    if((g_bat_init_flag == KAL_TRUE) && (g_thread_init_flag == KAL_TRUE))
     {
         if( upmu_is_chr_det() == KAL_TRUE )
         {
@@ -2342,6 +2505,38 @@ void do_chrdet_int_task(void)
 
 }
 
+#define JRD_FAST_FULL_CHARGING
+#ifdef JRD_FAST_FULL_CHARGING
+/*
+ * when reach soc 99, to happy users, force
+ * soc 100 after *timeout*
+ */
+#define FULL_CHARGING_TIMEOUT (15*60)
+#define TOPOFF_CHG_VOLTAGE (4270)
+static int g_top_off_time = 0;
+
+static void fast_full_charging()
+{
+    if(KAL_TRUE == upmu_is_chr_det()) {
+        if(BMT_status.SOC == 99 && BMT_status.bat_vol >= TOPOFF_CHG_VOLTAGE) {
+            g_top_off_time += BAT_TASK_PERIOD;
+            printk("Jrd fast_full_charging time = %d\n", g_top_off_time);
+
+            if(g_top_off_time > FULL_CHARGING_TIMEOUT) {
+                BMT_status.bat_full = KAL_FALSE;
+                BMT_status.bat_in_recharging_state = KAL_TRUE;
+                printk("Jrd fast_full_charging enabled\n");
+            }
+        } else if(g_top_off_time != 0) {
+            g_top_off_time = 0;
+            printk("Jrd fast_full_charging time reset\n");
+        }
+    } else if(g_top_off_time != 0) {
+        g_top_off_time = 0;
+        printk("Jrd fast_full_charging time reset\n");
+    }
+}
+#endif
 
 void BAT_thread(void)
 {
@@ -2362,6 +2557,9 @@ void BAT_thread(void)
 
     if( BMT_status.charger_exist == KAL_TRUE )
     {
+#ifdef JRD_FAST_FULL_CHARGING
+        fast_full_charging();
+#endif
         mt_battery_CheckBatteryStatus();	    
         mt_battery_charging_algorithm();
     }
@@ -2381,8 +2579,10 @@ int bat_thread_kthread(void *x)
         mutex_lock(&bat_mutex);
           
 		if((chargin_hw_init_done == KAL_TRUE) && (battery_suspended == KAL_FALSE))
-	        BAT_thread();                      
-
+			{
+				BAT_thread();
+				g_thread_init_flag = KAL_TRUE;
+			}
         mutex_unlock(&bat_mutex);
     
         battery_xlog_printk(BAT_LOG_FULL, "wait event \n" );
@@ -2426,6 +2626,7 @@ static long adc_cali_ioctl(struct file *file, unsigned int cmd, unsigned long ar
     int ret = 0;
 	int adc_in_data[2] = {1,1};
 	int adc_out_data[2] = {1,1};
+	kal_uint32 charging_enable;
 
     mutex_lock(&bat_mutex);
 
@@ -2577,6 +2778,16 @@ static long adc_cali_ioctl(struct file *file, unsigned int cmd, unsigned long ar
             //xlog_printk(ANDROID_LOG_DEBUG, "Power/Battery", "**** unlocked_ioctl : SOC:%d\n", adc_out_data[0]);   
 			break;
 		//add bing meta tool-------------------------------
+		case TURN_OFF_CHARGING_FOR_FACTORY:
+			/*  Disable charger */
+			g_factory_charging = 1;
+			printk("turn_off_charging for factory\n");
+			break;
+		case TURN_ON_CHARGING_FOR_FACTORY:
+			/*  Enable charger */
+			g_factory_charging = 0;
+			printk("turn_on_charging for factory\n");
+			break;
           
         default:
             g_ADC_Cali = KAL_FALSE;
@@ -2859,6 +3070,10 @@ static int battery_probe(struct platform_device *dev)
 	    ret_device_file = device_create_file(&(dev->dev), &dev_attr_FG_Battery_CurrentConsumption);
 	    ret_device_file = device_create_file(&(dev->dev), &dev_attr_FG_SW_CoulombCounter);
 	    ret_device_file = device_create_file(&(dev->dev), &dev_attr_Charging_CallState);
+	    #ifdef BATT_ID_CHECK_SUPPORT
+	    ret_device_file = device_create_file(&(dev->dev), &dev_attr_BATT_ID);
+	    #endif
+#endif
 	}
 	
 	//battery_meter_initial();	//move to mt_battery_GetBatteryData() to decrease booting time
@@ -2883,6 +3098,16 @@ static int battery_probe(struct platform_device *dev)
 	BMT_status.bat_full= KAL_FALSE;
 	BMT_status.nPercent_ZCV = 0;
 	BMT_status.nPrecent_UI_SOC_check_point= battery_meter_get_battery_nPercent_UI_SOC();
+
+#ifdef BATT_ID_CHECK_SUPPORT
+	check_battery_id();
+#if !defined BATTERY_ID_CHECK_BOOT
+	if((0 == BMT_status.bat_id_valid) && ((get_boot_mode() != META_BOOT)|| (get_boot_mode() !=ADVMETA_BOOT) || (get_boot_mode() !=ATE_FACTORY_BOOT)))
+	{
+	       printk(KERN_INFO "BAT_ID_CHECK-------Error, power off MS!\n");
+	       mt_power_off();
+	}
+#endif
 
 
     //battery kernel thread for 10s check and charger in/out event

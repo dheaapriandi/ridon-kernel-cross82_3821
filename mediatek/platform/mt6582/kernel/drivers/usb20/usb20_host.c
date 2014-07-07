@@ -141,7 +141,6 @@ static bool musb_is_host(void)
     iddig_state = mt_get_gpio_in(GPIO_OTG_IDDIG_EINT_PIN);
 	DBG(0,"iddig_state = %d\n", iddig_state);
 #else
-    iddig_state = 0 ;
     devctl = musb_readb(mtk_musb->mregs,MUSB_DEVCTL);
     DBG(0, "devctl = %x before end session\n", devctl);
     devctl &= ~MUSB_DEVCTL_SESSION;	// this will cause A-device change back to B-device after A-cable plug out
@@ -298,6 +297,13 @@ static void musb_id_pin_work(struct work_struct *data)
 		USBPHY_SET8(0x6d, 0x3e);
 		DBG(0,"force PHY to idle, 0x6d=%x, 0x6c=%x\n", USBPHY_READ8(0x6d), USBPHY_READ8(0x6c));
         #endif
+		/* for none disconnect interrupt*/
+               if (mtk_musb->is_active) {
+                    spin_lock_irqsave(&mtk_musb->lock, flags);
+                   usb_hcd_resume_root_hub(musb_to_hcd(mtk_musb));
+                   musb_root_disconnect(mtk_musb);
+                    spin_unlock_irqrestore(&mtk_musb->lock, flags);
+                }
 
 		musb_stop(mtk_musb);
 		//ALPS00849138

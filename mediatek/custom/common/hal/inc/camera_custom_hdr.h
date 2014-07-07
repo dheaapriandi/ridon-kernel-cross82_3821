@@ -5,9 +5,6 @@
 
 #define CUST_HDR_DEBUG          0   // Enable this will dump HDR Debug Information into SDCARD
 #define HDR_DEBUG_OUTPUT_FOLDER		"/storage/sdcard1/"	// For ALPS.JB.
-/**************************************************************************
- *                      D E F I N E S / M A C R O S                       *
- **************************************************************************/
 // For HDR Customer Parameters
 
 // [capture policy]
@@ -90,17 +87,8 @@
 #define CUST_HDR_TARGET_LEVEL_SUB		0
 
 
-/**************************************************************************
- *     E N U M / S T R U C T / T Y P E D E F    D E C L A R A T I O N     *
- **************************************************************************/
 
-/**************************************************************************
- *                 E X T E R N A L    R E F E R E N C E S                 *
- **************************************************************************/
 
-/**************************************************************************
- *        P U B L I C    F U N C T I O N    D E C L A R A T I O N         *
- **************************************************************************/
 MUINT32 CustomHdrCoreNumberGet(void);
 MUINT32 CustomHdrProlongedVdGet(void);
 MUINT32 CustomHdrBRatioGet(void);
@@ -113,9 +101,6 @@ MINT32 CustomHdrThHighGet(void);
 MINT32 CustomHdrThLowGet(void);
 MUINT32 CustomHdrTargetLevelSubGet(void);
 
-/*******************************************************************************
-* HDR exposure setting
-*******************************************************************************/
 typedef struct HDRExpSettingInputParam_S
 {
     MUINT32 u4MaxSensorAnalogGain; // 1x=1024
@@ -142,9 +127,6 @@ typedef struct HDRExpSettingOutputParam_S
 
 MVOID getHDRExpSetting(const HDRExpSettingInputParam_T& rInput, HDRExpSettingOutputParam_T& rOutput);
 
-/**************************************************************************
- *                   C L A S S    D E C L A R A T I O N                   *
- **************************************************************************/
 
 
 

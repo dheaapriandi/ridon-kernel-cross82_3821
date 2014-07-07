@@ -1,31 +1,5 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- *   cfg_gps_file.h
- *
- * Project:
- * --------
- *   YuSu
- *
- * Description:
- * ------------
- *    header file of main function
- *
- * Author:
- * -------
- *   Mike Chang(MTK02063)
- *
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- * 06 24 2010 yunchang.chang
- * [ALPS00002677][Need Patch] [Volunteer Patch] ALPS.10X.W10.26 Volunteer patch for GPS customization use NVRam 
- * .
- *
- *******************************************************************************/
+
+
 
 
 

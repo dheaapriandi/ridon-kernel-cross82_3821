@@ -1,3 +1,4 @@
+
 #ifndef __CAMERA_CUSTOM_FLICKER_H__
 #define __CAMERA_CUSTOM_FLICKER_H__
 
@@ -5,9 +6,6 @@
 void cust_getFlickerHalPara(int* defaultHz, int* maxDetExpUs); //default: 50 (50hz), 70000 (70ms)
 namespace NSCamCustom
 {
-/*******************************************************************************
-*
-*******************************************************************************/
 	typedef enum
 	{
 		eFLKSpeed_Slow =   0,

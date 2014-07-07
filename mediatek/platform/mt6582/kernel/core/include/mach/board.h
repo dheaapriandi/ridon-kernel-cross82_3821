@@ -80,6 +80,13 @@ struct msdc_hw {
 	unsigned char  cmdrrddly; //cmd; range: 0~31
 	unsigned char  cmdrddly; //cmd; range: 0~31
 
+	unsigned char  cmdrtactr_sdr50;   // command response turn around counter, sdr 50 mode
+	unsigned char  wdatcrctactr_sdr50;   // write data crc turn around counter, sdr 50 mode
+	unsigned char  intdatlatcksel_sdr50;   // internal data latch CK select, sdr 50 mode
+	unsigned char  cmdrtactr_sdr200;   // command response turn around counter, sdr 200 mode
+	unsigned char  wdatcrctactr_sdr200;   // write data crc turn around counter, sdr 200 mode
+	unsigned char  intdatlatcksel_sdr200;   // internal data latch CK select, sdr 200 mode
+
 	unsigned long  host_function;	 /* define host function*/
 	bool		   boot;			 /* define boot host*/ 
 	bool		   cd_level;		 /* card detection level*/	

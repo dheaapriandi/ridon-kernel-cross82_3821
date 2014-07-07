@@ -1,37 +1,4 @@
-/*******************************************************************************
- * Filename:
- * ---------
- *   eemcs_fs_ut.c
- *
- * Project:
- * --------
- *   MOLY
- *
- * Description:
- * ------------
- *   Implements the CCCI FS unit test functions
- *
- * Author:
- * -------
- *
- * ==========================================================================
- * $Log$
- *
- * 07 03 2013 ian.cheng
- * [ALPS00837674] [LTE_MD]  EEMCS ALPS.JB5.82LTE.DEV migration
- * [eemcs migration]
- *
- * 05 27 2013 ian.cheng
- * [ALPS00741900] [EEMCS] Modify device major number to 183
- * 1. update eemcs major number to 183
- * 2. fix typo of CCCI_CHNNEL_T
- *
- * 04 28 2013 ian.cheng
- * [ALPS00612780] [EEMCS] Submit EEMCS to ALPS.JB2.MT6582.MT6290.BSP.DEV
- * 1. merge mediatek/kernel/drivers/eemcs to dev branch
- * 2. merge mdediatek/kernel/drivers/net/lte_hdrv_em to dev branch
- *
- ****************************************************************************/
+
 
 #include <linux/module.h>
 #include <linux/limits.h>
@@ -442,15 +409,6 @@ KAL_INT32 eemcs_fs_ut_send_cmd(void);
 // Implemenataion
 //=============================================================================
 
-/*
- * @brief Generate a file with test data
- * @param
- *     file [in] The file name with full path
- *     size [in] The file size you want
- * @return
- *     KAL_SUCCESS is returned indicates success;
- *     KAL_FAIL otherwise.
- */
 KAL_INT32 gen_ap_random_file(char *file, KAL_UINT32 size)
 {
     struct file *fp = NULL;
@@ -480,15 +438,6 @@ KAL_INT32 gen_ap_random_file(char *file, KAL_UINT32 size)
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Get data from a file
- * @param
- *     file [in] The file name with full path
- *     size [in] The data size you want to get from the file
- * @return
- *     A non-null data pointer is returned indicates success;
- *     NULL otherwise.
- */
 void *get_file_data(char *file, KAL_UINT32 size)
 {
     void *data = NULL;
@@ -526,14 +475,6 @@ _open_fail:
     return data;
 }
 
-/*
- * @brief Get data from the test file
- * @param
- *     index [in] The file index in global variable g_test_file
- * @return
- *     A non-NULL data pointer is returned indicates success;
- *     NULL otherwise.
- */
 void *get_test_file_data(KAL_UINT32 index)
 {
     char src[NAME_MAX] = {0};
@@ -542,13 +483,6 @@ void *get_test_file_data(KAL_UINT32 index)
     return get_file_data(src, g_test_file[index].size);
 }
 
-/*
- * @brief Destroy file data
- * @param
- *     data [in] A data pointer returned from get_file_data()
- * @return
- *     None
- */
 void destroy_file_data(void *data)
 {
     DEBUG_LOG_FUNCTION_ENTRY;
@@ -584,15 +518,6 @@ static int FS_ConvWcsToCs(const wchar_t* strScr, char* strDst, unsigned int src_
         return length;
 }
 
-/*
- * @brief Convert char string to wide char string
- * @param
- *     strSrc [in] Source char string to be converted
- *     strDst [out] The converted wide char string
- *     length [in] Length of source char string
- * @return
- *     The length of source char string have been converted
- */
 static int FS_ConvCsToWcs(const char* strSrc, wchar_t* strDst, unsigned int src_length)
 {
     char *ptr;
@@ -627,13 +552,6 @@ static int FS_ConvCsToWcs(const char* strSrc, wchar_t* strDst, unsigned int src_
     return length;   
 }
 
-/*
- * @brief Calculate the length of wide char string
- * @param
- *     str [in] Source wide char string
- * @return
- *     The length of source wide char string
- */
 static int FS_WcsLen(const wchar_t *str)
 {
     KAL_UINT16 *ptr = NULL;
@@ -645,16 +563,6 @@ static int FS_WcsLen(const wchar_t *str)
     return len;
 }
 
-/*
- * @brief Allocate a sk buffer and initial it's FS header fields
- * @param
- *     size [in] Size in bytes to allocate
- *     stream [in] FS header structure for reference
- *     again [in] Send again indicator
- * @return
- *     A pointer to the allocated sk buffer indicates success.
- *     Otherwise NULL is returned.
- */
 struct sk_buff *eemcs_ut_alloc_skb(KAL_UINT32 size, FS_STREAMBUFFER *stream, KAL_UINT8 again)
 {
     struct sk_buff *new_skb = NULL;
@@ -694,13 +602,6 @@ _fail:
     return NULL;
 }
 
-/*
- * @brief Dump FS header information to standard output
- * @param
- *     data [in] A pointer to the data buffer containing FS header
- * @return
- *     None
- */
 void dump_fs_stream_header(void *data)
 {
     FS_STREAMBUFFER *stream = NULL;
@@ -713,16 +614,6 @@ void dump_fs_stream_header(void *data)
         stream->fs_operationID);
 }
 
-/*
- * @brief
- *     Simulating MD sending a FS command to AP.
- *     This function will allocate a sk buffer, format its data buffer to
- *     FS commands format, then callback to CCCI CHAR layer directly.
- * @param
- *     None
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_send_skb(void)
 {
     FS_STREAMBUFFER *stream = NULL;
@@ -812,17 +703,6 @@ KAL_INT32 eemcs_fs_ut_send_skb(void)
     return KAL_SUCCESS;
 }
 
-/*
- * @brief
- *     Store arguments information to the big buffer(g_eemcs_fs_ut.FS_REQ_BUF) for transmission
- * @param
- *     index [in] Port index currently in use
- *     op [in] Operation ID currently in progress
- *     pLV [in] A structure containing arguments information
- *     num [in] Number to arguments
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 ccci_fs_put_buff(KAL_INT32 index, KAL_UINT32 op, FS_CCCI_LV_T *pLV, KAL_UINT32 num)
 {
     FS_STREAMBUFFER *fs_buf = NULL;
@@ -884,18 +764,6 @@ KAL_INT32 ccci_fs_put_buff(KAL_INT32 index, KAL_UINT32 op, FS_CCCI_LV_T *pLV, KA
     return KAL_SUCCESS;
 }
 
-/*
- * @brief
- *     Parsing big buffer(g_eemcs_fs_ut.FS_REQ_BUF) and store arguments information
- *     to a arguments structure
- * @param
- *     index [in] Port index currently in use
- *     op [in] Operation ID currently in progress
- *     pLV [out] A structure to store argument information
- *     num [in] Number to arguments
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 ccci_fs_get_buff(KAL_INT32 index, KAL_UINT32 op, FS_CCCI_LV_T *pLV, KAL_UINT32 *num)
 {
     KAL_UINT32 i, no_copy = 0;
@@ -946,13 +814,6 @@ KAL_INT32 ccci_fs_get_buff(KAL_INT32 index, KAL_UINT32 op, FS_CCCI_LV_T *pLV, KA
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Wrapper function for all operations
- * @param
- *     fs_para [in] A structure containing arguments information
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 static KAL_UINT32 CCCI_FS_OP_Wrapper(CCCI_FS_PARA_T* fs_para)
 {
     KAL_INT32 ret;
@@ -969,13 +830,6 @@ static KAL_UINT32 CCCI_FS_OP_Wrapper(CCCI_FS_PARA_T* fs_para)
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Reset gobal arguments structures
- * @param
- *     None
- * @return
- *     None
- */
 void eemcs_fs_ut_reset_args(void)
 {
     memset(g_LV_in, 0, sizeof(FS_CCCI_LV_T) * FS_CCCI_MAX_ARG_NUM);
@@ -985,15 +839,6 @@ void eemcs_fs_ut_reset_args(void)
     memset(&g_ccci_fs_paras, 0, sizeof(CCCI_FS_PARA_T));
 }
 
-/*
- * @brief Get drive name
- * @param
- *     type [in] Drive type
- *     serial [in] Drive type serial
- *     alt_mask [in] Drvie mask
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_getdrive(KAL_UINT32 type, KAL_UINT32 serial, KAL_UINT32 alt_mask)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1030,13 +875,6 @@ KAL_INT32 eemcs_fs_ut_getdrive(KAL_UINT32 type, KAL_UINT32 serial, KAL_UINT32 al
     return ret;
 }
 
-/*
- * @brief Get cluster size of a specified drive
- * @param
- *     drive_index [in] Drive name
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_getclustersize(KAL_UINT32 drive_index)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1066,13 +904,6 @@ KAL_INT32 eemcs_fs_ut_getclustersize(KAL_UINT32 drive_index)
     return ret;
 }
 
-/*
- * @brief Create a directory
- * @param
- *     dir_path [in] Pull path of a directory
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_createdir(const wchar_t *dir_path)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1102,13 +933,6 @@ KAL_INT32 eemcs_fs_ut_createdir(const wchar_t *dir_path)
     return ret;
 }
 
-/*
- * @brief Delete a directory
- * @param
- *     dir_path [in] Pull path of a directory
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_removedir(const wchar_t *dir_name)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1138,14 +962,6 @@ KAL_INT32 eemcs_fs_ut_removedir(const wchar_t *dir_name)
     return ret;
 }
 
-/*
- * @brief Open a file
- * @param
- *     file_path [in] A file full path to be opened
- *     flags [in] Flags to open the file
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_open(wchar_t *file_path, KAL_UINT32 flags)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1184,13 +1000,6 @@ KAL_INT32 eemcs_fs_ut_open(wchar_t *file_path, KAL_UINT32 flags)
     return ret;
 }
 
-/*
- * @brief Close a file
- * @param
- *     fhandle [in] The file handle returned from eemcs_fs_ut_open()
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_close(KAL_UINT32 fhandle)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1226,16 +1035,6 @@ KAL_INT32 eemcs_fs_ut_close(KAL_UINT32 fhandle)
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Write data to a file
- * @param
- *     fhandle  [in] The file handle returned from eemcs_fs_ut_open()
- *     data     [in] Data to write
- *     size     [in] Size of data
- *     written  [out] The size in bytes have been written to file
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_write(KAL_UINT32 fhandle, void *data, KAL_UINT32 size, KAL_UINT32 *written)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1282,14 +1081,6 @@ KAL_INT32 eemcs_fs_ut_write(KAL_UINT32 fhandle, void *data, KAL_UINT32 size, KAL
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Get the size of a file
- * @param
- *     fhandle  [in] The file handle returned from eemcs_fs_ut_open()
- *     size     [out] Size of the file
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_get_file_size(KAL_UINT32 fhandle, KAL_UINT32 *size)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1330,16 +1121,6 @@ KAL_INT32 eemcs_fs_ut_get_file_size(KAL_UINT32 fhandle, KAL_UINT32 *size)
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Read data from a file
- * @param
- *     fhandle  [in] The file handle returned from eemcs_fs_ut_open()
- *     data     [out] A data buffer to store read data
- *     size     [in] Size to read from the file
- *     read     [out] The actual size read from the file
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_read(KAL_UINT32 fhandle, void *data, KAL_UINT32 size, KAL_UINT32 *read)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1388,15 +1169,6 @@ KAL_INT32 eemcs_fs_ut_read(KAL_UINT32 fhandle, void *data, KAL_UINT32 size, KAL_
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Move a file to another path
- * @param
- *     src [in] Source path of file
- *     dst [in] Destination path of ile
- *     flags [in] Options of move command
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_move(const wchar_t *src, const wchar_t *dst, KAL_UINT32 flags)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1431,14 +1203,6 @@ KAL_INT32 eemcs_fs_ut_move(const wchar_t *src, const wchar_t *dst, KAL_UINT32 fl
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Rename a file
- * @param
- *     old_name [in] Original name of file
- *     new_name [in] New name of ile
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_rename(const wchar_t *old_name, const wchar_t* new_name)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1470,13 +1234,6 @@ KAL_INT32 eemcs_fs_ut_rename(const wchar_t *old_name, const wchar_t* new_name)
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Delete a file
- * @param
- *     file_name [in] Full path of a file
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_delete(const wchar_t *file_name)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1505,14 +1262,6 @@ KAL_INT32 eemcs_fs_ut_delete(const wchar_t *file_name)
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Get size of a filder
- * @param
- *     src [in] Full path of folder
- *     flags [in] Options of GETFOLDERSIZE command.
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_getfoldersize(const wchar_t *dir, KAL_UINT32 flags)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1544,13 +1293,6 @@ KAL_INT32 eemcs_fs_ut_getfoldersize(const wchar_t *dir, KAL_UINT32 flags)
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Count file/folder number of a specified folder
- * @param
- *     dir_path [in] Full path of a folder
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_count(const wchar_t *dir_path, KAL_UINT32 flags)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1582,14 +1324,6 @@ KAL_INT32 eemcs_fs_ut_count(const wchar_t *dir_path, KAL_UINT32 flags)
     return KAL_SUCCESS;
 }
 
-/*
- * @brief Delete a folder
- * @param
- *     dir_path [in] Full path of a folder
- *     flags [in] Options of XDELETE command
- * @return
- *     This function will return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_xdelete(const wchar_t *dir_path, KAL_UINT32 flags)
 {
     KAL_INT32 index = g_eemcs_fs_ut.ut_port_index;
@@ -1741,14 +1475,6 @@ KAL_INT32 eemcs_fs_ut_findclose(KAL_UINT32 handle)
     return KAL_SUCCESS;
 }
 
-/*
- * @brief The handler after receiving ACK commands from AP
- * @param
- *     None
- * @return
- *     KAL_SUCCESS indicates the ACK command is handled correctly.
- *     KAL_FAIL indicates the ACK command is not supported.
- */
 KAL_INT32 eemcs_fs_ut_ul_handler(void)
 {
     KAL_UINT32 op_id = g_ccci_fs_paras.op_id;
@@ -2116,16 +1842,6 @@ void dump_fsd_skb_data(void *data)
     DBGLOG(FSUT, DBG, "[FSUT][SKB] %d Arguments", *((KAL_UINT32*)stream->buffer));
 }
 
-/*
- * @brief
- *     A function for FS UT.
- *     This function receives sk buffer containing FS commands from AP.
- * @param
- *     chn [in] Incomming channel of FS commands.
- *     skb [in] A sk buffer containing FS commands.
- * @return
- *     This function return KAL_SUCCESS always.
- */
 KAL_INT32 eemcs_fs_ut_UL_write_skb_to_swq(CCCI_CHANNEL_T chn, struct sk_buff *skb)
 {
     FS_STREAMBUFFER *stream = NULL;
@@ -2244,14 +1960,6 @@ KAL_INT32 eemcs_fs_ut_UL_write_skb_to_swq(CCCI_CHANNEL_T chn, struct sk_buff *sk
     return KAL_SUCCESS;
 }
 
-/*
- * @brief A function to simulate MD sending a FS operation to AP
- * @param
- *     None
- * @return
- *     KAL_SUCCESS indicates UT is in progress correctly.
- *     KAL_FAIL indicates UT is something wrong.
- */
 KAL_INT32 eemcs_fs_ut_send_cmd(void)
 {
     EEMCS_FS_TEST_CASE *test_case = NULL;
@@ -2556,13 +2264,6 @@ KAL_INT32 eemcs_fs_ut_exit(void)
 }
 
 
-/*
- * @brief Trigger FS UT procedure
- * @param
- *     None
- * @return
- *     None
- */
 void eemcs_fs_ut_trigger(void)
 {
     KAL_INT32 ut_port_index = 0;
@@ -2583,14 +2284,6 @@ void eemcs_fs_ut_trigger(void)
     eemcs_fs_ut_send_cmd();
 }
 
-/*
- * @brief Set the port index to be tested
- * @param
- *     index [in] Port index
- * @return
- *     KAL_SUCCESS if port index is set correctly;
- *     KAL_FAIL otherwise.
- */
 KAL_INT32 eemcs_fs_ut_set_index(KAL_UINT32 index)
 {
     if (index >=0 && index < 5) {
@@ -2602,25 +2295,11 @@ KAL_INT32 eemcs_fs_ut_set_index(KAL_UINT32 index)
     }
 }
 
-/*
- * @brief Return the port index currently in use.
- * @param
- *     None
- * @return
- *     The port index currently in use.
- */
 KAL_UINT32 eemcs_fs_ut_get_index(void)
 {
     return g_eemcs_fs_ut.ut_port_index;
 }
 
-/*
- * @brief Display information about FS UT
- * @param
- *     None
- * @return
- *     None
- */
 void eemcs_fs_ut_dump(void)
 {
     printk("[FSUT] g_eemcs_fs_ut.test_case_idx = %d\r\n", g_eemcs_fs_ut.test_case_idx);

@@ -4,6 +4,10 @@ ifeq ($(MTK_MT6333_SUPPORT),yes)
     obj-$(CONFIG_MTK_PMIC) += mt6333.o
 endif
 
+ifeq ($(TARGET_BUILD_MMITEST),true)
+EXTRA_CFLAGS += -DCHARGING_IOCHARGRE_RESET
+endif
+
 obj-$(CONFIG_MTK_SMART_BATTERY) += battery_meter_hal.o 
 
 #ifeq ($(MTK_BQ27541_SUPPORT),yes)

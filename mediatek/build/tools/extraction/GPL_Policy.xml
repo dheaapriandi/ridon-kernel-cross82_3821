@@ -5,6 +5,7 @@
 	<Dir>mediatek/config</Dir>
 	<Dir>mediatek/custom</Dir>
 	<Dir>mediatek/kernel</Dir>
+	<Dir>mediatek/cgen</Dir>
 	<Dir>mediatek/dct</Dir>
         <Dir>kernel</Dir>
 	<Dir>mediatek/platform/common/kernel</Dir>

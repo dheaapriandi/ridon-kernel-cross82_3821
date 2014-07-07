@@ -35,12 +35,6 @@
 			return 0;	\
 	} while (0)
 
-#define IS_MTKPASR_ENABLED_NORV		\
-	do {				\
-		if (!mtkpasr_enable)	\
-			return;		\
-	} while (0)
-
 /* MTKPASR Debug Filter */
 #define mtkpasr_print(level, x...) 			\
 	do {						\
@@ -59,8 +53,8 @@
 #define	mtkpasr_err(string, args...) 	mtkpasr_print(1, "[%s]:[%s][%d] "string,MTKPASR,__FUNCTION__,__LINE__,##args)
 #endif
 
-/* This is an experimental value based on ARMv7 single core with 1.3 GHz! (Let the external decompression time be around 0.25s.) */
-#define MTKPASR_MAX_EXTCOMP	0x1FFF
+/* This is an experimental value based on MT6589(1 core on)! (Let the external decompression time be around 0.5s.) */
+#define MTKPASR_MAX_EXTCOMP	0x3FFF
 
 #define MTKPASR_FLUSH() do {				\
 				lru_add_drain_all();	\
@@ -244,7 +238,6 @@ extern int mtkpasr_show_banks(char *);
 #ifdef CONFIG_MTKPASR_MAFL
 #define MAX_OPS_INVARIANT	(3)
 #define MAX_NO_OPS_INVARIANT	(MAX_OPS_INVARIANT << 2)
-#define KEEP_NO_OPS		(0x7FFFFFFF)
 extern unsigned long mtkpasr_show_page_reserved(void);
 extern bool mtkpasr_no_phaseone_ops(void);
 extern bool mtkpasr_no_ops(void);

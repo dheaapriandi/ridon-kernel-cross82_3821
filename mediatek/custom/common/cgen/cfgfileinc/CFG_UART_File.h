@@ -1,32 +1,6 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- *   cfg_uart_file.h
- *
- * Project:
- * --------
- *   DUMA
- *
- * Description:
- * ------------
- *    header file of UART config struct
- *
- * Author:
- * -------
- *    LiChunhui (MTK80143)
- *
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- * Mar 24 2009 mtk80143
- * [DUMA00112375] [uart] UART EM mode
- * Add for UART EM mode
- *
- *
- *******************************************************************************/
+
+
+
 
 #ifndef _CFG_UART_FILE_H
 #define _CFG_UART_FILE_H

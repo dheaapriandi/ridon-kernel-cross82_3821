@@ -145,7 +145,7 @@ int RDMAConfig(unsigned idx,
     unsigned int input_is_yuv = 0;
     unsigned int output_is_yuv = 0;
     // Calculate fifo settings
-    unsigned int fifo_pseudo_length = 256; 
+    unsigned int fifo_pseudo_length = 256; //HW fifo SRAM: 240(89), 256(71/72/82/92), 512(ROME)
     unsigned int fifo_threashold;
     // Calculate ultra settings
     unsigned int fps = 60;
@@ -199,7 +199,7 @@ int RDMAConfig(unsigned idx,
         ASSERT( pitch > 0);   	
         ASSERT( address > 0);
     }
-
+    
     switch(inputFormat) {
     case RDMA_INPUT_FORMAT_YUYV:
     case RDMA_INPUT_FORMAT_UYVY:

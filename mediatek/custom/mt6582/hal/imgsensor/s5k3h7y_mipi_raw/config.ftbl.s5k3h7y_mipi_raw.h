@@ -1,12 +1,10 @@
+
 //#ifndef _MTK_CUSTOM_PROJECT_HAL_IMGSENSOR_SRC_CONFIGFTBL__H_
 //#define _MTK_CUSTOM_PROJECT_HAL_IMGSENSOR_SRC_CONFIGFTBL__H_
 #if 1
 //
 
 
-/*******************************************************************************
- *
- ******************************************************************************/
 FTABLE_DEFINITION(SENSOR_DRVNAME_S5K3H7Y_MIPI_RAW)
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 FTABLE_SCENE_INDEP()
@@ -238,10 +236,10 @@ FTABLE_SCENE_INDEP()
                 MtkCameraParameters::CAPTURE_MODE_CONTINUOUS_SHOT, 
                 MtkCameraParameters::CAPTURE_MODE_SMILE_SHOT, 
                 MtkCameraParameters::CAPTURE_MODE_BEST_SHOT, 
-                MtkCameraParameters::CAPTURE_MODE_EV_BRACKET_SHOT, 
                 MtkCameraParameters::CAPTURE_MODE_AUTO_PANORAMA_SHOT, 
                 MtkCameraParameters::CAPTURE_MODE_MAV_SHOT,
                 MtkCameraParameters::CAPTURE_MODE_ASD_SHOT,
+                MtkCameraParameters::CAPTURE_MODE_MOTION_TRACK_SHOT,
             )
         ), 
     )
@@ -263,9 +261,6 @@ FTABLE_SCENE_INDEP()
     //==========================================================================    
 END_FTABLE_SCENE_INDEP()
 //------------------------------------------------------------------------------
-/*******************************************************************************
- *
- ******************************************************************************/
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 FTABLE_SCENE_DEP()
     //==========================================================================
@@ -453,9 +448,6 @@ END_FTABLE_SCENE_DEP()
 END_FTABLE_DEFINITION()
 
 
-/*******************************************************************************
- *
- ******************************************************************************/
 #endif
 //#endif //_MTK_CUSTOM_PROJECT_HAL_IMGSENSOR_SRC_CONFIGFTBL__H_
 

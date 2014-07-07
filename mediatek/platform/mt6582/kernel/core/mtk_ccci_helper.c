@@ -117,7 +117,7 @@ static void internal_md_power_down(void)
 	
 	/*[TDD] MDMCU Control Power Down Sequence*/
 	mt65xx_reg_sync_writew(0x1, TDD_HALT_CFG_ADDR(tdd_base));
-	status = *((volatile unsigned short*)TDD_HALT_STATUS_ADDR(tdd_base));
+	status = *((volatile unsigned short*)TDD_HALT_CFG_ADDR(tdd_base));
 	while ((status & 0x1) == 0) {
 		if (status & 0x1) {	//halted
 		/*TINFO=''TDD is in *HALT* STATE*/
@@ -128,7 +128,7 @@ static void internal_md_power_down(void)
 		}
 		i = 100;
 		while(i--);
-		status = *((volatile unsigned short*)TDD_HALT_STATUS_ADDR(tdd_base));
+		status = *((volatile unsigned short*)TDD_HALT_CFG_ADDR(tdd_base));
 	}
 
 	//printk("[ccci/ctl] (0)ABB power down...\n");
@@ -1502,9 +1502,7 @@ void ccci_md_mem_reserve(void)
 
 static int __init ccci_helper_init(void)
 {
-#ifndef MTK_TB_WIFI_3G_MODE_WIFI_ONLY	
 	internal_md_power_down();
-#endif
 	return 0;
 }
 

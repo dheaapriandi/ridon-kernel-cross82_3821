@@ -1,18 +1,3 @@
-/*
- * Copyright (C) 2011 MediaTek, Inc.
- *
- * Author: Holmes Chiou <holmes.chiou@mediatek.com>
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
 
 
 #include <stdarg.h>
@@ -34,9 +19,6 @@
 #include <linux/vmalloc.h>
 #include <fs/proc/internal.h>
 
-/*
- *  Constant
- */
 
 #define LCA_MAX_SHOW 2048
 #define MAX_FILENAME_TOTAL_LENGTH (50)
@@ -47,9 +29,6 @@
 #define DEFAULT_FILE_NAME DUMP_FILE_PATH"storage_logger_dump"
 #define ACCESS_PERMISSION 0660	//666 means that all users can read/write but not execute
 
-/*
- *  Macro
- */
 
 #define TEST_LOGGER_STORAGE
 #undef TEST_LOGGER_STORAGE
@@ -83,9 +62,6 @@ enum storage_logger_status_code{
 #define PERFORMANCE_FILE_CLEAR_STATUS_FLAG(sTATUSFLAG, BIT)  sTATUSFLAG &= (~(unsigned long)(1<<BIT))
 #define PERFORMANCE_FILE_TEST_STATUS_FLAG(sTATUSFLAG, BIT)  (sTATUSFLAG & ((unsigned long)(1<<BIT)))
 
-/*
- *  Global variable
- */
 static unsigned int trigger;
 
 static bool storage_logger_iosched = false;

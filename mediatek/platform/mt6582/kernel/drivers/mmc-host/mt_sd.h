@@ -1117,6 +1117,7 @@ struct ot_work_t
 	int         chg_volt;
 	atomic_t    ot_disable;
 	atomic_t	autok_done;
+	struct      completion ot_complete;
 };
 #endif // MTK_SDIO30_ONLINE_TUNING_SUPPORT
 
@@ -1185,7 +1186,7 @@ struct msdc_host
     u8                          power_mode;     /* host power mode */
     u8                          card_inserted;  /* card inserted ? */
     u8                          suspend;        /* host suspended ? */    
-    u8                          reserved;
+    u8                          sdio_suspend;   /* sdio suspend ? */
     u8                          app_cmd;        /* for app command */     
     u32                         app_cmd_arg;    
     u64                         starttime;

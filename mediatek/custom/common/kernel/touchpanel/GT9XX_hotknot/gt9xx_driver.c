@@ -25,8 +25,6 @@ static int tpd_flag = 0;
 int tpd_halt = 0;
 static int tpd_eint_mode=1;
 static struct task_struct *thread = NULL;
-static struct task_struct *probe_thread = NULL;
-static bool check_flag= false;
 static int tpd_polling_time=50;
 extern u8 load_fw_process;
 
@@ -224,16 +222,6 @@ s32 i2c_read_bytes(struct i2c_client *client, u16 addr, u8 *rxbuf, int len);
 s32 i2c_write_bytes(struct i2c_client *client, u16 addr, u8 *txbuf, int len);
 static struct proc_dir_entry *gt91xx_config_proc = NULL;
 
-/*******************************************************
-Function:
-	Write refresh rate
-
-Input:
-	rate: refresh rate N (Duration=5+N ms, N=0~15)
-
-Output:
-	Executive outcomes.0---succeed.
-*******************************************************/
 static u8 gtp_set_refresh_rate(u8 rate)
 {
 	u8 buf[3] = {GTP_REG_REFRESH_RATE>>8, GTP_REG_REFRESH_RATE& 0xff, rate};
@@ -248,13 +236,6 @@ static u8 gtp_set_refresh_rate(u8 rate)
 	return gtp_i2c_write(i2c_client_point, buf, sizeof(buf));
 }
 
-/*******************************************************
-Function:
-	Get refresh rate
-
-Output:
-	Refresh rate or error code
-*******************************************************/
 static u8 gtp_get_refresh_rate(void)
 {
 	int ret;
@@ -957,16 +938,6 @@ s32 gtp_i2c_write(struct i2c_client *client, u8 *buf, s32 len)
 
 
 
-/*******************************************************
-Function:
-    Send config Function.
-
-Input:
-    client: i2c client.
-
-Output:
-    Executive outcomes.0--success,non-0--fail.
-*******************************************************/
 s32 gtp_send_cfg(struct i2c_client *client)
 {
     s32 ret = 1;
@@ -999,17 +970,6 @@ s32 gtp_send_cfg(struct i2c_client *client)
 }
 
 
-/*******************************************************
-Function:
-    Read goodix touchscreen version function.
-
-Input:
-    client: i2c client struct.
-    version:address to store version info
-
-Output:
-    Executive outcomes.0---succeed.
-*******************************************************/
 s32 gtp_read_version(struct i2c_client *client, u16 *version)
 {
     s32 ret = -1;
@@ -1059,16 +1019,6 @@ s32 gtp_read_version(struct i2c_client *client, u16 *version)
 }
 
 #if GTP_DRIVER_SEND_CFG
-/*******************************************************
-Function:
-    Get information from ic, such as resolution and 
-    int trigger type
-Input:
-    client: i2c client private struct.
-
-Output:
-    FAIL: i2c failed, SUCCESS: i2c ok
-*******************************************************/
 static s32 gtp_get_info(struct i2c_client *client)
 {
     u8 opr_buf[6] = {0};
@@ -1104,16 +1054,6 @@ static s32 gtp_get_info(struct i2c_client *client)
 #endif
 
 
-/*******************************************************
-Function:
-    GTP initialize function.
-
-Input:
-    client: i2c client private struct.
-
-Output:
-    Executive outcomes.0---succeed.
-*******************************************************/
 static s32 gtp_init_panel(struct i2c_client *client)
 {
     s32 ret = 0;
@@ -1357,14 +1297,6 @@ static s8 gtp_i2c_test(struct i2c_client *client)
 
 
 
-/*******************************************************
-Function:
-    Set INT pin  as input for FW sync.
-
-Note:
-  If the INT is high, It means there is pull up resistor attached on the INT pin.
-  Pull low the INT pin manaully for FW sync.
-*******************************************************/
 void gtp_int_sync(s32 ms)
 {
     GTP_GPIO_OUTPUT(GTP_INT_PORT, 0);
@@ -1483,7 +1415,6 @@ void gtp_get_chip_type(struct i2c_client *client)
     {
         GTP_ERROR("Failed to get chip-type, set chip type default: GOODIX_GT9");
         gtp_chip_type = CHIP_TYPE_GT9;
-	tpd_load_status = 0;
         return;
     }
     
@@ -1497,9 +1428,6 @@ void gtp_get_chip_type(struct i2c_client *client)
     }
     gtp_chip_type = CHIP_TYPE_GT9F; // for test
     GTP_INFO("Chip Type: %s", (gtp_chip_type == CHIP_TYPE_GT9) ? "GOODIX_GT9" : "GOODIX_GT9F");
-
-	tpd_load_status = 1;
-	check_flag = true;
 }
 
 static u8 gtp_bak_ref_proc(struct i2c_client *client, u8 mode)
@@ -1649,7 +1577,7 @@ exit_ref_proc:
     {
         kfree(refp);
     }
-    if(flp!= NULL&&!IS_ERR(flp))
+    if(IS_ERR(flp))
     {
         filp_close(flp, NULL);
     }
@@ -1813,7 +1741,7 @@ static u8 gtp_main_clk_proc(struct i2c_client *client)
     
 
 send_main_clk:
-
+    
     ret = i2c_write_bytes(client, 0x8020, gtp_clk_buf, 6);
     if(-1 == ret)
     {
@@ -1823,12 +1751,9 @@ send_main_clk:
     }
     
     ret = SUCCESS;
+    return SUCCESS;
 exit_clk_proc:
-    if(flp!= NULL&&!IS_ERR(flp))
-    {
-        filp_close(flp, NULL);
-    }
-	
+ 
     return ret;
 }
 
@@ -1840,177 +1765,157 @@ static const struct file_operations gt_upgrade_proc_fops = {
     .read = gt91xx_config_read_proc
 };
 
-static int tpd_registration(struct i2c_client *client)
-{
-		s32 err = 0;
-		s32 ret = 0;
-		GTP_ERROR("tpd registration start.");
-		u16 version_info;
-#if GTP_HAVE_TOUCH_KEY
-		s32 idx = 0;
-#endif
-#ifdef TPD_PROXIMITY
-		struct hwmsen_object obj_ps;
-#endif
-	
-		i2c_client_point = client;
-		ret = tpd_power_on(client);
-	
-		if (ret < 0)
-		{
-			GTP_ERROR("I2C communication ERROR!");
-		}
-		
-	//#ifdef VELOCITY_CUSTOM
- #if 0
-	
-		if ((err = misc_register(&tpd_misc_device)))
-		{
-			printk("mtk_tpd: tpd_misc_device register failed\n");
-		}
-	
-#endif
-#ifdef VELOCITY_CUSTOM
-		tpd_v_magnify_x = TPD_VELOCITY_CUSTOM_X;
-		tpd_v_magnify_y = TPD_VELOCITY_CUSTOM_Y;
-	
-#endif
-	
-		ret = gtp_read_version(client, &version_info);
-	
-		if (ret < 0)
-		{
-			GTP_ERROR("Read version failed.");
-		}	 
-		
-		ret = gtp_init_panel(client);
-	
-		if (ret < 0)
-		{
-			GTP_ERROR("GTP init panel failed.");
-		}
-		
-		// Create proc file system
-		gt91xx_config_proc = proc_create(GT91XX_CONFIG_PROC_FILE, 0660, NULL, &gt_upgrade_proc_fops);
-		if (gt91xx_config_proc == NULL)
-		{
-			GTP_ERROR("create_proc_entry %s failed\n", GT91XX_CONFIG_PROC_FILE);
-		}
-	
-	
-#if GTP_CREATE_WR_NODE
-		init_wr_node(client);
-#endif
-	
-		thread = kthread_run(touch_event_handler, 0, TPD_DEVICE);
-	
-		if (IS_ERR(thread))
-		{
-			err = PTR_ERR(thread);
-			GTP_INFO(TPD_DEVICE " failed to create kernel thread: %d\n", err);
-		}
-		
-		
-#if GTP_HAVE_TOUCH_KEY
-	
-		for (idx = 0; idx < GTP_MAX_KEY_NUM; idx++)
-		{
-			input_set_capability(tpd->dev, EV_KEY, touch_key_array[idx]);
-		}
-	
-#endif
-#if GTP_SLIDE_WAKEUP
-		input_set_capability(tpd->dev, EV_KEY, KEY_POWER);
-#endif
-		
-#if GTP_WITH_PEN
-		// pen support
-		__set_bit(BTN_TOOL_PEN, tpd->dev->keybit);
-		__set_bit(INPUT_PROP_DIRECT, tpd->dev->propbit);
-		//__set_bit(INPUT_PROP_POINTER, tpd->dev->propbit); // 20130722
-#endif
-		// set INT mode
-		mt_set_gpio_mode(GPIO_CTP_EINT_PIN, GPIO_CTP_EINT_PIN_M_EINT);
-		mt_set_gpio_dir(GPIO_CTP_EINT_PIN, GPIO_DIR_IN);
-		mt_set_gpio_pull_enable(GPIO_CTP_EINT_PIN, GPIO_PULL_DISABLE);
-	
-		msleep(50);
-	
-	//#ifdef MT6572
-#if 1
-		if (!int_type)	//EINTF_TRIGGER
-		{
-			mt_eint_registration(CUST_EINT_TOUCH_PANEL_NUM, EINTF_TRIGGER_RISING, tpd_eint_interrupt_handler, 1);
-		}
-		else
-		{
-			mt_eint_registration(CUST_EINT_TOUCH_PANEL_NUM, EINTF_TRIGGER_FALLING, tpd_eint_interrupt_handler, 1);
-		}
-		
-#else
-		mt65xx_eint_set_sens(CUST_EINT_TOUCH_PANEL_NUM, CUST_EINT_TOUCH_PANEL_SENSITIVE);
-		mt65xx_eint_set_hw_debounce(CUST_EINT_TOUCH_PANEL_NUM, CUST_EINT_TOUCH_PANEL_DEBOUNCE_CN);
-	
-		if (!int_type)
-		{
-			mt65xx_eint_registration(CUST_EINT_TOUCH_PANEL_NUM, CUST_EINT_TOUCH_PANEL_DEBOUNCE_EN, CUST_EINT_POLARITY_HIGH, tpd_eint_interrupt_handler, 1);
-		}
-		else
-		{
-			mt65xx_eint_registration(CUST_EINT_TOUCH_PANEL_NUM, CUST_EINT_TOUCH_PANEL_DEBOUNCE_EN, CUST_EINT_POLARITY_LOW, tpd_eint_interrupt_handler, 1);
-		}
-#endif
-	
-		mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
-	
-#if GTP_AUTO_UPDATE
-		ret = gup_init_update_proc(client);
-	
-		if (ret < 0)
-		{
-			GTP_ERROR("Create update thread error.");
-		}
-#endif
-	
-#ifdef TPD_PROXIMITY
-		//obj_ps.self = cm3623_obj;
-		obj_ps.polling = 0; 		//0--interrupt mode;1--polling mode;
-		obj_ps.sensor_operate = tpd_ps_operate;
-	
-		if ((err = hwmsen_attach(ID_PROXIMITY, &obj_ps)))
-		{
-			GTP_ERROR("hwmsen attach fail, return:%d.", err);
-		}
-	
-#endif
-	
-#if GTP_ESD_PROTECT
-		gtp_esd_switch(client, SWITCH_ON);
-#endif
-	   GTP_ERROR("tpd registration done.");
-		return 0;
-}
 static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
-	int err = 0;
-	int count = 0;
-	GTP_ERROR("tpd_i2c_probe start.");
-	probe_thread =kthread_run(tpd_registration, client, "tpd_probe");
-	if (IS_ERR(probe_thread))
-	{
-		err = PTR_ERR(probe_thread);
-		GTP_INFO(TPD_DEVICE " failed to create probe thread: %d\n", err);
-		return err;
-	}
+    s32 err = 0;
+    s32 ret = 0;
 
-	do{
-		msleep(10);
-		count++;
-		if(check_flag)
-			break;
-	}while(count < 50);
-	GTP_ERROR("tpd_i2c_probe done.count = %d, flag = %d",count,check_flag);
-	return 0;
+    u16 version_info;
+#if GTP_HAVE_TOUCH_KEY
+    s32 idx = 0;
+#endif
+#ifdef TPD_PROXIMITY
+    struct hwmsen_object obj_ps;
+#endif
+
+    i2c_client_point = client;
+    ret = tpd_power_on(client);
+
+    if (ret < 0)
+    {
+        GTP_ERROR("I2C communication ERROR!");
+    }
+    
+//#ifdef VELOCITY_CUSTOM
+ #if 0
+
+    if ((err = misc_register(&tpd_misc_device)))
+    {
+        printk("mtk_tpd: tpd_misc_device register failed\n");
+    }
+
+#endif
+#ifdef VELOCITY_CUSTOM
+	tpd_v_magnify_x = TPD_VELOCITY_CUSTOM_X;
+	tpd_v_magnify_y = TPD_VELOCITY_CUSTOM_Y;
+
+#endif
+
+    ret = gtp_read_version(client, &version_info);
+
+    if (ret < 0)
+    {
+        GTP_ERROR("Read version failed.");
+    }    
+    
+    ret = gtp_init_panel(client);
+
+    if (ret < 0)
+    {
+        GTP_ERROR("GTP init panel failed.");
+    }
+    
+    // Create proc file system
+    gt91xx_config_proc = proc_create(GT91XX_CONFIG_PROC_FILE, 0660, NULL, &gt_upgrade_proc_fops);
+    if (gt91xx_config_proc == NULL)
+    {
+        GTP_ERROR("create_proc_entry %s failed\n", GT91XX_CONFIG_PROC_FILE);
+    }
+
+
+#if GTP_CREATE_WR_NODE
+    init_wr_node(client);
+#endif
+
+    thread = kthread_run(touch_event_handler, 0, TPD_DEVICE);
+
+    if (IS_ERR(thread))
+    {
+        err = PTR_ERR(thread);
+        GTP_INFO(TPD_DEVICE " failed to create kernel thread: %d\n", err);
+    }
+    
+    
+#if GTP_HAVE_TOUCH_KEY
+
+    for (idx = 0; idx < GTP_MAX_KEY_NUM; idx++)
+    {
+        input_set_capability(tpd->dev, EV_KEY, touch_key_array[idx]);
+    }
+
+#endif
+#if GTP_SLIDE_WAKEUP
+    input_set_capability(tpd->dev, EV_KEY, KEY_POWER);
+#endif
+    
+#if GTP_WITH_PEN
+    // pen support
+    __set_bit(BTN_TOOL_PEN, tpd->dev->keybit);
+    __set_bit(INPUT_PROP_DIRECT, tpd->dev->propbit);
+    //__set_bit(INPUT_PROP_POINTER, tpd->dev->propbit); // 20130722
+#endif
+    // set INT mode
+    mt_set_gpio_mode(GPIO_CTP_EINT_PIN, GPIO_CTP_EINT_PIN_M_EINT);
+    mt_set_gpio_dir(GPIO_CTP_EINT_PIN, GPIO_DIR_IN);
+    mt_set_gpio_pull_enable(GPIO_CTP_EINT_PIN, GPIO_PULL_DISABLE);
+
+    msleep(50);
+
+//#ifdef MT6572
+#if 1
+    if (!int_type)	//EINTF_TRIGGER
+    {
+        mt_eint_registration(CUST_EINT_TOUCH_PANEL_NUM, EINTF_TRIGGER_RISING, tpd_eint_interrupt_handler, 1);
+    }
+    else
+    {
+        mt_eint_registration(CUST_EINT_TOUCH_PANEL_NUM, EINTF_TRIGGER_FALLING, tpd_eint_interrupt_handler, 1);
+    }
+    
+#else
+    mt65xx_eint_set_sens(CUST_EINT_TOUCH_PANEL_NUM, CUST_EINT_TOUCH_PANEL_SENSITIVE);
+    mt65xx_eint_set_hw_debounce(CUST_EINT_TOUCH_PANEL_NUM, CUST_EINT_TOUCH_PANEL_DEBOUNCE_CN);
+
+    if (!int_type)
+    {
+        mt65xx_eint_registration(CUST_EINT_TOUCH_PANEL_NUM, CUST_EINT_TOUCH_PANEL_DEBOUNCE_EN, CUST_EINT_POLARITY_HIGH, tpd_eint_interrupt_handler, 1);
+    }
+    else
+    {
+        mt65xx_eint_registration(CUST_EINT_TOUCH_PANEL_NUM, CUST_EINT_TOUCH_PANEL_DEBOUNCE_EN, CUST_EINT_POLARITY_LOW, tpd_eint_interrupt_handler, 1);
+    }
+#endif
+
+    mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
+
+#if GTP_AUTO_UPDATE
+    ret = gup_init_update_proc(client);
+
+    if (ret < 0)
+    {
+        GTP_ERROR("Create update thread error.");
+    }
+#endif
+
+#ifdef TPD_PROXIMITY
+    //obj_ps.self = cm3623_obj;
+    obj_ps.polling = 0;         //0--interrupt mode;1--polling mode;
+    obj_ps.sensor_operate = tpd_ps_operate;
+
+    if ((err = hwmsen_attach(ID_PROXIMITY, &obj_ps)))
+    {
+        GTP_ERROR("hwmsen attach fail, return:%d.", err);
+    }
+
+#endif
+
+#if GTP_ESD_PROTECT
+    gtp_esd_switch(client, SWITCH_ON);
+#endif
+   
+    tpd_load_status = 1;
+
+    return 0;
 }
 
 static void tpd_eint_interrupt_handler(void)
@@ -2918,16 +2823,6 @@ static s8 gtp_enter_doze(struct i2c_client *client)
 }
 
 #else
-/*******************************************************
-Function:
-    Eter sleep function.
-
-Input:
-    client:i2c_client.
-
-Output:
-    Executive outcomes.0--success,non-0--fail.
-*******************************************************/
 static s8 gtp_enter_sleep(struct i2c_client *client)
 {
 #if GTP_COMPATIBLE_MODE
@@ -3013,16 +2908,6 @@ static s8 gtp_enter_sleep(struct i2c_client *client)
 }
 #endif
 
-/*******************************************************
-Function:
-    Wakeup from sleep mode Function.
-
-Input:
-    client:i2c_client.
-
-Output:
-    Executive outcomes.0--success,non-0--fail.
-*******************************************************/
 static s8 gtp_wakeup_sleep(struct i2c_client *client)
 {
     u8 retry = 0;

@@ -1,43 +1,6 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- *   CFG_BWCS_Default.h
- *
- * Project:
- * --------
- *   YuSu
- *
- * Description:
- * ------------
- *    give the default BT/WiFi co-existence config data.
- *
- * Author:
- * -------
- *  Saker Hsia(MTK02327) 
- *
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- * 06 30 2010 saker.hsia
- * [ALPS00002764][Need Patch] [Volunteer Patch] ALPS.10X.W10.28 Volunteer patch for BWCS NVRAM customization 
- * .
- *
- * 05 16 2010 saker.hsia
- * [ALPS00001913][BWCS] BT WiFi Single Antenna Feature check in Android 2.1 
- * .
- *
- * 05 14 2010 saker.hsia
- * [ALPS00001913][BWCS] BT WiFi Single Antenna Feature check in Android 2.1 
- * .
- *
- * 05 05 2010 saker.hsia
- * [ALPS00001913][BWCS] BT WiFi Single Antenna Feature check in Android 2.1 
- * Check in BT/WiFi Single Antenna Feature
- *
- *******************************************************************************/
+
+
+
 #ifndef _CFG_BWCS_D_H
 #define _CFG_BWCS_D_H
 #include "../inc/bwcs_custom.h"

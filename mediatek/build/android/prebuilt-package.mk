@@ -1,30 +1,3 @@
-#
-# Copyright (C) 2008 The Android Open Source Project
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-
-###########################################################
-## Extend rules for installing a prebuilt application package.
-##
-## Additional inputs from base_rules.make:
-## LOCAL_PACKAGE_NAME: The name of the package; the directory
-##		will be called this.
-##
-## MODULE, MODULE_PATH, and MODULE_SUFFIX will
-## be set for you.
-###########################################################
-
 LOCAL_PACKAGE_NAME := $(strip $(LOCAL_PACKAGE_NAME))
 ifeq ($(LOCAL_PACKAGE_NAME),)
 $(error $(LOCAL_PATH): Package modules must define LOCAL_PACKAGE_NAME)

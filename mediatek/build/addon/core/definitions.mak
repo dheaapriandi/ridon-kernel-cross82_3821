@@ -1,8 +1,3 @@
-##
-## Common build system used make function definitions.
-##
-
-# dependency error counter
 DEP_ERR_CNT:=
 
 ###########################################################

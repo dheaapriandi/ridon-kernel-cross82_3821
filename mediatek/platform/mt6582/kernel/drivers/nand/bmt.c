@@ -36,13 +36,6 @@ static struct nand_chip *nand_chip_bmt;
 #define OFFSET(block)       ((block) * BLOCK_SIZE_BMT)  
 #define PAGE_ADDR(block)    ((block) * BLOCK_SIZE_BMT / PAGE_SIZE_BMT)
 
-/*********************************************************************
-* Flash is splited into 2 parts, system part is for normal system    *
-* system usage, size is system_block_count, another is replace pool  *
-*    +-------------------------------------------------+             *
-*    |     system_block_count     |   bmt_block_count  |             *
-*    +-------------------------------------------------+             *
-*********************************************************************/
 static u32 total_block_count;   // block number in flash
 static u32 system_block_count;
 static int bmt_block_count;     // bmt table size
@@ -56,13 +49,6 @@ static u8 dat_buf[MAX_DAT_SIZE];
 static u8 oob_buf[MAX_OOB_SIZE];
 static bool pool_erased;
 
-/***************************************************************
-*                                                              
-* Interface adaptor for preloader/uboot/kernel                 
-*    These interfaces operate on physical address, read/write
-*       physical data.
-*                                                              
-***************************************************************/
 int nand_read_page_bmt(u32 page, u8 * dat, u8 * oob)
 {
     return mtk_nand_exec_read_page(mtd_bmt, page, PAGE_SIZE_BMT, dat, oob);
@@ -101,11 +87,6 @@ bool nand_write_page_bmt(u32 page, u8 * dat, u8 * oob)
         return true;
 }
 
-/***************************************************************
-*                                                              *
-* static internal function                                     *
-*                                                              *
-***************************************************************/
 static void dump_bmt_info(bmt_struct * bmt)
 {
     int i;
@@ -279,12 +260,6 @@ static int load_bmt_data(int start, int pool_size)
     return 0;
 }
 
-/*************************************************************************
-* Find an available block and erase.                                     *
-* start_from_end: if true, find available block from end of flash.       *
-*                 else, find from the beginning of the pool              *
-* need_erase: if true, all unmapped blocks in the pool will be erased    *
-*************************************************************************/
 static int find_available_block(bool start_from_end)
 {
     int i;                      // , j;
@@ -491,12 +466,6 @@ static bool write_bmt_to_flash(u8 * dat, u8 * oob)
     return true;
 }
 
-/*******************************************************************
-* Reconstruct bmt, called when found bmt info doesn't match bad 
-* block info in flash.
-* 
-* Return NULL for failure
-*******************************************************************/
 bmt_struct *reconstruct_bmt(bmt_struct * bmt)
 {
     int i;
@@ -576,18 +545,6 @@ bmt_struct *reconstruct_bmt(bmt_struct * bmt)
     return bmt;
 }
 
-/*******************************************************************
-* [BMT Interface]
-*
-* Description:
-*   Init bmt from nand. Reconstruct if not found or data error
-*
-* Parameter:
-*   size: size of bmt and replace pool
-* 
-* Return: 
-*   NULL for failure, and a bmt struct for success
-*******************************************************************/
 bmt_struct *init_bmt(struct nand_chip * chip, int size)
 {
     struct mtk_nand_host *host;
@@ -629,20 +586,6 @@ bmt_struct *init_bmt(struct nand_chip * chip, int size)
     }
 }
 
-/*******************************************************************
-* [BMT Interface]
-*
-* Description:
-*   Update BMT.
-*
-* Parameter:
-*   offset: update block/page offset.
-*   reason: update reason, see update_reason_t for reason.
-*   dat/oob: data and oob buffer for write fail.
-* 
-* Return: 
-*   Return true for success, and false for failure.
-*******************************************************************/
 bool update_bmt(u32 offset, update_reason_t reason, u8 * dat, u8 * oob)
 {
     int map_index;
@@ -702,19 +645,6 @@ bool update_bmt(u32 offset, update_reason_t reason, u8 * dat, u8 * oob)
     return true;
 }
 
-/*******************************************************************
-* [BMT Interface]
-*
-* Description:
-*   Given an block index, return mapped index if it's mapped, else 
-*   return given index.
-*
-* Parameter:
-*   index: given an block index. This value cannot exceed 
-*   system_block_count.
-*
-* Return NULL for failure
-*******************************************************************/
 u16 get_mapping_block_index(int index)
 {
     int i;

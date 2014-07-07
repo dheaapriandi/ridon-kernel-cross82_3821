@@ -50,9 +50,6 @@ extern u32 g_emmc_mode_switch;
 
 #define DEBUG_MMC_IOCTL   0
 #define DEBUG_MSDC_SSC    1
-/*
- * For simple_sd_ioctl
- */
 #define FORCE_IN_DMA (0x11)
 #define FORCE_IN_PIO (0x10)
 #define FORCE_NOTHING (0x0)
@@ -104,12 +101,8 @@ extern int msdc_reinit(struct msdc_host *host);
 
 static int sd_ioctl_reinit(struct msdc_ioctl* msdc_ctl)
 {
-    struct msdc_host *host = msdc_get_host(MSDC_SD,0,0);
-    if (NULL != host) {
-        return msdc_reinit(host);
-    } else {
-        return -EINVAL;
-    }
+	struct msdc_host *host = msdc_get_host(MSDC_SD,0,0);
+	return msdc_reinit(host);
 }
 
 

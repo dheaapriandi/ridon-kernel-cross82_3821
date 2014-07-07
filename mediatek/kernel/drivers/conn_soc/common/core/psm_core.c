@@ -345,7 +345,7 @@ static INT32 _stp_psm_put_op (
             if (!RB_FULL(pOpQ)) 
             {
                 RB_PUT(pOpQ, pOp);
-                STP_PSM_DBG_FUNC("opId(%d) enqueue\n", pOp->op.opId);
+                STP_PSM_INFO_FUNC("opId(%d) enqueue\n", pOp->op.opId);
             }
             else 
             {

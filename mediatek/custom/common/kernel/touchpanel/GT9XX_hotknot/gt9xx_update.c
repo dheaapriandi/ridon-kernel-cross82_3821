@@ -2423,29 +2423,21 @@ u8 gup_check_fs_mounted(char *path_name)
     int err;
     err = kern_path("/", LOOKUP_FOLLOW, &root_path);
 
-    if (err){
-	path_put(&root_path);
+    if (err)
         return FAIL;
-    	}
+
     err = kern_path(path_name, LOOKUP_FOLLOW, &path);
 
-    if (err){
-	path_put(&root_path);
-	path_put(&path);
+    if (err)
         return FAIL;
-    	}
-	
+
     if (path.mnt->mnt_sb == root_path.mnt->mnt_sb)
     {
         //-- not mounted
-       path_put(&root_path);
-	path_put(&path);
         return FAIL;
     }
     else
     {
-	path_put(&root_path);
-	path_put(&path);
         return SUCCESS;
     }
 }

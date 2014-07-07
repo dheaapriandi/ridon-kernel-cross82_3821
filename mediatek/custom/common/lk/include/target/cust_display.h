@@ -1,35 +1,4 @@
-/*
 
-// new animation parameters example:WVGA (480*800)
-// A , start point of first number rectangle
-// B , left_top point of battery_capacity fill_in rectangle
-// c , left_bottom point of battery_capacity fill_in rectangle
-
-// battery capacity rectangle
-#define CAPACITY_LEFT                (172) // CAPACITY_LEFT = B.x = 172
-#define CAPACITY_TOP                 (330) // CAPACITY_TOP = B.y = 330
-#define CAPACITY_RIGHT               (307) // CAPACITY_RIGHT = B.x + fill_line.w = 172 + 135
-#define CAPACITY_BOTTOM              (546) // CAPACITY_BOTTOM  = C.y = 546
-
-// first number rectangle
-#define NUMBER_LEFT                  (178) // NUMBER_LEFT = A.x
-#define NUMBER_TOP                   (190) // NUMBER_TOP  = A.y
-#define NUMBER_RIGHT                 (216) // NUMBER_RIGHT = A.x + num.w = 178 + 38
-#define NUMBER_BOTTOM                (244) // NUMBER_BOTTOM = A.y + num.h = 190 + 54
-
-// %  rectangle
-#define PERCENT_LEFT                 (254) // PERCENT_LEFT = A.x + 2*num.w = 178 + 2*38
-#define PERCENT_TOP                  (190) // PERCENT_TOP  = A.y
-#define PERCENT_RIGHT                (302) // PERCENT_LEFT = A.x + 2*num.w +(%).w 
-#define PERCENT_BOTTOM               (244) // PERCENT_BOTTOM = A.y + (%).h = 190 + 54
-
-// top animation part
-#define TOP_ANIMATION_LEFT           (172) // TOP_ANIMATION_LEFT = B.x
-#define TOP_ANIMATION_TOP            (100) // 100 
-#define TOP_ANIMATION_RIGHT          (307) // TOP_ANIMATION_LEFT = B.x + fill_line.w = 172 + 135
-#define TOP_ANIMATION_BOTTOM         (124) // TOP_ANIMATION_BOTTOM = TOP_ANIMATION_TOP + fill_line.h = 100 + 24
-
-*/
 
 
 #ifndef __CUST_DISPLAY_H__

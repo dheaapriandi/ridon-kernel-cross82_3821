@@ -1,37 +1,5 @@
-/******************************************************************************* 
-* 
-* Filename: 
-* --------- 
-* 
-* 
-* Project: 
-* -------- 
-*   ALPS 
-* 
-* Description: 
-* ------------ 
-* 
-* Author: 
-* ------- 
-* ChiPeng 
-* 
-*------------------------------------------------------------------------------ 
-* $Revision:$ 1.0.0 
-* $Modtime:$ 
-* $Log:$ 
-* 
-* 06 26 2010 chipeng.chang 
-* [ALPS00002705][Need Patch] [Volunteer Patch] ALPS.10X.W10.11 Volunteer patch for speech parameter 
-* modify speech parameters. 
-* 
-* Mar 15 2010 mtk02308 
-* [ALPS] Init Custom parameter 
-* 
-* 
  
-* 
-* 
-*******************************************************************************/ 
+ 
 #ifndef SPEECH_COEFF_DEFAULT_H 
 #define SPEECH_COEFF_DEFAULT_H 
 #ifndef FALSE 
@@ -95,16 +63,7 @@
 #define DEFAULT_AUTO_VM FALSE 
 #define MICBAIS  1900
 /* The Bluetooth PCM digital volume */
-/* default_bt_pcm_in_vol : uplink, only for enlarge volume,
-                       0x100 : 0dB  gain
-                       0x200 : 6dB  gain
-                       0x300 : 9dB  gain
-                       0x400 : 12dB gain
-                       0x800 : 18dB gain 
-                       0xF00 : 24dB gain             */
 #define DEFAULT_BT_PCM_IN_VOL  0x100
-/* default_bt_pcm_out_vol : downlink gain,
-                       0x1000 : 0dB; maximum 0x7FFF  */
 #define DEFAULT_BT_PCM_OUT_VOL  0x1000
 #define DEFAULT_WB_SPEECH_NORMAL_MODE_PARA \
     96,   253, 16388,    31, 57607,    31,   400,     0,\

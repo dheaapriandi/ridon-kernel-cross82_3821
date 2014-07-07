@@ -7,16 +7,20 @@ ccflags-y += -I$(MTK_PATH_SOURCE)/drivers/video/ 							\
 ifeq ($(strip $(MTK_SEC_VIDEO_PATH_SUPPORT)),yes)
 ifeq ($(strip $(TRUSTONIC_TEE_SUPPORT)),yes)
 ccflags-y += -I$(MTK_PATH_PLATFORM)/drivers/gud/MobiCoreKernelApi/include \
-             -I$(MTK_PATH_PLATFORM)/drivers/gud/MobiCoreKernelApi/public
+             -I$(MTK_PATH_PLATFORM)/drivers/gud/MobiCoreKernelApi/public \
+             -I$(MTK_PATH_SOURCE)/../trustzone/vendor/trustonic/t-base/trustlets/cmdq/cmdq_sec_dr/public \
+             -I$(MTK_PATH_SOURCE)/../trustzone/vendor/trustonic/t-base/trustlets/cmdq/cmdq_sec_tl/public \
+             -I$(MTK_PATH_SOURCE)/../trustzone/vendor/trustonic/t-base/trustlets/svp/TlSvp/Locals/Code/public \
+             -I$(MTK_PATH_SOURCE)/../trustzone/vendor/trustonic/t-base/trustlets/svp/DrSvp/Locals/Code/public
 endif
 endif
 
+#TODO: the header file under "protect-bsp" folder does not exist for customer release codebase.
 ifeq ($(strip $(MTK_SEC_VIDEO_PATH_SUPPORT)),yes)
 ifeq ($(strip $(TRUSTONIC_TEE_SUPPORT)),yes)
-ccflags-y += -I$(MTK_PATH_SOURCE)/../platform/${ARCH_MTK_PLATFORM}/kernel/core/include/trustzone/cmdq/cmdq_sec_dr \
-             -I$(MTK_PATH_SOURCE)/../platform/${ARCH_MTK_PLATFORM}/kernel/core/include/trustzone/cmdq/cmdq_sec_tl
-ccflags-y += -I$(MTK_PATH_SOURCE)/../platform/${ARCH_MTK_PLATFORM}/kernel/core/include/trustzone/svp/TlSvp/Locals/Code/public \
-             -I$(MTK_PATH_SOURCE)/../platform/${ARCH_MTK_PLATFORM}/kernel/core/include/trustzone/svp/DrSvp/Locals/Code/public
+ccflags-y += -I$(MTK_PATH_SOURCE)/../protect-bsp/platform/mt6582/external/trustzone/trustlets/sec/Tlsec/Locals/Code/public \
+             -I$(MTK_PATH_SOURCE)/../protect-bsp/platform/mt6582/external/trustzone/trustlets/cmdq/cmdq_sec_dr/Locals/Code/public \
+             -I$(MTK_PATH_SOURCE)/../protect-bsp/platform/mt6582/external/trustzone/trustlets/cmdq/cmdq_sec_tl/Locals/Code/public
 endif
 endif
 

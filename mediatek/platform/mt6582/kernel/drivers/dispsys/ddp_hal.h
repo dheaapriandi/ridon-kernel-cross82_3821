@@ -136,9 +136,7 @@ int disp_path_config_mem_out(struct disp_path_config_mem_out_struct* pConfig);
 int disp_path_config_mem_out_without_lcd(struct disp_path_config_mem_out_struct* pConfig);
 void disp_path_wait_mem_out_done(void);
 int disp_path_clock_on(char* name);
-int disp_hdmi_path_clock_on(char* name);
 int disp_path_clock_off(char* name);
-int disp_hdmi_path_clock_off(char* name);
 int disp_path_change_tdshp_status(unsigned int layer, unsigned int enable);
 
 void disp_path_clear_mem_out_done_flag(void);
@@ -152,7 +150,6 @@ int disp_path_get_mem_read_mutex (void);
 int disp_path_release_mem_read_mutex (void);
 int disp_path_get_mem_write_mutex (void);
 int disp_path_release_mem_write_mutex (void);
-int disp_path_clear_config(int mutexId);
 
 #if defined(CONFIG_TRUSTONIC_TEE_SUPPORT) && defined(CONFIG_MTK_SEC_VIDEO_PATH_SUPPORT)
 int disp_path_update_secure_port(void);

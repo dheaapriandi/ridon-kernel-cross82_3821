@@ -1,3 +1,4 @@
+
 #ifndef __CFG_CAMERA_FILE_MAX_SIZE_H__
 #define __CFG_CAMERA_FILE_MAX_SIZE_H__
 

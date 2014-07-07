@@ -908,9 +908,11 @@ CREATE_THREAD_FAIL:
 PROBE_TEST_DRV_FAIL:
 #endif
 
-	mtlte_df_remove() ;
+	mtlte_df_remove_phase1() ;
+	mtlte_df_remove_phase2() ;
 DF_PROBE_FAIL:
-	mtlte_hif_sdio_remove() ;
+	mtlte_hif_sdio_remove_phase1() ;
+	mtlte_hif_sdio_remove_phase2() ;
 HIF_PROBE_FAIL:
 	sdio_close_device(func) ;
 OPEN_FAIL:
@@ -951,15 +953,19 @@ void mtlte_sys_sdio_remove(struct sdio_func *func)
 	mtlte_dev_test_detach(LTE_TEST_DEVICE_MINOR) ;
 #endif	
   
-    mtlte_expt_remove();
+	mtlte_expt_remove();
     
-	/* do the data flow layer removing */
-	mtlte_df_remove() ;
-	KAL_RAWPRINT(("[REMOVE] mtlte_df_remove Done. \n")); 
+	/* do phase 1 removing */
+	mtlte_hif_sdio_remove_phase1() ;
+	KAL_RAWPRINT(("[REMOVE] mtlte_hif_sdio_remove_phase1 Done. \n")); 
+	mtlte_df_remove_phase1() ;
+	KAL_RAWPRINT(("[REMOVE] mtlte_df_remove_phase1 Done. \n")); 
 
-	/* do the hif layer removing */
-	mtlte_hif_sdio_remove() ;
-	KAL_RAWPRINT(("[REMOVE] mtlte_hif_sdio_remove Done. \n")); 
+	/* do phase 2 removing */
+	mtlte_hif_sdio_remove_phase2() ;
+	KAL_RAWPRINT(("[REMOVE] mtlte_hif_sdio_remove_phase2 Done. \n")); 
+	mtlte_df_remove_phase2();
+	KAL_RAWPRINT(("[REMOVE] mtlte_df_remove_phase2 Done. \n")); 
 
 	/* disable the SDIO interrupt and */
 	sdio_close_device(func) ;
@@ -1100,14 +1106,6 @@ void mtlte_sys_sdio_driver_init_after_phase2(void)
     #endif
 }
 
-/*
-module_init(mtlte_sys_sdio_driver_init);
-module_exit(mtlte_sys_sdio_driver_exit);
-
-MODULE_AUTHOR("MediaTek Inc.");
-MODULE_DESCRIPTION("MediaTek MT72X8 LTE OS glue for SDIO");
-MODULE_LICENSE("Dual BSD/GPL");
-*/
 
 //#if !UNIT_TEST  
 //DULE_FIRMWARE(MT72X8S_FW_FILE_NAME);

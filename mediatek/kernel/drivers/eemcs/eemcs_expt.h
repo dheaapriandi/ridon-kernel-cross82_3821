@@ -8,13 +8,22 @@
 #include "eemcs_char.h"
 #include "lte_df_main.h"
 
-/* FFFFFFIXXXXXX MMMMMEEEE */
-/* Exception Mode Enumeration */ 
-#define EEMCS_EX_MODE_MASK (0xF0000000)
-#define MD_EX_MAGIC  0x5745444D  //"MDEX"
+/* Exception message magic number*/
+#define MD_EX_MAGIC  		0x5745444D  //"MDEX"
 
-#define MD_EX_LOG_SIZE 512
-#define EE_BUF_LEN			(256)
+/* Exception Mode Enumeration */ 
+#define EEMCS_EX_MODE_MASK 	(0xF0000000)
+
+/* Exception show string length*/
+#define EE_BUF_LEN		   	(256)
+
+/* Exception dump flag*/
+#define CCCI_AED_DUMP_EX_MEM		(1<<0)
+#define CCCI_AED_DUMP_MD_IMG_MEM	(1<<1)
+
+/* Modem boot up init stage number*/
+#define MD_TSID_MAGIC 		0x43525442 //"BTRC"
+
 
 enum { 
 	MD_INIT_START_BOOT = 0x00000000, 
@@ -159,19 +168,15 @@ typedef struct dump_debug_info
 	void (*platform_call)(void *data);
 }DEBUG_INFO_T ;
 
-/*typedef enum EEMCS_EXCEPTION_MODE_e {
-    EEMCS_EX_INVALID    = -1,
-    EEMCS_EX_NONE       = 0,
-    EEMCS_EX_INIT       = 0x10000000,
-    EEMCS_EX_DHL_DL_RDY = 0x20000000,
-    EEMCS_EX_INIT_DONE  = 0x40000000,
-} EEMCS_EXCEPTION_MODE;*/
+
 typedef enum EEMCS_EXCEPTION_STATE_e {
     EEMCS_EX_INVALID    = -1,
     EEMCS_EX_NONE       = 0,
     EEMCS_EX_INIT       = 1,
     EEMCS_EX_DHL_DL_RDY = 2,
     EEMCS_EX_INIT_DONE  = 3,
+    EEMCS_EX_MSG_OK		= 4,
+    EEMCS_EX_REC_MSG_OK = 5,
 } EEMCS_EXCEPTION_STATE;
 
 
@@ -196,7 +201,9 @@ typedef void (*EEMCS_CCCI_EXCEPTION_IND_CALLBACK)(KAL_UINT32 msg_id);
 typedef struct EEMCS_EXCEPTION_SET_st {
     int md_ex_type;
     spinlock_t expt_cb_lock;
-    EEMCS_CCCI_EXCEPTION_IND_CALLBACK expt_cb[CCCI_PORT_NUM_MAX];    
+    struct timer_list md_ex_monitor;
+    EEMCS_CCCI_EXCEPTION_IND_CALLBACK expt_cb[CCCI_PORT_NUM_MAX]; 
+    KAL_UINT8 *expt_info_mem;
 
     EEMCS_EXCEPTION_RECORD txq[SDIO_TX_Q_NUM];
     EEMCS_EXCEPTION_RECORD rxq[SDIO_RX_Q_NUM];
@@ -209,33 +216,42 @@ typedef struct EEMCS_EXCEPTION_SET_st {
     atomic_t ccci_rx_drp_cnt[CCCI_PORT_NUM];        // Rx operation dropped in CCCI layer
 } EEMCS_EXCEPTION_SET;
 
+typedef struct{
+	KAL_UINT32 TsId;
+	KAL_UINT32 TimeStp;
+} MD_BOOTUP_TRACE;
+
 /*******************************************************************************
 *                            A P I s
 ********************************************************************************/
-KAL_INT32 eemcs_expt_handshake(struct sk_buff *skb);
-void eemcs_aed(char* aed_addr, unsigned int aed_len, char *aed_str);
-KAL_INT32 get_md_expt_type(void);
+KAL_INT32 	eemcs_expt_handshake(struct sk_buff *skb);
+KAL_INT32 	eemcs_bootup_trace(struct sk_buff *skb);
+void 		eemcs_aed(unsigned int dump_flag, char *aed_str);
+KAL_INT32 	get_md_expt_type(void);
 
-KAL_INT32 eemcs_expt_mod_init(void);
-void eemcs_expt_exit(void);
-KAL_UINT32 eemcs_register_expt_callback(EEMCS_CCCI_EXCEPTION_IND_CALLBACK func_ptr);
-KAL_UINT32 eemcs_unregister_expt_callback(KAL_UINT32 id);
-KAL_INT32 eemcs_expt_log_port(struct sk_buff *skb, KAL_UINT32 port_id);
+KAL_INT32 	eemcs_expt_mod_init(void);
+void 		eemcs_expt_exit(void);
+KAL_UINT32 	eemcs_register_expt_callback(EEMCS_CCCI_EXCEPTION_IND_CALLBACK func_ptr);
+KAL_UINT32 	eemcs_unregister_expt_callback(KAL_UINT32 id);
+KAL_INT32 	eemcs_expt_log_port(struct sk_buff *skb, KAL_UINT32 port_id);
 
-void eemcs_expt_dev_tx_block(KAL_UINT32 port_id);
-void eemcs_expt_dev_tx_drop(KAL_UINT32 port_id);
-void eemcs_expt_dev_rx_block(KAL_UINT32 port_id);
-void eemcs_expt_dev_rx_drop(KAL_UINT32 port_id);
-void eemcs_expt_ccci_tx_drop(KAL_UINT32 port_id);
-void eemcs_expt_ccci_rx_drop(KAL_UINT32 port_id);
-KAL_INT32 eemcs_expt_flush(void);
+void 		eemcs_expt_dev_tx_block(KAL_UINT32 port_id);
+void 		eemcs_expt_dev_tx_drop(KAL_UINT32 port_id);
+void 		eemcs_expt_dev_rx_block(KAL_UINT32 port_id);
+void 		eemcs_expt_dev_rx_drop(KAL_UINT32 port_id);
+void 		eemcs_expt_ccci_tx_drop(KAL_UINT32 port_id);
+void 		eemcs_expt_ccci_rx_drop(KAL_UINT32 port_id);
+KAL_INT32 	eemcs_expt_flush(void);
+void 		eemcs_expt_reset(void);
 
-kal_bool set_exception_mode(EEMCS_EXCEPTION_STATE mode);
-kal_bool is_exception_mode(EEMCS_EXCEPTION_STATE *);
-kal_bool is_valid_exception_port(KAL_UINT32 port_id, kal_bool is_rx);
-kal_bool is_valid_exception_tx_channel(CCCI_CHANNEL_T chn);
+kal_bool 	set_exception_mode(EEMCS_EXCEPTION_STATE mode);
+kal_bool 	is_exception_mode(EEMCS_EXCEPTION_STATE *mode);
+kal_bool 	is_valid_exception_port(KAL_UINT32 port_id, kal_bool is_rx);
+kal_bool 	is_valid_exception_tx_channel(CCCI_CHANNEL_T chn);
+ccci_expt_port_cfg* get_expt_port_info(KAL_UINT32 port_id);
 
-ccci_expt_port_cfg* ccci_get_expt_port_info(KAL_UINT32 ccci_port_index);
+ssize_t 	eemcs_expt_show_statistics(char *buf);
+void 		eemcs_expt_reset_statistics(void);
 
 
 #define hif_expt_dl_pkt_in_swq             mtlte_df_DL_pkt_in_swq
@@ -244,8 +260,6 @@ ccci_expt_port_cfg* ccci_get_expt_port_info(KAL_UINT32 ccci_port_index);
 #define hif_expt_ul_pkt_in_swq             mtlte_df_UL_pkt_in_swq
 //#define hif_expt_ul_read_swq               mtlte_df_UL_read_skb_from_swq
 
-/* For sysfs operation */
-ssize_t eemcs_expt_show_statistics(char *);
-void eemcs_expt_reset_statistics(void);
+
 
 #endif // __EEMCS_EXPT_H__

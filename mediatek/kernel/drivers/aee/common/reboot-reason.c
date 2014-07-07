@@ -4,7 +4,6 @@
 #include <linux/init.h>
 #include <linux/sched.h>
 #include <linux/aee.h>
-#include <linux/mrdump.h>
 #include <linux/module.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
@@ -43,6 +42,7 @@ typedef enum {
 } boot_reason_t;
 
 char boot_reason[][16]={"keypad","usb_chg","rtc","wdt","reboot","tool reboot","smpl","others","kpanic"};
+#define MAX_EXCEPTION_FRAME		16
 
 void aee_rr_last(struct last_reboot_reason *lrr)
 {
@@ -169,23 +169,24 @@ static inline unsigned int get_linear_memory_size(void)
 static char nested_panic_buf[1024];
 static int aee_nested_printf(const char *fmt, ...)
 {
-	va_list args;
-	static int total_len = 0;
-	va_start(args, fmt);
-	total_len += vsnprintf(nested_panic_buf, sizeof(nested_panic_buf), fmt, args);
-	va_end(args);
+    va_list args;
+    static int total_len = 0;
+    va_start(args, fmt);
+    total_len += vsnprintf(nested_panic_buf, sizeof(nested_panic_buf), fmt, args);
+    va_end(args);
 
-	aee_sram_fiq_log(nested_panic_buf);
+    aee_sram_fiq_log(nested_panic_buf);
     
-	return total_len;
+    return total_len;
 }
 
 static void print_error_msg(int len)
 {
-	static char error_msg[][50] = {"Bottom unaligned", "Bottom out of kernel addr", 
-				       "Top out of kernel addr", "Buf len not enough"};
-	int tmp = (-len) - 1;
-	aee_sram_fiq_log(error_msg[tmp]);
+   static char error_msg[][50] = {"Bottom unaligned", "Bottom out of kernel addr", 
+								  "Top out of kernel addr", "Buf len not enough"};
+   int tmp = (-len) - 1;
+   
+   aee_sram_fiq_log(error_msg[tmp]);
 }
 
 /*save stack as binary into buf, 
@@ -224,152 +225,167 @@ int aee_dump_stack_top_binary(char *buf, int buf_len,
 }
 
 //extern void mt_fiq_printf(const char *fmt, ...);
-void *aee_excp_regs;
+
 static atomic_t nested_panic_time = ATOMIC_INIT(0);
-
-inline void aee_print_regs(struct pt_regs *regs){
-	aee_nested_printf("[r0-r15,cpsr]%08lx %08lx %08lx %08lx %08lx %08lx %08lx "
-			  "%08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx %08lx\n",
-			  regs->ARM_r0, regs->ARM_r1, regs->ARM_r2,
-			  regs->ARM_r3, regs->ARM_r4, regs->ARM_r5,
-			  regs->ARM_r6, regs->ARM_r7, regs->ARM_r8,
-			  regs->ARM_r9, regs->ARM_r10,
-			  regs->ARM_fp, regs->ARM_ip, regs->ARM_sp,
-			  regs->ARM_lr, regs->ARM_pc, regs->ARM_cpsr);
-}
-#define AEE_MAX_EXCP_FRAME	16
-inline void aee_print_bt(struct pt_regs *regs) {
-	int i;
-	unsigned long high, bottom, fp;
-	struct stackframe cur_frame;
-	bottom = regs->ARM_sp;
-	if (!virt_addr_valid(bottom)) {
-		aee_nested_printf("invalid sp *[0x%x]\n", regs);
-		return;
-	}
-	high = ALIGN(bottom, THREAD_SIZE);
-	cur_frame.lr = regs->ARM_lr;
-	cur_frame.fp = regs->ARM_fp;
-	for (i=0; i < AEE_MAX_EXCP_FRAME; i++) 
-	{
-		aee_nested_printf("%08lx, ", cur_frame.lr);
-		fp = cur_frame.fp;
-		if ((fp < (bottom + 12)) || ((fp + 4) >= (high + 8192))) {
-			aee_nested_printf("fp(0x%x) out of bounds sp(0x%x)", fp, bottom);
-			break;
-		}
-		cur_frame.fp = *(unsigned long *)(fp - 12);
-		cur_frame.lr = *(unsigned long *)(fp - 4);
-		if (!((cur_frame.lr >= (PAGE_OFFSET + THREAD_SIZE)) && virt_addr_valid(cur_frame.lr)) ){
-			break;
-		}
-	}
-	return;
-}
-
-inline int aee_nested_save_stack(struct pt_regs *regs){
-	int len = 0;
-	if (!virt_addr_valid(regs->ARM_sp))
-		return -1;
-	aee_nested_printf("[%08lx %08lx]\n", regs->ARM_sp, regs->ARM_sp + 256);
-
-	len = aee_dump_stack_top_binary(nested_panic_buf, sizeof(nested_panic_buf), 
-					regs->ARM_sp, regs->ARM_sp + 256);
-	if (len > 0)
-		aee_sram_fiq_save_bin(nested_panic_buf, len);
-	else
-		print_error_msg(len);
-	return len;
-}
-
 void aee_stop_nested_panic(struct pt_regs *regs)
 {
 	struct thread_info *thread = current_thread_info();
-	int len = 0;
+	int i = 0, len = 0;
 	int timeout = 1000000;
 	int res = 0, cpu = 0;
-	struct wd_api *wd_api = NULL;
-	struct pt_regs *excp_regs = NULL;
+	struct wd_api*wd_api = NULL;
+	unsigned long high, bottom, fp;
+	struct stackframe cur_frame;
+	
+	res = get_wd_api(&wd_api);
 
 	local_irq_disable();
 	preempt_disable();
 
-	aee_rr_rec_fiq_step(AEE_FIQ_STEP_KE_NESTED_PANIC);
-
 	cpu = get_HW_cpuid();
-	aee_nested_printf("\nCPU %d, nested_panic_time=%d\n", cpu, nested_panic_time);
+	aee_nested_printf("\n CPU %d, nested_panic_time=%d\n", cpu, nested_panic_time);
 
 	/*Data abort handler data abort again on many cpu.
 	  Since ram console api is lockless, this should be prevented*/
-	atomic_inc(&nested_panic_time);
-
-	switch(atomic_read(&nested_panic_time)) {
-	case 2:
-		aee_print_regs(regs);
-		aee_nested_printf("backtrace:");
-		aee_print_bt(regs);
-		break;
-		
-	/* must guarantee Only one cpu can run here*/
-	/* first check if thread valid */
-	case 1: 
-	if (virt_addr_valid(thread) && virt_addr_valid(thread->regs_on_excp)) {
-		excp_regs = thread->regs_on_excp;
-	} else if (virt_addr_valid(aee_excp_regs)) {
-		/* if thread invalid, which means wrong sp or thread_info corrupted,
-		   check global aee_excp_regs instead */
-		aee_nested_printf("invalid threadinfo *[0x%x]\n", thread);
-		excp_regs = aee_excp_regs;
-	} else {
-		/* no valid excp_regs available, set to null */
-		excp_regs = NULL;
-		aee_nested_printf("invalid excp_regs *[0x%x]\n", aee_excp_regs);
+	if (atomic_xchg(&nested_panic_time, 1) != 0) {
+		aee_nested_printf("multicore enters nested panic\n");
+		goto out; 
 	}
-	
-	aee_nested_printf("Nested panic\n");
-	if (excp_regs) {
-		aee_nested_printf("Previous\n");
-		aee_print_regs(excp_regs);
-	}
-	aee_nested_printf("Current\n");
-	aee_print_regs(regs);
-
-	/*should not print stack info. this may overwhelms ram console used by fiq*/
-	if (0!= in_fiq_handler()) {
-		aee_nested_printf("in fiq hander\n");
-		break;
-	}
-
-	/*Dump first panic stack*/
-	aee_nested_printf("Previous\n");
-	if (excp_regs) {
-		len = aee_nested_save_stack(excp_regs);
-		aee_nested_printf("backtrace:");
-		aee_print_bt(excp_regs);
-	}
-
-	/*Dump second panic stack*/
-	aee_nested_printf("Current\n");
-	if (virt_addr_valid(regs)) {
-		len = aee_nested_save_stack(regs);
-		aee_nested_printf("backtrace:");
-		aee_print_bt(regs);
-	}
-
-	aee_nested_printf("aee_stop_nested_panic: RAMDUMP.\n");
-	__mrdump_create_oops_dump(AEE_REBOOT_MODE_NESTED_EXCEPTION, (struct pt_regs *)thread->regs_on_excp, "Nested Panic");
-	
-	res = get_wd_api(&wd_api);
 	if (res) {
 		aee_nested_printf("aee_stop_nested_panic, get wd api error\n");
 	} else {
+		aee_nested_printf("wd_api[0x%x]\n", (unsigned long)wd_api);
+		aee_nested_printf("wd_restart[0x%x]\n", (unsigned long)(wd_api->wd_restart));
 		wd_api->wd_restart(WD_TYPE_NOLOCK);
 		wd_api->wd_aee_confirm_hwreboot();
 	}
-	
-	default:
-		break;
+
+	/*must guarantee Only one cpu can run here*/
+	aee_nested_printf("Nested panic\n");
+	aee_nested_printf("Previous reg:\n");
+	aee_nested_printf("pc: %08lx lr: %08lx psr: %08lx\n",
+			((struct pt_regs *)thread->regs_on_excp)->ARM_pc, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_lr, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_cpsr);
+	aee_nested_printf("sp: %08lx ip: %08lx fp: %08lx\n",
+			((struct pt_regs *)thread->regs_on_excp)->ARM_sp, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_ip, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_fp);
+	aee_nested_printf("r10: %08lx r9: %08lx r8: %08lx\n",
+			((struct pt_regs *)thread->regs_on_excp)->ARM_r10, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_r9, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_r8);
+	aee_nested_printf("r7: %08lx r6: %08lx r5: %08lx r4: %08lx\n",
+			((struct pt_regs *)thread->regs_on_excp)->ARM_r7, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_r6, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_r5, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_r4);
+	aee_nested_printf("r3: %08lx r2: %08lx r1: %08lx r0: %08lx\n",
+			((struct pt_regs *)thread->regs_on_excp)->ARM_r3, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_r2, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_r1, 
+			((struct pt_regs *)thread->regs_on_excp)->ARM_r0);
+
+	aee_nested_printf("Current reg:\n");
+	aee_nested_printf("pc: %08lx lr: %08lx psr: %08lx\n",
+			regs->ARM_pc, 
+			regs->ARM_lr, 
+			regs->ARM_cpsr);
+	aee_nested_printf("sp: %08lx ip: %08lx fp: %08lx\n",
+			regs->ARM_sp, 
+			regs->ARM_ip, 
+			regs->ARM_fp);
+	aee_nested_printf("r10: %08lx r9: %08lx r8: %08lx\n",
+			regs->ARM_r10, 
+			regs->ARM_r9, 
+			regs->ARM_r8);
+	aee_nested_printf("r7: %08lx r6: %08lx r5: %08lx r4: %08lx\n",
+			regs->ARM_r7, 
+			regs->ARM_r6, 
+			regs->ARM_r5, 
+			regs->ARM_r4);
+	len = aee_nested_printf("r3: %08lx r2: %08lx r1: %08lx r0: %08lx\n",
+			regs->ARM_r3, 
+			regs->ARM_r2, 
+			regs->ARM_r1, 
+			regs->ARM_r0);
+
+	/*should not print stack info. this may overwhelms ram console used by fiq*/
+	if (0!= in_fiq_handler()) {
+			goto out;
 	}
+
+	aee_nested_printf("Previous stack [%08lx %08lx]\n", 
+					((struct pt_regs *)thread->regs_on_excp)->ARM_sp,
+					((struct pt_regs *)thread->regs_on_excp)->ARM_sp + 256);
+
+	/*Dump first panic stack*/
+	len = aee_dump_stack_top_binary(nested_panic_buf, sizeof(nested_panic_buf), 
+                             ((struct pt_regs *)thread->regs_on_excp)->ARM_sp,
+                             ((struct pt_regs *)thread->regs_on_excp)->ARM_sp + 256);
+	if (len > 0) {
+		aee_sram_fiq_save_bin(nested_panic_buf, len);
+
+		/* save backtrace addr */
+		bottom = ((struct pt_regs *)thread->regs_on_excp)->ARM_sp;
+		high = ALIGN(bottom, THREAD_SIZE);
+		cur_frame.lr = ((struct pt_regs *)thread->regs_on_excp)->ARM_lr;
+		cur_frame.fp = ((struct pt_regs *)thread->regs_on_excp)->ARM_fp;
+		aee_nested_printf("\nPrevious backtrace:\n");
+		for (i=0; i < MAX_EXCEPTION_FRAME; i++) 
+		{
+			aee_nested_printf("%08lx, ", cur_frame.lr);
+			fp = cur_frame.fp;
+			/* Expand region on purpose for kernel stack overflow case debug */
+			if ((fp < (bottom + 12)) || ((fp + 4) >= (high + THREAD_SIZE))) {
+				goto cur_stk;
+			}
+			cur_frame.fp = *(unsigned long *)(fp - 12);
+			cur_frame.lr = *(unsigned long *)(fp - 4);
+			if (!((cur_frame.lr >= (PAGE_OFFSET + THREAD_SIZE)) && 
+				virt_addr_valid(cur_frame.lr)) ){
+				goto cur_stk;
+			}
+		}
+    } else {
+		print_error_msg(len);
+    }
+
+cur_stk:
+	aee_nested_printf("\nCurrent stack [%08lx %08lx]\n", regs->ARM_sp, regs->ARM_sp + 256);
+
+	/*Dump second panic stack*/
+	len  = aee_dump_stack_top_binary(nested_panic_buf, sizeof(nested_panic_buf), 
+								regs->ARM_sp, regs->ARM_sp + 256);
+
+	if (len > 0) {
+		aee_sram_fiq_save_bin(nested_panic_buf, len);
+
+		/* save backtrace addr */
+		bottom = regs->ARM_sp;
+		high = ALIGN(bottom, THREAD_SIZE);
+		cur_frame.lr = regs->ARM_lr;
+		cur_frame.fp = regs->ARM_fp;
+		aee_nested_printf("\nCurrent backtrace:\n");
+		for (i=0; i < MAX_EXCEPTION_FRAME; i++) 
+		{
+			aee_nested_printf("%08lx, ", cur_frame.lr);
+			fp = cur_frame.fp;
+			if ((fp < (bottom + 12)) || ((fp + 4) >= high)) {
+				goto out;
+			}
+			cur_frame.fp = *(unsigned long *)(fp - 12);
+			cur_frame.lr = *(unsigned long *)(fp - 4);
+			if (!((cur_frame.lr >= (PAGE_OFFSET + THREAD_SIZE)) && 
+				virt_addr_valid(cur_frame.lr)) ){
+				goto out;
+			}
+		}
+	} else {
+		print_error_msg(len);
+	}
+
+out:
 	/* waiting for the WDT timeout */
 	while (1)
 	{
@@ -381,6 +397,7 @@ void aee_stop_nested_panic(struct pt_regs *regs)
 		}
 		timeout = 1000000;
 	}
+
 }
 
 

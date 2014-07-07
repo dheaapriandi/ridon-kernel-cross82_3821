@@ -5,7 +5,8 @@
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio.h>
 #include <linux/delay.h>
-
+#include <linux/string.h>
+#include <linux/slab.h>
 #include "mt_sd.h"
 #include "sdio_autok.h"
 /*****************************************************************************
@@ -159,7 +160,21 @@
 #ifdef MT6290
 #define AUTOK_PRINT(_fmt, args...)        printf("[AUTO_K]" _fmt, ## args)
 #else
-#define AUTOK_PRINT(_fmt, args...)        printk(KERN_ERR "[AUTO_K]" _fmt, ## args)
+//#define AUTOK_PRINT(_fmt, args...)        printk(KERN_ERR "[AUTO_K]" _fmt, ## args)
+#define AUTOK_PSIZE PAGE_SIZE
+char autok_single[128];
+char *log_info = NULL;
+int autok_size = 0;
+int total_msg_size = 0;
+#define AUTOK_PRINT(_fmt, args...)  \
+do{ \   
+    autok_size = snprintf(autok_single, 128, _fmt, ## args);     \ 
+      if(log_info != NULL && total_msg_size+autok_size < LOG_SIZE){ \
+      memcpy(log_info+total_msg_size, autok_single, autok_size);    \
+      total_msg_size += autok_size; \
+    }   \
+    printk(KERN_ERR "[AUTO_K]" _fmt, ## args);   \
+}while(0)
 #endif
 
 #ifdef AUTOK_DEBUG
@@ -440,7 +455,7 @@ static const unsigned char tuning_cmd[] = { 0x00, 0xFF, 0x0F, 0xF0,   /* 0000000
 static U_AUTOK_INTERFACE_DATA **g_pp_autok_data = NULL;
 
 /* micro-volt */
-static unsigned int mt65x2_vcore_tbl[] = {
+unsigned int mt65x2_vcore_tbl[] = {
     700000, 706250, 712500, 718750, 725000, 731250, 737500, 743750, 
     750000, 756250, 762500, 768750, 775000, 781250, 787500, 793750, 
     800000, 806250, 812500, 818750, 825000, 831250, 837500, 843750, 
@@ -543,6 +558,53 @@ extern int msdc_pio_write(struct msdc_host* host, struct mmc_data *data);
  *                         Functions Implement                               *
  *****************************************************************************/
 
+int autok_start_rw(struct msdc_host *host, u8 *value, unsigned size, unsigned blocks, bool write)
+{
+    int ret = 0;
+    u32 base = host->base;
+    struct mmc_data *data = host->data;
+    struct mmc_command *cmd = host->mrq->cmd;
+    
+    /* Code in host drivers/fwk assumes that "blocks" always is >=1 */
+    data->blocks = blocks;
+    data->error = 0;
+    
+    sg_init_one(data->sg, value, size);
+    
+    host->xfer_size = blocks * data->blksz;
+    host->blksz = data->blksz;
+    host->autocmd = 0;
+    host->dma_xfer = 0;
+    
+    sdr_write32(SDC_BLK_NUM, blocks);
+    
+    /* check msdc is work ok. rule is RX/TX fifocnt must be zero after last request 
+     * if find abnormal, try to reset msdc first
+     */
+    if (msdc_txfifocnt() || msdc_rxfifocnt()) {
+        printk("[%s][SD%d] register abnormal,please check!\n",__func__, host->id);
+        msdc_reset_hw(host->id);
+    }
+    
+    if((ret = msdc_do_command(host, cmd, 0, CMD_TIMEOUT)) != 0)
+    {
+        return ret;
+    }
+    
+    if(write == 0)
+    {
+        if((ret = msdc_pio_read(host, data))!= 0)
+            return ret;
+    }
+    else
+    {
+        if((ret = msdc_pio_write(host, data))!= 0)
+            return ret;
+    }
+    
+    return 0;
+}
+
 int autok_io_rw_extended(struct msdc_host *host, unsigned int u4Addr, unsigned int u4Func, void *pBuffer, unsigned int u4Len, bool write)
 {
     int ret = 0;
@@ -607,39 +669,9 @@ int autok_io_rw_extended(struct msdc_host *host, unsigned int u4Addr, unsigned i
 		cmd.arg |= 0x08000000 | blocks;
 		
 		data.blksz = sdioFunc->cur_blksize;
-    	/* Code in host drivers/fwk assumes that "blocks" always is >=1 */
-    	data.blocks = blocks;
-		data.error = 0;
-    	
-    	sg_init_one(&sg, value, size);
 		
-    	host->xfer_size = blocks * data.blksz;
-        host->blksz = data.blksz;
-        host->autocmd = 0;
-        host->dma_xfer = 0;
-        
-        sdr_write32(SDC_BLK_NUM, blocks);
-        
-        /* check msdc is work ok. rule is RX/TX fifocnt must be zero after last request 
-         * if find abnormal, try to reset msdc first
-         */
-        if (msdc_txfifocnt() || msdc_rxfifocnt()) {
-            printk("[%s][SD%d] register abnormal,please check!\n",__func__, host->id);
-            msdc_reset_hw(host->id);
-        }
-		
-		if((ret = msdc_do_command(host, &cmd, 0, CMD_TIMEOUT)) != 0)
-		    goto stop;
-		if(write == 0)
-		{
-		    if((ret = msdc_pio_read(host, &data))!= 0)
-		        goto stop;
-		}
-		else
-		{
-		    if((ret = msdc_pio_write(host, &data))!= 0)
-		        goto stop;
-		}
+        if((ret = autok_start_rw(host, value, size, blocks, write)) != 0)
+            goto stop;
 		
 		remainder -= size;
 		value += size;
@@ -653,42 +685,10 @@ int autok_io_rw_extended(struct msdc_host *host, unsigned int u4Addr, unsigned i
 		cmd.arg |= size;
 		
 		data.blksz = size;
-    	/* Code in host drivers/fwk assumes that "blocks" always is >=1 */
-    	data.blocks = 1;
-		data.error = 0;
-    	
-    	sg_init_one(&sg, value, size);
 		
-		host->xfer_size = data.blksz;
-        host->blksz = data.blksz;
-        host->autocmd = 0;
-        host->dma_xfer = 0;
-        
-        sdr_write32(SDC_BLK_NUM, 1);
-        
-        /* check msdc is work ok. rule is RX/TX fifocnt must be zero after last request 
-         * if find abnormal, try to reset msdc first
-         */
-        if (msdc_txfifocnt() || msdc_rxfifocnt()) {
-            printk("[%s][SD%d] register abnormal,please check!\n",__func__, host->id);
-            msdc_reset_hw(host->id);
-        }
-    	
-		if((ret = msdc_do_command(host, &cmd, 0, CMD_TIMEOUT)) != 0)
-		{
-		    goto stop;
-		}
-		if(write == 0)
-		{
-	        if((ret = msdc_pio_read(host, &data))!= 0)
-		        goto stop;
-		}
-		else
-		{
-		    if((ret = msdc_pio_write(host, &data))!= 0)
-		        goto stop;
-		}
-		
+        if((ret = autok_start_rw(host, value, size, 1, write)) != 0)
+            goto stop;
+
 		remainder -= size;
 		value += size;
 	}
@@ -5395,7 +5395,7 @@ static void autok_tuning_parameter_init(struct msdc_host *host, E_AUTOK_TUNING_S
         pAutokData[E_MSDC_CMD_RSP_TA_CNTR].data.sel = val;
         #else
 
-        #if 1   /* Temporary */
+        #if 0   /* Temporary */
         pAutokData[E_MSDC_CMD_RSP_TA_CNTR].data.sel = 3;
         #else
         pAutokData[E_MSDC_CMD_RSP_TA_CNTR].data.sel = val;
@@ -5414,7 +5414,7 @@ static void autok_tuning_parameter_init(struct msdc_host *host, E_AUTOK_TUNING_S
         pAutokData[E_MSDC_INT_DAT_LATCH_CK_SEL].data.sel = val;
         #else
 
-        #if 1   /* Temporary */
+        #if 0   /* Temporary */
         pAutokData[E_MSDC_INT_DAT_LATCH_CK_SEL].data.sel = 0;
         #else
         pAutokData[E_MSDC_INT_DAT_LATCH_CK_SEL].data.sel = val;
@@ -5433,7 +5433,7 @@ static void autok_tuning_parameter_init(struct msdc_host *host, E_AUTOK_TUNING_S
         pAutokData[E_MSDC_WRDAT_CRCS_TA_CNTR].data.sel = val;
         #else
 
-        #if 1   /* Temporary */
+        #if 0   /* Temporary */
         pAutokData[E_MSDC_WRDAT_CRCS_TA_CNTR].data.sel = 3;
         #else
         pAutokData[E_MSDC_WRDAT_CRCS_TA_CNTR].data.sel = val;
@@ -5667,7 +5667,7 @@ static void autok_setup_envir(struct msdc_host *host)
     return;
 }
 
-static unsigned int 
+unsigned int 
 msdc_autok_get_vcore(unsigned int vcore_uv, unsigned int *pfIdentical)
 {
     unsigned int idx, size, vcore_sel = 0;
@@ -5675,7 +5675,7 @@ msdc_autok_get_vcore(unsigned int vcore_uv, unsigned int *pfIdentical)
 
     size = sizeof(autok_vcore_sel)/sizeof(autok_vcore_sel[0]);
 
-    AUTOK_PRINT("Vcore interpolation: ");
+    //AUTOK_PRINT("Vcore interpolation: ");
 
     if (!gfTinyMar) {
         for (idx = 0; idx < size; idx++) {
@@ -5685,9 +5685,9 @@ msdc_autok_get_vcore(unsigned int vcore_uv, unsigned int *pfIdentical)
                 autok_vcore_sel[idx] = g_autok_vcore_sel[idx/2] +
                     (g_autok_vcore_sel[idx/2 + 1] - g_autok_vcore_sel[idx/2])/2;
 
-            AUTOK_PRINT("%duV ", autok_vcore_sel[idx]);
+            //AUTOK_PRINT("%duV ", autok_vcore_sel[idx]);
         }
-        AUTOK_PRINT("\r\n");
+        //AUTOK_PRINT("\r\n");
         
         if (vcore_uv <= g_autok_vcore_sel[0])
             //vcore_uv = g_autok_vcore_sel[0];
@@ -5711,9 +5711,9 @@ msdc_autok_get_vcore(unsigned int vcore_uv, unsigned int *pfIdentical)
         }
     }
     else {
-        for (idx = 0; idx < autok_vcore_scan_num; idx++)
-            AUTOK_PRINT("%duV ", g_autok_vcore_sel[idx]);
-        AUTOK_PRINT("\r\n");
+        //for (idx = 0; idx < autok_vcore_scan_num; idx++)
+        //    AUTOK_PRINT("%duV ", g_autok_vcore_sel[idx]);
+        //AUTOK_PRINT("\r\n");
         
         if (vcore_uv <= g_autok_vcore_sel[0])
             //vcore_uv = g_autok_vcore_sel[0];
@@ -5798,7 +5798,7 @@ int msdc_autok_stg1_cal(
 {
     E_RESULT_TYPE res= E_RESULT_ERR;
     U_AUTOK_INTERFACE_DATA *pAutok;
-
+    
     /* Check parameters */
     if ((p_single_autok == NULL) || (host == NULL)) {
         AUTOK_PRINT("NULL autok param pointer on STG1!\r\n");
@@ -5838,7 +5838,7 @@ exit:
     autok_vcore_set(mt65x2_vcore_tbl[offset_restore]);
     
     AUTOK_PRINT("Stage1 statistic : end\r\n");
-    
+
     return -res;
 }
 

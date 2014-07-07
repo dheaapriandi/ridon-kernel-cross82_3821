@@ -1,19 +1,9 @@
+
+
 #ifndef _MEDIA_TYPES_H
 #define _MEDIA_TYPES_H
 
-/*******************************************************************************
-*
-*   !!! Remove Me If Possible
-*   !!! Do Not Include Me If Possible
-*   !!! Do Not Modify Me If Possbile
-*   !!! Make sure the compatibility with the original one.
-*   !!! Do Not Rename "_MEDIA_TYPES_H" Unless No Side Effect.
-*
-********************************************************************************/
 
-/*******************************************************************************
-*
-********************************************************************************/
 //
 typedef unsigned char   u8;
 typedef unsigned short  u16;
@@ -36,18 +26,12 @@ typedef MHAL_UINT16     MUINT16;
 typedef MHAL_UINT32     MUINT32;
 typedef MHAL_INT32      MINT32;
 
-/*******************************************************************************
-*
-********************************************************************************/
 #define READ32(addr)        *(MUINT32 *) (addr)
 #define WRITE32(addr, val)  *(MUINT32 *) (addr) = (val)
 
 #define MHAL_TRUE     1
 #define MHAL_FALSE    0
 
-/*******************************************************************************
-*
-********************************************************************************/
 //typedef signed char         CHAR;
 //typedef char                UCHAR;
 #define CHAR                signed char
@@ -79,16 +63,7 @@ typedef INT32 MRESULT;
 #define NULL 0
 #endif
 
-/*******************************************************************************
-*
-********************************************************************************/
 
-/**
- * @par Enumeration
- *   MHAL_ERROR_ENUM
- * @par Description
- *   This is the return status of each MHAL function
- */
 typedef enum
 {
     MHAL_NO_ERROR = 0,                  ///< The function work successfully

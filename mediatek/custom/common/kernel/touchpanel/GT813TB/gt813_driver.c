@@ -136,8 +136,6 @@ struct tpd_info_t tpd_info;
 static u8 cfg_data1[CONFIG_LEN];
 static u8 cfg_data_with_charger[CONFIG_LEN];
 
-/* mika 2012.2.28, esd protect
- */
 //#define ESD_PROTECT
 #ifdef ESD_PROTECT
 #define TPD_I2C_DISABLE_REG 0x8000
@@ -939,23 +937,6 @@ static int touch_event_handler(void *unused)
 		    continue;
         }
 
-/*        finger_num = buffer[0]&0x1F;
-
-        if ( tpd == NULL || tpd->dev == NULL )
-        {
-            i2c_write_dummy( i2c_client, TPD_HANDSHAKING_END_REG ); 
-            continue;
-        }
-
-        if ( finger_num )
-        {
-            i2c_read_bytes( i2c_client, TPD_POINT_INFO_REG_BASE, buffer, TPD_MAX_POINTS*TPD_POINT_INFO_LEN);
-        }
-        else
-        {
-            i2c_read_bytes( i2c_client, TPD_POINT_INFO_REG_BASE, buffer, 1);
-        }
-*/
         
         for ( idx = 0 ; idx < TPD_MAX_POINTS ; idx++ )
         {

@@ -1,34 +1,5 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- * med_audio_default.h
- *
- * Project:
- * --------
- *   ALPS
- *
- * Description:
- * ------------
- * This file is the header of audio customization related function or definition.
- *
- * Author:
- * -------
- * Chipeng Chang
- *
- *============================================================================
- *             HISTORY
- * Below this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
 
- *
- *------------------------------------------------------------------------------
- * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *============================================================================
- ****************************************************************************/
+
 #ifndef MED_AUDIO_CUSTOM_H
 #define MED_AUDIO_CUSTOM_H
 // normal mode parameters ------------------------

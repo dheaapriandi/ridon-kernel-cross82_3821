@@ -33,21 +33,6 @@
 /*Ctp Power Off In Sleep ? */
 //#define TPD_CLOSE_POWER_IN_SLEEP
 
-/*************************************************************
-**msz xb.pang
-**
-**msg2133,msg2133a,msg2138a Firmware update data transfer select
-**
-**
-** if BB Chip == MT6575,MT7577 , please undef __MSG_DMA_MODE__
-**
-**
-** if BB Chip == MT6589,MT6572 , please define __MSG_DMA_MODE__
-**
-**
-**
-**
-*************************************************************/
 #define __MSG_DMA_MODE__
 
 #ifdef __MSG_DMA_MODE__
@@ -206,33 +191,6 @@ static void msg2133_reset()
 }
 
 
-/*static bool msg2133_i2c_read(char *pbt_buf, int dw_lenth)
-{
-    int ret;
-    MSG2133_DBG("The msg_i2c_client->addr=0x%x\n",i2c_client->addr);
-    ret = i2c_master_recv(this_client, pbt_buf, dw_lenth);
-
-    if(ret <= 0){
-        MSG2133_DBG("msg_i2c_read_interface error\n");
-        return false;
-    }
-
-    return true;
-}
-
-static bool msg2133_i2c_write(char *pbt_buf, int dw_lenth)
-{
-    int ret;
-    MSG2133_DBG("The msg_i2c_client->addr=0x%x\n",i2c_client->addr);
-    ret = i2c_master_send(this_client, pbt_buf, dw_lenth);
-
-    if(ret <= 0){
-        MSG2133_DBG("msg_i2c_read_interface error\n");
-        return false;
-    }
-
-    return true;
-}*/
 
 static void HalTscrCReadI2CSeq(u8 addr, u8* read_data, u16 size)
 {
@@ -303,37 +261,6 @@ static void HalTscrCDevWriteI2CSeq(u8 addr, u8* data, u16 size)
 		printk("HalTscrCDevWriteI2CSeq error %d,addr = %d\n", rc,addr);
 	}
 }
-/*
-static bool msg2133_i2c_read(char *pbt_buf, int dw_lenth)
-{
-    int ret;
-    //    pr_ch("The msg_i2c_client->addr=0x%x\n",i2c_client->addr);
-    ret = i2c_master_recv(this_client, pbt_buf, dw_lenth);
-
-    if(ret <= 0)
-    {
-        //pr_tp("msg_i2c_read_interface error\n");
-        return false;
-    }
-
-    return true;
-}
-
-static bool msg2133_i2c_write(char *pbt_buf, int dw_lenth)
-{
-    int ret;
-    //    pr_ch("The msg_i2c_client->addr=0x%x\n",i2c_client->addr);
-    ret = i2c_master_send(this_client, pbt_buf, dw_lenth);
-
-    if(ret <= 0)
-    {
-        //pr_tp("msg_i2c_read_interface error\n");
-        return false;
-    }
-
-    return true;
-}
-*/
 static void i2c_read_msg2133(unsigned char *pbt_buf, int dw_lenth)
 {
     //this_client->addr = MSG2133_FW_ADDR;
@@ -2261,30 +2188,6 @@ void msg2133_init_class()
 	msleep(50);
 	mt_eint_unmask(CUST_EINT_TOUCH_PANEL_NUM);
 	msleep(200);
-/*
-	 char dbbus_tx_data[3];
-	 char dbbus_rx_data[2]; 
-	 dbbusDWIICEnterSerialDebugMode();
-	 dbbusDWIICStopMCU();
-	 dbbusDWIICIICUseBus();
-	 dbbusDWIICIICReshape();
-	 dbbus_tx_data[0] = 0x10;
-	 dbbus_tx_data[1] = 0x3A;
-	 dbbus_tx_data[2] = 0x08; 
-	 dbbus_rx_data[0]=0xFF;
-	 dbbus_rx_data[1]=0xFF; 
-	 HalTscrCDevWriteI2CSeq(0XC4, &dbbus_tx_data[0], 3);
-	 HalTscrCReadI2CSeq(0XC4, &dbbus_rx_data[0], 2);
-	 dbbusDWIICIICNotUseBus();
-	 dbbusDWIICNotStopMCU();
-	 dbbusDWIICExitSerialDebugMode();
-
-	 if(dbbus_rx_data[0]==0||dbbus_rx_data[0]==0xff)
-	 {
-		 return -1;//	
-	 }
-
-	*/
     if((i2c_smbus_read_i2c_block_data(msg_i2c_client, 0x00, 1, &data))< 0)
 	{
 		TPD_DMESG("I2C transfer error, line: %d\n", __LINE__);

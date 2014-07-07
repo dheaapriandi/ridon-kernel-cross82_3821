@@ -441,7 +441,7 @@ fm_s32 mt6627_pwrup_digital_init(fm_u8 *buf, fm_s32 buf_size)
 	//FM RF&ADPLL divider setting
 	//D2.1 set cell mode
     //wr 30 D3:D2 00:FDD(default),01:both.10: TDD, 11 FDD
-    //pkt_size += fm_bop_modify(0x30, 0xFFF3, 0x0000, &buf[pkt_size], buf_size - pkt_size);
+    pkt_size += fm_bop_modify(0x30, 0xFFF3, 0x0000, &buf[pkt_size], buf_size - pkt_size);
     //D2.2 set ADPLL divider
     pkt_size += fm_bop_write(0x21, 0xE000, &buf[pkt_size], buf_size - pkt_size);//wr 21 E000
     //D2.3 set SDM coeff0_H

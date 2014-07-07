@@ -1,7 +1,6 @@
-/*******************************************************************************
-* Configuration Info
-* (it's needed for sensor authors to specify the following info)
-*******************************************************************************/
+
+
+
 //  header file name where sensor features are specified;
 //  it is included in this source file below.
 #define CFG_FTBL_FILENAME   "cfg_ftbl_hi704_yuv.h"
@@ -13,9 +12,6 @@
 #define SENSOR_NAME         "[hi704_yuv]"
 
 
-/*******************************************************************************
-* 
-*******************************************************************************/
 #define LOG_TAG "feature_YUV"
 //
 #include <utils/Errors.h>
@@ -31,37 +27,22 @@
 #define TOTAL_TABLE_SCENE_NUM   static_cast<MUINT32>(NSFeature::ENumOfScene)
 
 
-/*******************************************************************************
-* MACRO Define: Scene Independent
-*******************************************************************************/
 #define GETFINFO_SCENE_INDEP()          _GETFINFO_SCENE_INDEP(SENSOR_NAME)
 #define END_GETFINFO_SCENE_INDEP()  _END_GETFINFO_SCENE_INDEP(SENSOR_NAME)
 
 
-/*******************************************************************************
-* MACRO Define: Scene Dependent
-*******************************************************************************/
 #define GETFINFO_SCENE_DEP()            _GETFINFO_SCENE_DEP(SENSOR_NAME)
 #define END_GETFINFO_SCENE_DEP()    _END_GETFINFO_SCENE_DEP(SENSOR_NAME)
 
 
-/*******************************************************************************
-* MACRO Define: Config Scene
-*******************************************************************************/
 #define CONFIG_SCENE(_sid)              _CONFIG_SCENE(_sid, SENSOR_NAME)
 #define END_CONFIG_SCENE()          _END_CONFIG_SCENE(SENSOR_NAME)
 
 
-/*******************************************************************************
-* MACRO Define: Config Feature
-*******************************************************************************/
 #define CHECK_FID_SI    CHECK_FID_YUV_SI
 #define CHECK_FID_SD    CHECK_FID_YUV_SD
 
 
-/*******************************************************************************
-* Implementation of Feature Tables
-*******************************************************************************/
 namespace
 {
 using namespace NSFeature;
@@ -87,9 +68,6 @@ GetFInfo_YUV_SD()
 }
 
 
-/*******************************************************************************
-* Implementation of class SensorInfo
-*******************************************************************************/
 #include "camera_custom_sensor.h"
 #include "kd_imgsensor.h"
 

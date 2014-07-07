@@ -1,3 +1,4 @@
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,31 +15,19 @@
 #include <sign_extension.h>
 #include <errno.h>
 
-/**************************************************************************
- *  DEFINITIONS
- **************************************************************************/
 #define MOD                         "SignLib"
 #define FB_SIG_DIR_NAME             "fb_sig/"
 #define FB_SIG_EXT_NAME             ".sig"
 #define FB_SIG_FILE_SIZE            256
 
-/**************************************************************************
- *  MCARO
- **************************************************************************/
 #define DBG                         printf
 
 
-/**************************************************************************
- *  VARIABLES
- **************************************************************************/
 SEC_CRYPTO_HASH_TYPE g_hash_type = SEC_CRYPTO_HASH_SHA1;
 SEC_CRYPTO_SIGNATURE_TYPE g_sig_type = SEC_CRYPTO_SIG_RSA1024;
 static unsigned int g_fb_chunk_size = 0x1000000; //default is 16MB
 #define FIX_FB_PADDING_HEADER_SIZE 0x4000 //default is 16KB
 
-/**************************************************************************
- *  INTERNAL UTILITES
- **************************************************************************/
 void * mcpy(void *dst, const void *src, int  cnt)
 {
     char *tmp = dst;
@@ -69,9 +58,6 @@ int mcmp (const void *cs, const void *ct, int cnt)
 }
 
 
-/**************************************************************************
- *  IMPORT KEY
- **************************************************************************/
 int chk_img (char *img_name)
 {    
     uint32 br = 0;
@@ -104,9 +90,6 @@ int chk_img (char *img_name)
 }
 
 
-/**************************************************************************
- *  IMPORT KEY
- **************************************************************************/
 int imp_key (char *kf, char *kp, char gen_hdr, FILE *gen_fd)
 {
     CUSTOMER_SEC_INTER cust;
@@ -337,9 +320,6 @@ int imp_cfg(char *cfg_name, SEC_IMG_HEADER *sec)
     return 0;
 }
 
-/**************************************************************************
- * WRITE IMAGE HEADER
- **************************************************************************/
 int gen_hdr (char *cfg_name, char *hdr_name, char* img_name, char *hs_name)
 {
     SEC_IMG_HEADER sec = {0};
@@ -473,9 +453,6 @@ check_err:
 
 
 
-/**************************************************************************
- * WRITE HASH + SIGNATURE
- **************************************************************************/
 
 int pro_img_v1_v2(char *hs_name, char *img_name,char *hdr_name)
 {

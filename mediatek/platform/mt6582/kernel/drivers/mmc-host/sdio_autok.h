@@ -66,12 +66,13 @@ typedef union
 #ifdef USE_KERNEL_THREAD
 struct sdio_autok_thread_data
 {
-	struct msdc_host *host;
-	struct autok_predata *p_autok_predata;
-	char stage;
+    struct msdc_host *host;
+    struct autok_predata *p_autok_predata;
+    char stage;
     struct autok_progress *p_autok_progress;
     u8 *is_autok_done;
     struct completion *autok_completion;
+    char *log;
 };
 #else   // USE_KERNEL_THREAD
 struct sdio_autok_workqueue_data
@@ -82,6 +83,12 @@ struct sdio_autok_workqueue_data
 	char stage;
 };
 #endif  // USE_KERNEL_THREAD
+
+struct log_mmap_info {
+  char *data; /* the data */
+  int reference;       /* how many times it is mmapped */  
+  int size;   
+};
 
 typedef enum
 {
@@ -134,6 +141,8 @@ typedef enum
 
 #define MSDC_READ      (0)
 #define MSDC_WRITE     (1)
+#define LOG_SIZE (PAGE_SIZE*8)
+
 
 enum AUTOK_PARAM {
     CMD_EDGE,                       // command response sample selection (MSDC_SMPL_RISING, MSDC_SMPL_FALLING)
@@ -181,4 +190,7 @@ int msdc_autok_stg1_cal(struct msdc_host *host, unsigned int offset_restore, str
 //int msdc_autok_stg1_data_get(void **ppData, int *pLen);
 int msdc_autok_stg2_cal(struct msdc_host *host, struct autok_predata *p_autok_data, unsigned int vcore_uv_off);
 int msdc_autok_apply_param(struct msdc_host *host, unsigned int vcore_uv_off);
+extern char* reset_autok_cursor(int voltage);
+//extern void clear_autok_buf();
+extern bool is_vcore_ss_corner();
 #endif /* end of MT6582_AUTOK_H */

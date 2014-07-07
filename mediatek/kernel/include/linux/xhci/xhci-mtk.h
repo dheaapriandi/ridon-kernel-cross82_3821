@@ -35,13 +35,6 @@
 #define SSUSB_IP_SW_RST		(1<<0)
 #define SSUSB_IP_PW_CTRL_1	(SIFSLV_IPPC+0x4)
 #define SSUSB_IP_PDN		(1<<0)
-#define SSUSB_IP_PW_STS1    (SIFSLV_IPPC+0x10)
-#define SSUSB_SYS125_RST_B_STS (0x1<<10)
-#define SSUSB_U3_MAC_RST_B_STS (0x1<<16)
-#define SSUSB_IP_PW_STS2    (SIFSLV_IPPC+0x14)
-#define SSUSB_U2_MAC_SYS_RST_B_STS (0x1<<0)
-#define SSUSB_OTG_STS       (SIFSLV_IPPC+0x18)
-#define SSUSB_IDDIG         (1 << 10)
 #define SSUSB_U3_CTRL(p)	(SIFSLV_IPPC+0x30+(p*0x08))
 #define SSUSB_U3_PORT_DIS	(1<<0)
 #define SSUSB_U3_PORT_PDN	(1<<1)
@@ -61,15 +54,9 @@
 #define SSUSB_U3_PORT_NUM(p)	(p & 0xff)
 #define SSUSB_U2_PORT_NUM(p)	((p>>8) & 0xff)
 
-extern void mtk_xhci_ip_init(void);
-extern void mtk_xhci_ck_timer_init(void);
-
-#ifdef CONFIG_USB_MTK_DUALMODE
-#define IDDIG_EINT_PIN (16)
-
-extern void mtk_xhci_set(struct xhci_hcd *xhci);
-extern void mtk_xhci_eint_iddig_init(void);
-#endif
+extern void reinitIP(void);
+extern void setInitialReg(void);
+extern int dbg_u3init(int argc, char**argv);
 
 /*
   mediatek probe out

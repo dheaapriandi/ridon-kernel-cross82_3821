@@ -62,6 +62,7 @@ typedef unsigned char uint8;
 typedef unsigned short uint16;
 typedef struct {
 	uint8  ref_count;
+	uint8  lp_reserved;
 	uint16 msg_len;
 	uint8 data[0];
 } local_para_struct ;
@@ -154,7 +155,13 @@ inline KAL_UINT32 ipcdut_UL_write_room_check(CCCI_CHANNEL_T chn);
 #define ccci_ch_write_desc_to_q(ch_num,desc_p)     eemcs_ccci_UL_write_skb_to_swq(ch_num, desc_p)
 #define ccci_ch_write_space_alloc(ch_num)          eemcs_ccci_UL_write_room_alloc(ch_num)
 #endif
+
+#ifdef CCCI_SDIO_HEAD
 #define CCCI_IPC_HEADER_ROOM                   (sizeof(SDIO_H)+sizeof(CCCI_BUFF_T))
+#else
+#define CCCI_IPC_HEADER_ROOM                   (sizeof(CCCI_BUFF_T))
+#endif
+
 #define ccci_ipc_mem_alloc(sz)                 dev_alloc_skb(sz)
 
 ssize_t eemcs_ipc_kern_write(ipc_ilm_t *in_ilm);

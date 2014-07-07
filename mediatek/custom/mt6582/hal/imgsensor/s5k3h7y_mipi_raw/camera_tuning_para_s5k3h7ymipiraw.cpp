@@ -1,3 +1,4 @@
+
 #include <utils/Log.h>
 #include <fcntl.h>
 #include <math.h>
@@ -159,448 +160,445 @@ const NVRAM_CAMERA_3A_STRUCT CAMERA_3A_NVRAM_DEFAULT_VALUE =
 
     // AWB NVRAM
     {
-	// AWB calibration data
-	{
-		// rCalGain (calibration gain: 1.0 = 512)
-		{
-			0,	// u4R
-			0,	// u4G
-			0	// u4B
-		},
-		// rDefGain (Default calibration gain: 1.0 = 512)
-		{
-			0,	// u4R
-			0,	// u4G
-			0	// u4B
-		},
-		// rDefGain (Default calibration gain: 1.0 = 512)
-		{
-			0,	// u4R
-			0,	// u4G
-			0	// u4B
-		},
-		// rD65Gain (D65 WB gain: 1.0 = 512)
-		{
-			827,	// u4R
-			512,	// u4G
-			664	// u4B
-		}
-	},
-	// Original XY coordinate of AWB light source
-	{
-		// Strobe
-		{
-			-30,	// i4X
-			-454	// i4Y
-		},
-		// Horizon
-		{
-			-427,	// i4X
-			-345	// i4Y
-		},
-		// A
-		{
-			-321,	// i4X
-			-351	// i4Y
-		},
-		// TL84
-		{
-			-212,	// i4X
-			-338	// i4Y
-		},
-		// CWF
-		{
-			-170,	// i4X
-			-455	// i4Y
-		},
-		// DNP
-		{
-			-39,	// i4X
-			-310	// i4Y
-		},
-		// D65
-		{
-			81,	// i4X
-			-273	// i4Y
-		},
-		// DF
-		{
-			0, 	// i4X
-			0	// i4Y
-		}
-	},
-	// Rotated XY coordinate of AWB light source
-	{
-		// Strobe
-		{
-			-108,	// i4X
-			-442	// i4Y
-		},
-		// Horizon
-		{
-			-480,	// i4X
-			-266	// i4Y
-		},
-		// A
-		{
-			-376,	// i4X
-			-290	// i4Y
-		},
-		// TL84
-		{
-			-267,	// i4X
-			-296	// i4Y
-		},
-		// CWF
-		{
-			-246,	// i4X
-			-419	// i4Y
-		},
-		// DNP
-		{
-			-92,	// i4X
-			-298	// i4Y
-		},
-		// D65
-		{
-			33,	// i4X
-			-283	// i4Y
-		},
-		// DF
-		{
-			0,	// i4X
-			0	// i4Y
-		}
-	},
-	// AWB gain of AWB light source
-	{
-		// Strobe
-		{
-			910,	// u4R
-			512,	// u4G
-			986	// u4B
-		},
-		// Horizon
-		{
-			512,	// u4R
-			573,	// u4G
-			1628	// u4B
-		},
-		// A
-		{
-			534,	// u4R
-			512,	// u4G
-			1272	// u4B
-		},
-		// TL84
-		{
-			607,	// u4R
-			512,	// u4G
-			1079	// u4B
-		},
-		// CWF
-		{
-			753,	// u4R
-			512,	// u4G
-			1192	// u4B
-		},
-		// DNP
-		{
-			739,	// u4R
-			512,	// u4G
-			822	// u4B
-		},
-		// D65
-		{
-			827,	// u4R
-			512,	// u4G
-			664	// u4B
-		},
-		// DF
-		{
-			606,	// u4R
-			512,	// u4G
-			1241	// u4B
-		}
-	},
-	// Rotation matrix parameter
-	{
-		10,	// i4RotationAngle
-		252,	// i4Cos
-		44,	// i4Sin
-	},
-	// Daylight locus parameter
-	{
-		-181,	// i4SlopeNumerator
-		128	// i4SlopeDenominator
-	},
-	// AWB light area
-	{
-		// Strobe
-		{
-			58,	// i4RightBound
-			-142,	// i4LeftBound
-			-363,	// i4UpperBound
-			-500	// i4LowerBound
-		},
-		// Tungsten
-		{
-			-337,	// i4RightBound
-			-987,	// i4LeftBound
-			-228,	// i4UpperBound
-			-328	// i4LowerBound
-		},
-		// Warm fluorescent
-		{
-			-337,	// i4RightBound
-			-987,	// i4LeftBound
-			-328,	// i4UpperBound
-			-448	// i4LowerBound
-		},
-		// Fluorescent
-		{
-			-142,	// i4RightBound
-			-337,	// i4LeftBound
-			-216,	// i4UpperBound
-			-358	// i4LowerBound
-		},
-		// CWF
-		{
-			-142,	// i4RightBound
-			-337,	// i4LeftBound
-			-358,	// i4UpperBound
-			-469	// i4LowerBound
-		},
-		// Daylight
-		{
-			58,	// i4RightBound
-			-142,	// i4LeftBound
-			-203,	// i4UpperBound
-			-363	// i4LowerBound
-		},
-		// Shade
-		{
-			418,	// i4RightBound
-			58,	// i4LeftBound
-			-203,	// i4UpperBound
-			-363	// i4LowerBound
-		},
-		// Daylight Fluorescent
-		{
-			0,	// i4RightBound
-			0,	// i4LeftBound
-			0,	// i4UpperBound
-			0	// i4LowerBound
-		}
-	},
-	// PWB light area
-	{
-		// Reference area
-		{
-			418,	// i4RightBound
-			-987,	// i4LeftBound
-			-178,	// i4UpperBound
-			-469	// i4LowerBound
-		},
-		// Daylight
-		{
-			83,	// i4RightBound
-			-142,	// i4LeftBound
-			-203,	// i4UpperBound
-			-363	// i4LowerBound
-		},
-		// Cloudy daylight
-		{
-			183,	// i4RightBound
-			8,	// i4LeftBound
-			-203,	// i4UpperBound
-			-363	// i4LowerBound
-		},
-		// Shade
-		{
-			283,	// i4RightBound
-			8,	// i4LeftBound
-			-203,	// i4UpperBound
-			-363	// i4LowerBound
-		},
-		// Twilight
-		{
-			-142,	// i4RightBound
-			-302,	// i4LeftBound
-			-203,	// i4UpperBound
-			-363	// i4LowerBound
-		},
-		// Fluorescent
-		{
-			83,	// i4RightBound
-			-367,	// i4LeftBound
-			-233,	// i4UpperBound
-			-469	// i4LowerBound
-		},
-		// Warm fluorescent
-		{
-			-276,	// i4RightBound
-			-476,	// i4LeftBound
-			-233,	// i4UpperBound
-			-469	// i4LowerBound
-		},
-		// Incandescent
-		{
-			-276,	// i4RightBound
-			-476,	// i4LeftBound
-			-203,	// i4UpperBound
-			-363	// i4LowerBound
-		},
-		// Gray World
-		{
-			5000,	// i4RightBound
-			-5000,	// i4LeftBound
-			5000,	// i4UpperBound
-			-5000	// i4LowerBound
-		}
-	},
-	// PWB default gain
-	{
-		// Daylight
-		{
-			772,	// u4R
-			512,	// u4G
-			732	// u4B
-		},
-		// Cloudy daylight
-		{
-			886,	// u4R
-			512,	// u4G
-			602	// u4B
-		},
-		// Shade
-		{
-			937,	// u4R
-			512,	// u4G
-			557	// u4B
-		},
-		// Twilight
-		{
-			625,	// u4R
-			512,	// u4G
-			990	// u4B
-		},
-		// Fluorescent
-		{
-			759,	// u4R
-			512,	// u4G
-			942	// u4B
-		},
-		// Warm fluorescent
-		{
-			587,	// u4R
-			512,	// u4G
-			1359	// u4B
-		},
-		// Incandescent
-		{
-			527,	// u4R
-			512,	// u4G
-			1261	// u4B
-		},
-		// Gray World
-		{
-			512,	// u4R
-			512,	// u4G
-			512	// u4B
-		}
-	},
-	// AWB preference color
-	{
-		// Tungsten
-		{
-			50,	// i4SliderValue
-			5115	// i4OffsetThr
-		},
-		// Warm fluorescent
-		{
-			50,	// i4SliderValue
-			5115	// i4OffsetThr
-		},
-		// Shade
-		{
-			50,	// i4SliderValue
-			846	// i4OffsetThr
-		},
-		// Daylight WB gain
-		{
-			721,	// u4R
-			512,	// u4G
-			808	// u4B
-		},
-		// Preference gain: strobe
-		{
-			512,	// u4R
-			512,	// u4G
-			512	// u4B
-		},
-		// Preference gain: tungsten
-		{
-			512,	// u4R
-			512,	// u4G
-			512	// u4B
-		},
-		// Preference gain: warm fluorescent
-		{
-			512,	// u4R
-			512,	// u4G
-			512	// u4B
-		},
-		// Preference gain: fluorescent
-		{
-			512,	// u4R
-			512,	// u4G
-			512	// u4B
-		},
-		// Preference gain: CWF
-		{
-			512,	// u4R
-			512,	// u4G
-			512	// u4B
-		},
-		// Preference gain: daylight
-		{
-			512,	// u4R
-			512,	// u4G
-			512	// u4B
-		},
-		// Preference gain: shade
-		{
-			512,	// u4R
-			512,	// u4G
-			512	// u4B
-		},
-		// Preference gain: daylight fluorescent
-		{
-			512,	// u4R
-			512,	// u4G
-			512	// u4B
-		}
-	},
-	// CCT estimation
-	{
-		// CCT
-		{
-			2300,	// i4CCT[0]
-			2850,	// i4CCT[1]
-			4100,	// i4CCT[2]
-			5100,	// i4CCT[3]
-			6500 	// i4CCT[4]
-		},
-		// Rotated X coordinate
-		{
-			-513,	// i4RotatedXCoordinate[0]
-			-409,	// i4RotatedXCoordinate[1]
-			-300,	// i4RotatedXCoordinate[2]
-			-125,	// i4RotatedXCoordinate[3]
-			0 	// i4RotatedXCoordinate[4]
-		}
-	}
+        // AWB calibration data
+        {
+            // rUnitGain (unit gain: 1.0 = 512)
+            {
+                0,    // i4R
+                0,    // i4G
+                0    // i4B
+            },
+            // rGoldenGain (golden sample gain: 1.0 = 512)
+            {
+                0,    // i4R
+                0,    // i4G
+                0    // i4B
+            },
+            // rTuningUnitGain (Tuning sample unit gain: 1.0 = 512)
+            {
+                0,    // i4R
+                0,    // i4G
+                0    // i4B
+            },
+            // rD65Gain (D65 WB gain: 1.0 = 512)
+            {
+                810,    // i4R
+                512,    // i4G
+                677    // i4B
+            }
+        },
+        // Original XY coordinate of AWB light source
+        {
+           // Strobe
+            {
+                67,    // i4X
+                -273    // i4Y
+            },
+            // Horizon
+            {
+                -493,    // i4X
+                -398    // i4Y
+            },
+            // A
+            {
+                -379,    // i4X
+                -390    // i4Y
+            },
+            // TL84
+            {
+                -244,    // i4X
+                -367    // i4Y
+            },
+            // CWF
+            {
+                -191,    // i4X
+                -493    // i4Y
+            },
+            // DNP
+            {
+                -99,    // i4X
+                -325    // i4Y
+            },
+            // D65
+            {
+                67,    // i4X
+                -273    // i4Y
+            },
+            // DF
+            {
+                67,    // i4X
+                -273    // i4Y
+            }
+        },
+        // Rotated XY coordinate of AWB light source
+        {
+            // Strobe
+            {
+                -1,    // i4X
+                -281    // i4Y
+            },
+            // Horizon
+            {
+                -574,    // i4X
+                -266    // i4Y
+            },
+            // A
+            {
+                -462,    // i4X
+                -286    // i4Y
+            },
+            // TL84
+            {
+                -325,    // i4X
+                -296    // i4Y
+            },
+            // CWF
+            {
+                -304,    // i4X
+                -431    // i4Y
+            },
+            // DNP
+            {
+                -175,    // i4X
+                -291    // i4Y
+            },
+            // D65
+            {
+                -1,    // i4X
+                -281    // i4Y
+            },
+            // DF
+            {
+                -1,    // i4X
+                -281    // i4Y
+            }
+        },
+        // AWB gain of AWB light source
+        {
+            // Strobe
+            {
+                810,    // i4R
+                512,    // i4G
+                677    // i4B
+            },
+            // Horizon
+            {
+                512,    // i4R
+                583,    // i4G
+                1946    // i4B
+            },
+            // A
+            {
+                519,    // i4R
+                512,    // i4G
+                1450    // i4B
+            },
+            // TL84
+            {
+                605,    // i4R
+                512,    // i4G
+                1172    // i4B
+            },
+            // CWF
+            {
+                771,    // i4R
+                512,    // i4G
+                1293    // i4B
+            },
+            // DNP
+            {
+                695,    // i4R
+                512,    // i4G
+                909    // i4B
+            },
+            // D65
+            {
+                810,    // i4R
+                512,    // i4G
+                677    // i4B
+            },
+            // DF
+            {
+                810,    // i4R
+                512,    // i4G
+                677    // i4B
+            }
+        },
+        // Rotation matrix parameter
+        {
+            14,    // i4RotationAngle
+            248,    // i4Cos
+            62    // i4Sin
+        },
+        // Daylight locus parameter
+        {
+            -213,    // i4SlopeNumerator
+            128    // i4SlopeDenominator
+        },
+        // AWB light area
+        {
+            // Strobe:FIXME
+            {
+            -100, // i4RightBound
+            -250, // i4LeftBound
+            -361, // i4UpperBound
+            -600  // i4LowerBound
+            },
+            // Tungsten
+            {
+            -375,    // i4RightBound
+            -1025,    // i4LeftBound
+            -226,    // i4UpperBound
+            -326    // i4LowerBound
+            },
+            // Warm fluorescent
+            {
+            -375,    // i4RightBound
+            -1025,    // i4LeftBound
+            -326,    // i4UpperBound
+            -446    // i4LowerBound
+            },
+            // Fluorescent
+            {
+            -225,    // i4RightBound
+            -375,    // i4LeftBound
+            -213,    // i4UpperBound
+            -363    // i4LowerBound
+            },
+            // CWF
+            {
+            -225,    // i4RightBound
+            -375,    // i4LeftBound
+            -363,    // i4UpperBound
+            -481    // i4LowerBound
+            },
+            // Daylight
+            {
+            24,    // i4RightBound
+            -225,    // i4LeftBound
+            -201,    // i4UpperBound
+            -361    // i4LowerBound
+            },
+            // Shade
+            {
+            384,    // i4RightBound
+            24,    // i4LeftBound
+            -201,    // i4UpperBound
+            -361    // i4LowerBound
+            },
+            // Daylight Fluorescent
+            {
+            0,    // i4RightBound
+            0,    // i4LeftBound
+            0,    // i4UpperBound
+            0    // i4LowerBound
+            }
+        },
+        // PWB light area
+        {
+            // Reference area
+            {
+            384,    // i4RightBound
+            -1025,    // i4LeftBound
+            -176,    // i4UpperBound
+            -481    // i4LowerBound
+            },
+            // Daylight
+            {
+            49,    // i4RightBound
+            -225,    // i4LeftBound
+            -201,    // i4UpperBound
+            -361    // i4LowerBound
+            },
+            // Cloudy daylight
+            {
+            149,    // i4RightBound
+            -26,    // i4LeftBound
+            -201,    // i4UpperBound
+            -361    // i4LowerBound
+            },
+            // Shade
+            {
+            249,    // i4RightBound
+            -26,    // i4LeftBound
+            -201,    // i4UpperBound
+            -361    // i4LowerBound
+            },
+            // Twilight
+            {
+            -225,    // i4RightBound
+            -385,    // i4LeftBound
+            -201,    // i4UpperBound
+            -361    // i4LowerBound
+            },
+            // Fluorescent
+            {
+            49,    // i4RightBound
+            -425,    // i4LeftBound
+            -231,    // i4UpperBound
+            -481    // i4LowerBound
+            },
+            // Warm fluorescent
+            {
+            -362,    // i4RightBound
+            -562,    // i4LeftBound
+            -231,    // i4UpperBound
+            -481    // i4LowerBound
+            },
+            // Incandescent
+            {
+            -362,    // i4RightBound
+            -562,    // i4LeftBound
+            -201,    // i4UpperBound
+            -361    // i4LowerBound
+            },
+            // Gray World
+            {
+            5000,    // i4RightBound
+            -5000,    // i4LeftBound
+            5000,    // i4UpperBound
+            -5000    // i4LowerBound
+            }
+        },
+        // PWB default gain
+        {
+            // Daylight
+            {
+            745,    // i4R
+            512,    // i4G
+            781    // i4B
+            },
+            // Cloudy daylight
+            {
+            863,    // i4R
+            512,    // i4G
+            611    // i4B
+            },
+            // Shade
+            {
+            907,    // i4R
+            512,    // i4G
+            562    // i4B
+            },
+            // Twilight
+            {
+            602,    // i4R
+            512,    // i4G
+            1115    // i4B
+            },
+            // Fluorescent
+            {
+            764,    // i4R
+            512,    // i4G
+            991    // i4B
+            },
+            // Warm fluorescent
+            {
+            583,    // i4R
+            512,    // i4G
+            1555    // i4B
+            },
+            // Incandescent
+            {
+            515,    // i4R
+            512,    // i4G
+            1444    // i4B
+            },
+            // Gray World
+            {
+            512,    // i4R
+            512,    // i4G
+            512    // i4B
+            }
+        },
+        // AWB preference color
+        {
+            // Tungsten
+            {
+            50,    // i4SliderValue
+            5250    // i4OffsetThr
+            },
+            // Warm fluorescent
+            {
+            50,    // i4SliderValue
+            5250    // i4OffsetThr
+            },
+            // Shade
+            {
+            50,    // i4SliderValue
+            851    // i4OffsetThr
+            },
+            // Daylight WB gain
+            {
+            684,    // i4R
+            512,    // i4G
+            901    // i4B
+            },
+            // Preference gain: strobe
+            {
+            512,    // i4R
+            512,    // i4G
+            512    // i4B
+            },
+            // Preference gain: tungsten
+            {
+            512,    // i4R
+            512,    // i4G
+            512    // i4B
+            },
+            // Preference gain: warm fluorescent
+            {
+            512,    // i4R
+            512,    // i4G
+            512    // i4B
+            },
+            // Preference gain: fluorescent
+            {
+            512,    // i4R
+            512,    // i4G
+            512    // i4B
+            },
+            // Preference gain: CWF
+            {
+            512,    // i4R
+            512,    // i4G
+            512    // i4B
+            },
+            // Preference gain: daylight
+            {
+            512,    // i4R
+            512,    // i4G
+            512    // i4B
+            },
+            // Preference gain: shade
+            {
+            512,    // i4R
+            512,    // i4G
+            512    // i4B
+            },
+            // Preference gain: daylight fluorescent
+            {
+            512,    // i4R
+            512,    // i4G
+            512    // i4B
+            }
+        },
+        {// CCT estimation
+            {// CCT
+                2300,    // i4CCT[0]
+                2850,    // i4CCT[1]
+                4100,    // i4CCT[2]
+                5100,    // i4CCT[3]
+                6500    // i4CCT[4]
+            },
+            {// Rotated X coordinate
+                -573,    // i4RotatedXCoordinate[0]
+                -461,    // i4RotatedXCoordinate[1]
+                -324,    // i4RotatedXCoordinate[2]
+                -174,    // i4RotatedXCoordinate[3]
+                0    // i4RotatedXCoordinate[4]
+            }
+        }
     },
     {0}
 };

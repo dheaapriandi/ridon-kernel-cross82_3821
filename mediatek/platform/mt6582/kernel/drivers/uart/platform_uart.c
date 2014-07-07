@@ -1,25 +1,3 @@
-/* mediatek/platform/mt6589/kernel/drivers/uart/uart.c
- *
- * (C) Copyright 2008 
- * MediaTek <www.mediatek.com>
- * MingHsien Hsieh <minghsien.hsieh@mediatek.com>
- *
- * MT6589 UART Driver
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
 /*---------------------------------------------------------------------------*/
 #include <linux/tty.h>
 #include <linux/tty_flip.h>
@@ -273,9 +251,6 @@ void mtk_uart_console_setting_switch(struct mtk_uart *uart)
     }
 #endif
 }
-/******************************************************************************
- * Virtual FIFO implementation
-******************************************************************************/
 #if defined(ENABLE_VFIFO) 
 /*---------------------------------------------------------------------------*/
 int mtk_uart_vfifo_enable(struct mtk_uart *uart, struct mtk_uart_vfifo *vfifo)
@@ -530,96 +505,7 @@ static void mtk_uart_dma_vfifo_tx_tasklet_byte(unsigned long arg)
 
 }
 /*---------------------------------------------------------------------------*/
-/*static int mtk_uart_vfifo_write_string(struct mtk_uart *uart, const unsigned char *chars, size_t size)
-{
-    void *addr, *base = uart->tx_vfifo->base;
-    unsigned int wpt = UART_READ32(VFF_WPT(base));
-    unsigned int num_to_end;
-
-    addr = (void*)((wpt&0xffff)+uart->tx_vfifo->addr);
-    num_to_end = UART_READ32(VFF_LEN(base)) - (wpt&0xffff);
-    if(num_to_end >= size){ 
-        memcpy(addr, chars, size);
-        mb();                                                  //make sure write point updated after VFIFO written.
-        reg_sync_writel( wpt+(unsigned int)size, VFF_WPT(base));
-    }else{
-        memcpy(addr, chars, num_to_end);
-        memcpy(uart->tx_vfifo->addr, &chars[num_to_end], (unsigned int)size - num_to_end);
-        mb();                                                  //make sure write point updated after VFIFO written.
-        wpt = ((~wpt)&0x10000)+ (unsigned int)size - num_to_end;
-        reg_sync_writel(wpt, VFF_WPT(base));
-    }
-
-    return size;
-}*/
 /*---------------------------------------------------------------------------*/
-/*static void mtk_uart_dma_vfifo_tx_tasklet_str(unsigned long arg)
-{
-    struct mtk_uart *uart = (struct mtk_uart *)arg;
-    struct uart_port   *port = &uart->port;
-    //struct mtk_uart_dma *dma = &uart->dma_tx;    
-    struct mtk_uart_vfifo *vfifo = uart->tx_vfifo;
-    struct circ_buf    *xmit = &port->state->xmit;
-    unsigned int len, count, size, left, chk = 0;
-
-    size = CIRC_CNT_TO_END(xmit->head, xmit->tail, UART_XMIT_SIZE);
-    left = vfifo->size - mtk_uart_vfifo_get_counts(vfifo);
-    left = (left > 16) ? (left-16) : (0); 
-    len  = count = left < size ? left : size;    
-
-    if (!len) {
-        chk = 1;
-        MSG(DMA,">>>>> zero size <<<<< \n");
-    }
-
-    DGBUF_INIT(vfifo);
-
-    mtk_uart_vfifo_write_string(uart, &xmit->buf[xmit->tail], size);
-    DGBUF_PUSH_STR(vfifo, &xmit->buf[xmit->tail], size);
-    xmit->tail = (xmit->tail+size) & (UART_XMIT_SIZE - 1);
-    port->icount.tx += size;
-    
-#if defined(ENABLE_VFIFO_DEBUG)
-    if (UART_DEBUG_EVT(DBG_EVT_DMA) && UART_DEBUG_EVT(DBG_EVT_BUF)) {
-        char str[4] = {0};    
-        if (count >= 4) {
-            str[0] = vfifo->cur->dat[0];
-            str[1] = vfifo->cur->dat[1];
-            str[2] = vfifo->cur->dat[vfifo->cur->idx-2];
-            str[3] = vfifo->cur->dat[vfifo->cur->idx-1];
-        } else {
-            int idx;
-            for (idx = 0; idx < count; idx++)
-                str[idx] = vfifo->cur->dat[idx];
-            for (; idx < 4; idx++)
-                str[idx] = 0;
-        }
-        MSG(DMA, "TX[%4d]: %4d/%4d [%05X-%05X] (%02X %02X .. %02X %02X) \n", 
-            size, count, left, UART_READ32(VFF_WPT(vfifo->base)), UART_READ32(VFF_RPT(vfifo->base)),
-            str[0], str[1], str[2], str[3]);
-    } else {
-        MSG(DMA, "TX[%4d]: %4d/%4d [%05X-%05X] \n", 
-            size, count, left, UART_READ32(VFF_WPT(vfifo->base)), UART_READ32(VFF_RPT(vfifo->base)));
-    }
-#endif    
- 
-#if defined(ENABLE_VFIFO_DEBUG)
-    if (UART_DEBUG_EVT(DBG_EVT_DAT) && UART_DEBUG_EVT(DBG_EVT_BUF)) {
-        int i;
-        printk("[UART%d_TX] %4d bytes:", uart->nport, vfifo->cur->idx);
-        for (i = 0; i < vfifo->cur->idx; i++) {
-            if (i % 16 == 0)
-                printk("\n");
-            printk("%.2x ", (unsigned char)vfifo->cur->dat[i]);
-        }
-        printk("\n");
-    }
-#endif
-
-    if (uart_circ_chars_pending(xmit) < WAKEUP_CHARS)
-        uart_write_wakeup(port);
-
-}*/
 /*---------------------------------------------------------------------------*/
 void mtk_uart_dma_vfifo_tx_tasklet(unsigned long arg) 
 {
@@ -663,100 +549,6 @@ void mtk_uart_dma_vfifo_tx_tasklet(unsigned long arg)
     spin_unlock_irqrestore(&vfifo->iolock, flags);
 }
 /*---------------------------------------------------------------------------*/
-/*static void mtk_uart_dma_vfifo_rx_tasklet_byte(unsigned long arg)
-{
-    struct mtk_uart *uart = (struct mtk_uart*)arg;
-    struct uart_port   *port = &uart->port;
-    struct mtk_uart_vfifo *vfifo = uart->rx_vfifo;
-    struct tty_struct *tty = uart->port.state->port.tty;
-    int count, left;
-    unsigned int ch, flag, status;
-    unsigned long flags;
-
-    MSG_FUNC_ENTRY();
-
-    count = left = mtk_uart_vfifo_get_counts(vfifo);
-    
-    spin_lock_irqsave(&port->lock, flags);
-    
-    DGBUF_INIT(vfifo);
-    while (!mtk_uart_vfifo_is_empty(vfifo) && count > 0) {
-
-        status = uart->read_status(uart);
-        status = mtk_uart_filter_line_status(uart);
-        
-        ch = uart->read_byte(uart);
-        flag = TTY_NORMAL;
-
-        if (status & UART_LSR_BI) {
-            MSG(INFO, "Break Interrupt!!!\n");
-            port->icount.brk++;
-            if (uart_handle_break(port))
-                continue;
-            flag = TTY_BREAK;
-        } else if (status & UART_LSR_PE) {
-            MSG(INFO, "Parity Error!!!\n");
-            port->icount.parity++;
-            flag = TTY_PARITY;
-        } else if (status & UART_LSR_FE) {
-            MSG(INFO, "Frame Error!!!\n");
-            port->icount.frame++;
-            flag = TTY_FRAME;
-        } else if (status & UART_LSR_OE) {
-            MSG(INFO, "Overrun!!!\n");
-            port->icount.overrun++;
-            flag = TTY_OVERRUN;        
-        }
-        port->icount.rx++;
-        count--;
-        DGBUF_PUSH_CH(vfifo, ch);
-        if (!tty_insert_flip_char(tty, ch, flag))
-            MSG(ERR, "tty_insert_flip_char: no space\n");
-    }
-    tty_flip_buffer_push(tty);
-    
-#if defined(ENABLE_VFIFO_DEBUG)
-    if (UART_DEBUG_EVT(DBG_EVT_DMA) && UART_DEBUG_EVT(DBG_EVT_BUF)) {
-        char str[4] = {0};    
-        if (count >= 4) {
-            str[0] = vfifo->cur->dat[0];
-            str[1] = vfifo->cur->dat[1];
-            str[2] = vfifo->cur->dat[vfifo->cur->idx-2];
-            str[3] = vfifo->cur->dat[vfifo->cur->idx-1];
-        } else {
-            int idx;
-            for (idx = 0; idx < count; idx++)
-                str[idx] = vfifo->cur->dat[idx];
-            for (; idx < 4; idx++)
-                str[idx] = 0;
-        }
-        MSG(DMA, "RX[%4d]: %4d bytes from VFIFO [%4d] (%02X %02X .. %02X %02X) %d\n", 
-            left, left - count, mtk_uart_vfifo_get_counts(vfifo), str[0], str[1], str[2], str[3], 
-            UART_READ32(VFF_VALID_SIZE(vfifo->base)));
-    } else {
-        MSG(DMA, "RX[%4d]: %4d bytes from VFIFO [%4d] %d\n", 
-            left, left - count, mtk_uart_vfifo_get_counts(vfifo), 
-            UART_READ32(VFF_VALID_SIZE(vfifo->base)));
-    }
-#endif    
-
-    spin_unlock_irqrestore(&port->lock, flags);
-
-#if defined(ENABLE_VFIFO_DEBUG)
-    if (UART_DEBUG_EVT(DBG_EVT_DAT) && UART_DEBUG_EVT(DBG_EVT_BUF)) {
-        int i;
-        printk("[UART%d_RX] %4d bytes:", uart->nport, vfifo->cur->idx);
-        
-        for (i = 0; i < vfifo->cur->idx; i++) {        
-            if (i % 16 == 0)
-                printk("\n");
-            printk("%.2x ", (unsigned char)vfifo->cur->dat[i]);
-        }
-        printk("\n");
-        
-    }
-#endif
-}*/
 /*---------------------------------------------------------------------------*/
 /* A duplicate of tty_insert_flip_string.                                    */
 /* The only difference is the function will accept one extra variable for    */
@@ -1456,14 +1248,6 @@ unsigned int mtk_uart_read_allow(struct mtk_uart *uart)
     return uart->line_status & UART_LSR_DR;
 }
 /*---------------------------------------------------------------------------*/
-/* Note:
- * 1. FIFO mode:
- *    -THRE=1 : when free space in FIFO is reduced blow its trigger level
- *    -THRE=0 : when free space in FIFO is more than its trigger level
- * 2. non-FIFO mode:
- *    -THRE=1 : when tx holding register is empty
- *    -THRE=0 : when tx holding register is not empty
- */
 unsigned int mtk_uart_write_allow(struct mtk_uart *uart)
 {
     u32 base = uart->base;
@@ -1678,9 +1462,6 @@ unsigned int mtk_uart_get_mctrl(struct uart_port *port)
     return result;
 }
 /*---------------------------------------------------------------------------*/
-/* stop receiving characters
- * note: port->lock has been taken by serial core layer 
- */
 void mtk_uart_stop_rx(struct uart_port *port)
 {
     struct mtk_uart *uart = (struct mtk_uart *)port;

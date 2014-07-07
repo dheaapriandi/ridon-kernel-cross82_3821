@@ -1,64 +1,5 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- * cfg_audio_file.h
- *
- * Project:
- * --------
- *   DUMA
- *
- * Description:
- * ------------
- * This file is the header of audio customization related function or definition.
- *
- * Author:
- * -------
- * Ning.F
- *
- *============================================================================
- *             HISTORY
- * Below this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- * 12 29 2012 donglei.ji
- * [ALPS00425279] [Need Patch] [Volunteer Patch] voice ui and password unlock feature check in
- * voice ui - NVRAM .
- *
- * 08 26 2012 weiguo.li
- * [ALPS00347285] [Need Patch] [Volunteer Patch]LGE AudioGainTable modification
- * .
- *
- * 07 29 2012 weiguo.li
- * [ALPS00319405] ALPS.JB.BSP.PRA check in CR for Jades
- * .
- *
- * Jun 22 2009 mtk01352
- * [DUMA00007771] Moving modem side customization to AP
- *
- *
- * Apr 29 2009 mtk80306
- * [DUMA00116080] revise the customization of nvram
- * revise nvram customization
- *
- * Mar 21 2009 mtk80306
- * [DUMA00112158] fix the code convention.
- * modify code convention
- *
- * Mar 9 2009 mtk80306
- * [DUMA00111088] nvram customization
- * nvram customization
- *
- *
- *
- *
- *------------------------------------------------------------------------------
- * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *============================================================================
- ****************************************************************************/
+
+
 #ifndef _CFG_AUDIO_FILE_H
 #define _CFG_AUDIO_FILE_H
 
@@ -295,8 +236,6 @@ typedef struct _AUDIO_ACF_CUSTOM_PARAM_STRUCT
 
 } AUDIO_ACF_CUSTOM_PARAM_STRUCT;
 #endif
-/*
-*/
 #define CFG_FILE_AUDIO_COMPFLT_REC_SIZE        sizeof(AUDIO_ACF_CUSTOM_PARAM_STRUCT)
 #define CFG_FILE_AUDIO_COMPFLT_REC_TOTAL   1
 #define CFG_FILE_HEADPHONE_COMPFLT_REC_TOTAL   1
@@ -391,9 +330,6 @@ typedef struct _AUDIO_VER1_CUSTOM_VOLUME_STRUCT {
 
 
 
-/********************************************************************
-*   Audio Gain Table
-*********************************************************************/
 #define GAIN_TABLE_LEVEL (20)
 
 #define VOICE_GAIN_TABLE_LEVEL (6+1)

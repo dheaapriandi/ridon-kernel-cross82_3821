@@ -2105,7 +2105,7 @@ p2pFuncParseBeaconContent (
                 {
                     //DBGLOG(P2P, TRACE, ("SSID update\n"));
                     /* SSID is saved when start AP/GO */
-                    /* SSID IE set in beacon from supplicant will not always be the true since hidden SSID case */
+                    /* SSID IE set in beacon from supplicant will not always be true since hidden SSID case */
                     /*
                     COPY_SSID(prP2pBssInfo->aucSSID,
                                                 prP2pBssInfo->ucSSIDLen,

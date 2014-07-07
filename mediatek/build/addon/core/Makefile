@@ -1,9 +1,3 @@
-# ###############################################################
-# Flow control makefile
-# ###############################################################
-
-
-
 TOPDIR :=
 MTK_BUILD_SYSTEM   := $(TOPDIR)mediatek/build/addon/core
 MTK_PROJECT_CONFIG := $(TOPDIR)mediatek/build/addon/project

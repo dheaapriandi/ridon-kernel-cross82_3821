@@ -1,3 +1,5 @@
+
+
 #ifndef AP_EDTIOR_DATA_ITEM_SYSTEM_H
 #define AP_EDTIOR_DATA_ITEM_SYSTEM_H
 
@@ -10,13 +12,7 @@
 //#include "../../custom/oppo/cgen/inc/Custom_NvRam_LID.h"
 #include "Custom_NvRam_LID.h"
 
-/***************************************************************************** 
-* Include
-*****************************************************************************/
 
-/***************************************************************************** 
-* Define
-*****************************************************************************/
 typedef struct
 {
 	char	cFileVer[4];
@@ -24,24 +20,9 @@ typedef struct
 
 
 
-/***************************************************************************** 
-* META Description
-*****************************************************************************/
 BEGIN_NVRAM_DATA
 
 
-/***********************************************************************
-  ***  This is a nvram data item bit level description for meta tools nvram editor
-  ***
-  ***  Logical Data Item ID : AP_CFG_FILE_AUXADC_LID
-  ***
-  ***  Module: 
-  ***
-  ***  Description:  
-  ***
-  ***  Maintainer: 
-  ***
-  ***********************************************************************/
 LID_BIT VER_LID(AP_CFG_RDCL_FILE_AUXADC_LID)
      AUXADC_CFG_Struct *CFG_FILE_AUXADC_REC_TOTAL
      {

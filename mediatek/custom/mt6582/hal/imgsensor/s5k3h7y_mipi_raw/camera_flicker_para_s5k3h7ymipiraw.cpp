@@ -26,7 +26,7 @@ static void get_flicker_para_by_preview(FLICKER_CUST_PARA* para)
   {
     para->flickerFreq[i]=freq[i];
   }
-  para->flickerGradThreshold=42;
+  para->flickerGradThreshold=24;
   para->flickerSearchRange=20;
   para->minPastFrames=3;
   para->maxPastFrames=14;
@@ -35,9 +35,9 @@ static void get_flicker_para_by_preview(FLICKER_CUST_PARA* para)
   para->EV60_L50=EV60_L50;
   para->EV60_L60=EV60_L60;
   para->EV50_thresholds[0]=-30;
-  para->EV50_thresholds[1]=8;
+  para->EV50_thresholds[1]=12;
   para->EV60_thresholds[0]=-30;
-  para->EV60_thresholds[1]=8;
+  para->EV60_thresholds[1]=12;
   para->freq_feature_index[0]=2;
   para->freq_feature_index[1]=1;
 }
@@ -55,7 +55,7 @@ static void get_flicker_para_by_ZSD(FLICKER_CUST_PARA* para)
   {
     para->flickerFreq[i]=freq[i];
   }
-  para->flickerGradThreshold=42;
+  para->flickerGradThreshold=25;
   para->flickerSearchRange=40;
   para->minPastFrames=3;
   para->maxPastFrames=14;
@@ -64,9 +64,9 @@ static void get_flicker_para_by_ZSD(FLICKER_CUST_PARA* para)
   para->EV60_L50=EV60_L50;
   para->EV60_L60=EV60_L60;
   para->EV50_thresholds[0]=-30;
-  para->EV50_thresholds[1]=8;
+  para->EV50_thresholds[1]=12;
   para->EV60_thresholds[0]=-30;
-  para->EV60_thresholds[1]=8;
+  para->EV60_thresholds[1]=12;
   para->freq_feature_index[0]=4;
   para->freq_feature_index[1]=3;
 }

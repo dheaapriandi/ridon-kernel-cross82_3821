@@ -1,8 +1,4 @@
-/*
-** $Log: camera_custom_errocde.h $
- *
- *
-*/
+
 
 #ifndef _CAMERA_CUSTOM_ERRCODE_H_
 #define _CAMERA_CUSTOM_ERRCODE_H_

@@ -1,9 +1,3 @@
-# include project feature configuration makefile
-# ############################################################
-# maybe enable in the future
-# ############################################################
-#include $(MTK_PROJECT_CONFIG)/$(PROJECT).mak
-
 include mediatek/build/addon/core/definitions.mak
 MTK_BUILD_SYSTEM := mediatek/build/addon/core
 # ###############################################################

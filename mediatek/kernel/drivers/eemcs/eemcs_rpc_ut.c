@@ -1,36 +1,4 @@
-/*******************************************************************************
- * Filename:
- * ---------
- *   eemcs_rpc_ut.c
- *
- * Project:
- * --------
- *   MOLY
- *
- * Description:
- * ------------
- *   Implements the CCCI RPC unit test functions
- *
- * Author:
- * -------
- *
- * ==========================================================================
- * $Log$
- *
- * 07 03 2013 ian.cheng
- * [ALPS00837674] [LTE_MD]  EEMCS ALPS.JB5.82LTE.DEV migration
- * [eemcs migration]
- *
- * 05 27 2013 ian.cheng
- * [ALPS00741900] [EEMCS] Modify device major number to 183
- * 1. update eemcs major number to 183
- * 2. fix typo of CCCI_CHNNEL_T
- *
- * 04 30 2013 ian.cheng
- * [ALPS00612780] [EEMCS] Submit EEMCS to ALPS.JB2.MT6582.MT6290.BSP.DEV
- * 1. fix compile warning from RPC.
- *
- ****************************************************************************/
+
 
 #include <linux/module.h>
 #include <linux/limits.h>
@@ -120,13 +88,6 @@ inline KAL_INT32 eemcs_rpc_ut_UL_write_skb_to_swq(CCCI_CHANNEL_T chn, struct sk_
 }
 
 
-/*
- * @brief Trigger RPC UT procedure
- * @param
- *     None
- * @return
- *     None
- */
 void eemcs_rpc_ut_trigger(void)
 {
 	struct sk_buff *new_skb = NULL;

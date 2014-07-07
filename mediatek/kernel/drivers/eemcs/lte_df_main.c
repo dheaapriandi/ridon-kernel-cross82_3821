@@ -123,10 +123,17 @@ int mtlte_df_DL_pkt_in_swq(MTLTE_DF_RX_QUEUE_TYPE qno)
 	return lte_df_core.dl_pkt_in_use[qno] ;
 }
 
+#if BUFFER_POOL_FOR_EACH_QUE
+int mtlte_df_DL_pkt_in_buff_pool(MTLTE_DF_TX_QUEUE_TYPE qno)
+{
+	return lte_df_core.dl_buffer_pool_queue[qno].qlen ;
+}
+#else
 int mtlte_df_DL_pkt_in_buff_pool()
 {
 	return lte_df_core.dl_buffer_pool_queue.qlen ;
 }
+#endif
 
 /* DL data traffic APIs */
 void mtlte_df_DL_try_reload_swq()
@@ -135,6 +142,24 @@ void mtlte_df_DL_try_reload_swq()
 }
 
 /* DL data traffic APIs */
+#if BUFFER_POOL_FOR_EACH_QUE
+void inline mtlte_df_DL_prepare_skb_for_swq(MTLTE_DF_TX_QUEUE_TYPE qno)
+{	
+	struct sk_buff *skb_tmp ;
+	unsigned cnt=0 ;
+
+	while(lte_df_core.dl_buffer_pool_queue[qno].qlen<lte_df_core.df_buffer_pool_depth[qno]){
+		skb_tmp = dev_alloc_skb(lte_df_core.df_skb_alloc_size[qno]) ;
+		if (skb_tmp){
+			cnt++ ;
+			skb_queue_tail(&lte_df_core.dl_buffer_pool_queue[qno], skb_tmp) ;
+		}else{
+			break ;
+		}
+	}
+	KAL_DBGPRINT(KAL, DBG_INFO,("Reload %d skbs for DL buffer pool, the pool len is %d\n",cnt, lte_df_core.dl_buffer_pool_queue[qno].qlen)) ;			
+}
+#else
 void inline mtlte_df_DL_prepare_skb_for_swq(void)
 {	
 	struct sk_buff *skb_tmp ;
@@ -151,6 +176,7 @@ void inline mtlte_df_DL_prepare_skb_for_swq(void)
 	}
 	KAL_DBGPRINT(KAL, DBG_INFO,("Reload %d skbs for DL buffer pool, the pool len is %d\n",cnt, lte_df_core.dl_buffer_pool_queue.qlen)) ;			
 }
+#endif
 
 
 #if USE_MULTI_QUE_DISPATCH
@@ -228,27 +254,24 @@ static void mtlte_df_DL_dispatch_work(struct work_struct *work)
 
 #endif
 
-
-#if IMMEDIATE_RELOAD_DL_SKB
-/* DL dataflow test APIs */
-void  mtlte_df_DL_prepare_skb_for_swq_immediate(void)
+#if BUFFER_POOL_FOR_EACH_QUE
+void  mtlte_df_DL_prepare_skb_for_swq_short(unsigned int target_num, MTLTE_DF_TX_QUEUE_TYPE qno)
 {	
 	struct sk_buff *skb_tmp ;
 	unsigned cnt=0 ;
 	
-	while(lte_df_core.dl_buffer_pool_queue.qlen<MT_LTE_DL_BUFF_POOL_TH){
-		skb_tmp = dev_alloc_skb(DEV_MAX_PKT_SIZE) ;
+	while(lte_df_core.dl_buffer_pool_queue[qno].qlen < target_num){
+		skb_tmp = dev_alloc_skb(lte_df_core.df_skb_alloc_size[qno]) ;
 		if (skb_tmp){
 			cnt++ ;
-			skb_queue_tail(&lte_df_core.dl_buffer_pool_queue, skb_tmp) ;
+			skb_queue_tail(&lte_df_core.dl_buffer_pool_queue[qno], skb_tmp) ;
 		}else{
 			break ;
 		}
 	}
 }
-#endif
-
-
+ 
+#else
 void  mtlte_df_DL_prepare_skb_for_swq_short(unsigned int target_num)
 {	
 	struct sk_buff *skb_tmp ;
@@ -264,14 +287,54 @@ void  mtlte_df_DL_prepare_skb_for_swq_short(unsigned int target_num)
 		}
 	}
 }
+ 
+#endif
+
+#if BUFFER_POOL_FOR_EACH_QUE
+void mtlte_df_DL_set_skb_alloc_size_depth(MTLTE_DF_TX_QUEUE_TYPE qno, unsigned int alloc_size, unsigned int pool_depth)
+{
+    if(alloc_size == 0){
+        lte_df_core.df_skb_alloc_size[qno] = DEV_MAX_PKT_SIZE;
+    }else if(alloc_size > DEV_MAX_PKT_SIZE){
+        lte_df_core.df_skb_alloc_size[qno] = DEV_MAX_PKT_SIZE;
+        KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO][WARN] Set skb allocate size to %d of DLQ%d is Invaild, which is bigger than DEV_MAX_PKT_SIZE %d \n", alloc_size, qno, DEV_MAX_PKT_SIZE)) ; 
+    }else{
+        lte_df_core.df_skb_alloc_size[qno] = alloc_size;
+    }
+    
+    KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO][INFO] Set skb allocate size of DLQ%d = %d \n", qno, lte_df_core.df_skb_alloc_size[qno])) ; 
+
+
+    if(pool_depth == 0){
+        lte_df_core.df_buffer_pool_depth[qno] = MT_LTE_DL_BUFF_POOL_TH;
+    }else{
+        lte_df_core.df_buffer_pool_depth[qno] = pool_depth;
+    }
+
+    KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO][INFO] Set skb pool depth of DLQ%d = %d \n", qno, lte_df_core.df_buffer_pool_depth[qno])) ; 
+
+}
+#endif
 
 static void mtlte_df_DL_reload_work(struct work_struct *work)
 {	
+#if BUFFER_POOL_FOR_EACH_QUE
+    KAL_UINT32 qno;
+
+	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s\n",KAL_FUNC_NAME)) ;      
+
+    for(qno=0; qno<RXQ_NUM; qno++){
+	    mtlte_df_DL_prepare_skb_for_swq(qno);
+    }
+
+	KAL_DBGPRINT(KAL, DBG_INFO,("<==== %s\n",KAL_FUNC_NAME)) ;
+#else
 	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s\n",KAL_FUNC_NAME)) ;		
 
 	mtlte_df_DL_prepare_skb_for_swq(); 
 
 	KAL_DBGPRINT(KAL, DBG_INFO,("<==== %s\n",KAL_FUNC_NAME)) ;
+#endif    
 	return ;
 
 }
@@ -308,17 +371,36 @@ int mtlte_df_DL_enswq_buf(MTLTE_DF_RX_QUEUE_TYPE qno ,  void *buf, unsigned int 
 	struct sk_buff *skb = NULL; 
 	
 	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s , qno: %d\n",KAL_FUNC_NAME, qno)) ;	
-    
+
+#if BUFFER_POOL_FOR_EACH_QUE
+    if(len > lte_df_core.df_skb_alloc_size[qno]){
+        KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO][ERR] lte_df_core.df_skb_alloc_size[%d] = %d, packet this time = %d \n", qno, lte_df_core.df_skb_alloc_size[qno], len)) ;
+        KAL_DBGPRINT(KAL, DBG_ERROR,("[SDIO][ERR] First 64byte of this error packet = ")) ;
+        KAL_DBGPRINT(KAL, DBG_ERROR, ("0x%08x, 0x%08x, 0x%08x, 0x%08x,  ", *(unsigned int *)(buf+0), *(unsigned int *)(buf+4), *(unsigned int *)(buf+8), *(unsigned int *)(buf+12))) ;
+        KAL_DBGPRINT(KAL, DBG_ERROR, ("0x%08x, 0x%08x, 0x%08x, 0x%08x,  ", *(unsigned int *)(buf+16), *(unsigned int *)(buf+20), *(unsigned int *)(buf+24), *(unsigned int *)(buf+28))) ;
+        KAL_DBGPRINT(KAL, DBG_ERROR, ("0x%08x, 0x%08x, 0x%08x, 0x%08x,  ", *(unsigned int *)(buf+32), *(unsigned int *)(buf+36), *(unsigned int *)(buf+40), *(unsigned int *)(buf+44))) ;
+        KAL_DBGPRINT(KAL, DBG_ERROR, ("0x%08x, 0x%08x, 0x%08x, 0x%08x,  ", *(unsigned int *)(buf+48), *(unsigned int *)(buf+52), *(unsigned int *)(buf+56), *(unsigned int *)(buf+60))) ;
+    }
+    KAL_ASSERT(len <= lte_df_core.df_skb_alloc_size[qno]) ;
+#else
 	KAL_ASSERT(len <= DEV_MAX_PKT_SIZE) ;
+#endif
 
 	if (lte_df_core.cb_handle[qno].callback_func == NULL){
 		return KAL_SUCCESS ;
 	}
 
+#if BUFFER_POOL_FOR_EACH_QUE
+    if ((skb = skb_dequeue(&lte_df_core.dl_buffer_pool_queue[qno])) == NULL ){
+		KAL_DBGPRINT(KAL, DBG_WARN,("mtlte_df_DL_enswq_buf skb_dequeue no skb\n")) ;
+		return KAL_FAIL ;
+	}
+#else
 	if ((skb = skb_dequeue(&lte_df_core.dl_buffer_pool_queue)) == NULL ){
 		KAL_DBGPRINT(KAL, DBG_WARN,("mtlte_df_DL_enswq_buf skb_dequeue no skb\n")) ;
 		return KAL_FAIL ;
 	}
+#endif
 
 	memcpy(skb_put(skb, len), buf, len) ;
 
@@ -609,7 +691,7 @@ void mtlte_df_UL_SWQ_threshold_set(MTLTE_DF_TX_QUEUE_TYPE qno, unsigned int thre
 
 int mtlte_df_init(void)
 {
-#if FORMAL_DL_FLOW_CONTROL
+#if (FORMAL_DL_FLOW_CONTROL || BUFFER_POOL_FOR_EACH_QUE)
     unsigned int i;
 #endif
 	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s\n",KAL_FUNC_NAME)) ;	
@@ -653,6 +735,13 @@ int mtlte_df_init(void)
 	INIT_WORK(&lte_df_core.dl_dispatch_work, mtlte_df_DL_dispatch_work);
 #endif
 
+#if BUFFER_POOL_FOR_EACH_QUE
+    for (i=0; i<RXQ_NUM ; i++){
+        lte_df_core.df_skb_alloc_size[i] = DEV_MAX_PKT_SIZE;
+        lte_df_core.df_buffer_pool_depth[i] = MT_LTE_DL_BUFF_POOL_TH;
+    }
+#endif
+
     KAL_AQUIREMUTEX(&lte_df_core.dl_pkt_lock) ;
 
 	KAL_DBGPRINT(KAL, DBG_INFO,("<==== %s\n",KAL_FUNC_NAME)) ;
@@ -679,10 +768,19 @@ int mtlte_df_probe(void)
 		lte_df_core.dl_pkt_in_use[i] = 0 ;
 		skb_queue_head_init(&lte_df_core.dl_recv_wait_queue[i]);
 	}
-	skb_queue_head_init(&lte_df_core.dl_buffer_pool_queue);
 
+#if BUFFER_POOL_FOR_EACH_QUE
+    for (i=0; i<RXQ_NUM ; i++){
+        skb_queue_head_init(&lte_df_core.dl_buffer_pool_queue[i]);
+        mtlte_df_DL_prepare_skb_for_swq(i) ;
+        KAL_RAWPRINT(("The DL Buffer Pool packet of RXQ%d is %d\r\n", i, lte_df_core.dl_buffer_pool_queue[i].qlen)) ;
+        KAL_RAWPRINT(("The skb size of RXQ%d is %d\r\n", i, lte_df_core.df_skb_alloc_size[i])) ;
+    }
+#else
+    skb_queue_head_init(&lte_df_core.dl_buffer_pool_queue);
 	mtlte_df_DL_prepare_skb_for_swq() ;
-	KAL_RAWPRINT(("The DL Buffer Pool packet is %d\r\n", lte_df_core.dl_buffer_pool_queue.qlen)) ;
+    KAL_RAWPRINT(("The DL Buffer Pool packet is %d\r\n", lte_df_core.dl_buffer_pool_queue.qlen)) ;
+#endif
 
 #if FORMAL_DL_FLOW_CONTROL
     for (i=0; i<RXQ_NUM ; i++){
@@ -696,9 +794,13 @@ int mtlte_df_probe(void)
 	return KAL_SUCCESS ; 
 }
 
-int mtlte_df_remove(void)
+
+int mtlte_df_remove_phase1(void)
 {	
+#if	USE_MULTI_QUE_DISPATCH
 	int i ;
+#endif
+
 	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s\n",KAL_FUNC_NAME)) ;	
 
 #if	USE_MULTI_QUE_DISPATCH
@@ -712,6 +814,17 @@ int mtlte_df_remove(void)
 	flush_workqueue(lte_df_core.dl_reload_work_queue);
 
 	KAL_RAWPRINT(("[REMOVE] All queue work is flushed ~~ \r\n")) ;
+
+	KAL_DBGPRINT(KAL, DBG_INFO,("<==== %s\n",KAL_FUNC_NAME)) ;
+
+	return 0 ; 
+}
+
+
+int mtlte_df_remove_phase2(void)
+{	
+	int i ;
+	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s\n",KAL_FUNC_NAME)) ;	
     
 	for (i=0; i<TXQ_NUM ; i++){
 		skb_queue_purge(&lte_df_core.ul_xmit_wait_queue[i]);
@@ -723,8 +836,14 @@ int mtlte_df_remove(void)
 		// already performed at probe, no need to do again.
 		//lte_df_core.dl_pkt_in_use[i] = 0 ;
 		skb_queue_purge(&lte_df_core.dl_recv_wait_queue[i]);		
-	}	
+	}
+#if BUFFER_POOL_FOR_EACH_QUE
+    for (i=0; i<RXQ_NUM ; i++){
+        skb_queue_purge(&lte_df_core.dl_buffer_pool_queue[i]);	
+    }
+#else
 	skb_queue_purge(&lte_df_core.dl_buffer_pool_queue);		
+#endif
 
 	KAL_DBGPRINT(KAL, DBG_INFO,("<==== %s\n",KAL_FUNC_NAME)) ;
 

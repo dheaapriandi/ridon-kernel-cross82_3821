@@ -40,6 +40,15 @@
  // ============================================================ //
  //cut off to full
 #define POST_CHARGING_TIME	 30 * 60 // 30mins
+#if defined(RIO_5_CHARGING_TEMPERATURE_PLOICY)
+extern int charge_temperature_above_step1 ;
+extern int charge_temperature_above_step2 ;
+extern int charge_temperature_above_step3 ;
+extern int charge_temperature_above_step1_valid ;
+extern int charge_temperature_above_step2_valid ;
+extern int charge_temperature_above_step3_valid ;
+int Full_status_check = 0;
+#endif
 #define FULL_CHECK_TIMES		6
 
  // ============================================================ //
@@ -71,7 +80,12 @@
  //extern variable
  // ============================================================ //
  extern int g_platform_boot_mode;
- 
+ extern kal_uint32 upmu_get_rgs_baton_undet(void);
+
+ // JRD added for fuel gauge issue PR679477 start
+ extern bool IsBatMeterInited;
+ //JRD added for fuel gauge issue PR679477 end
+
  // ============================================================ //
  //extern function
  // ============================================================ //
@@ -387,14 +401,94 @@ void select_charging_curret(void)
         } 
         else if (BMT_status.charger_type == NONSTANDARD_CHARGER) 
         {   
+		/*JRD BSP START*/
+		#if defined(RIO_5_CHARGING_TEMPERATURE_PLOICY)
+		if(((BMT_status.temperature < CHARGE_TEMPERATURE_STEP1)&&
+		 (charge_temperature_above_step1 == 0))||(charge_temperature_above_step1_valid==1))
+            	{
+            	    g_temp_input_CC_value = CHARGE_CURRENT_1000_00_MA;
+					g_temp_CC_value = CHARGE_CURRENT_1000_00_MA;
+                 if(charge_temperature_above_step1_valid)
+                 {
+                    charge_temperature_above_step1_valid =0;
+		    }
+		}
+	     else if(((BMT_status.temperature < CHARGE_TEMPERATURE_STEP2)&&
+	             (charge_temperature_above_step2 == 0))||(charge_temperature_above_step2_valid==1))
+	     {
+                g_temp_input_CC_value = CHARGE_CURRENT_800_00_MA;
+				g_temp_CC_value = CHARGE_CURRENT_800_00_MA;
+		   if(charge_temperature_above_step2_valid)
+                {
+                   charge_temperature_above_step2_valid =0;
+				}
+	     }
+		else if(((BMT_status.temperature < CHARGE_TEMPERATURE_STEP3)&&
+	             (charge_temperature_above_step3 == 0))||(charge_temperature_above_step3_valid==1))
+	     {
+                g_temp_input_CC_value = CHARGE_CURRENT_500_00_MA;
+				g_temp_CC_value = CHARGE_CURRENT_500_00_MA;
+		   if(charge_temperature_above_step3_valid)
+                {
+                   charge_temperature_above_step3_valid =0;
+				}
+	     }
+
+	     else
+	     {
+			g_temp_input_CC_value = CHARGE_CURRENT_300_00_MA;
+			g_temp_CC_value = CHARGE_CURRENT_300_00_MA;
+	     }
+		#else	
         	g_temp_input_CC_value = NON_STD_AC_CHARGER_CURRENT;	
             g_temp_CC_value = NON_STD_AC_CHARGER_CURRENT;
-
+		#endif
+		/*JRD BSP END*/
         } 
         else if (BMT_status.charger_type == STANDARD_CHARGER) 
         {
-        	g_temp_input_CC_value = AC_CHARGER_CURRENT;
-			g_temp_CC_value = AC_CHARGER_CURRENT;
+#if defined(RIO_5_CHARGING_TEMPERATURE_PLOICY)
+            if(((BMT_status.temperature < CHARGE_TEMPERATURE_STEP1)&&
+		 (charge_temperature_above_step1 == 0))||(charge_temperature_above_step1_valid==1))
+            	{
+            	    g_temp_input_CC_value = CHARGE_CURRENT_1200_00_MA;
+			g_temp_CC_value = CHARGE_CURRENT_1200_00_MA;
+                 if(charge_temperature_above_step1_valid)
+                 {
+                    charge_temperature_above_step1_valid =0;
+		    }
+		}
+	     else if(((BMT_status.temperature < CHARGE_TEMPERATURE_STEP2)&&
+	             (charge_temperature_above_step2 == 0))||(charge_temperature_above_step2_valid==1))
+	     {
+                g_temp_input_CC_value = CHARGE_CURRENT_800_00_MA;
+			g_temp_CC_value = CHARGE_CURRENT_800_00_MA;
+		   if(charge_temperature_above_step2_valid)
+                {
+                   charge_temperature_above_step2_valid =0;
+				}
+	     }
+		else if(((BMT_status.temperature < CHARGE_TEMPERATURE_STEP3)&&
+	             (charge_temperature_above_step3 == 0))||(charge_temperature_above_step3_valid==1))
+	     {
+                g_temp_input_CC_value = CHARGE_CURRENT_500_00_MA;
+			g_temp_CC_value = CHARGE_CURRENT_500_00_MA;
+		   if(charge_temperature_above_step3_valid)
+                {
+                   charge_temperature_above_step3_valid =0;
+				}
+	     }
+
+	     else
+	     {
+			g_temp_input_CC_value = CHARGE_CURRENT_300_00_MA;
+			g_temp_CC_value = CHARGE_CURRENT_300_00_MA;
+	     }
+#else
+	
+        	g_temp_input_CC_value = CHARGE_CURRENT_1200_00_MA;
+			g_temp_CC_value = CHARGE_CURRENT_1200_00_MA;
+#endif
         }
         else if (BMT_status.charger_type == CHARGING_HOST) 
         {
@@ -459,6 +553,11 @@ static void pchr_turn_on_charging (void)
 #endif	
 	kal_uint32 charging_enable = KAL_TRUE;
 
+	// JRD added for fuel gauge issue PR679477 start
+	if(IsBatMeterInited==KAL_FALSE)
+		return;
+	// JRD added for fuel gauge issue PR679477 end
+
     if ( BMT_status.bat_charging_state == CHR_ERROR ) 
     {
         battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] Charger Error, turn OFF charging !\n");
@@ -466,11 +565,19 @@ static void pchr_turn_on_charging (void)
 		charging_enable = KAL_FALSE;
         
     }
-    else if( (g_platform_boot_mode==META_BOOT) || (g_platform_boot_mode==ADVMETA_BOOT) )
+#if defined CHARGING_META
+    else if( (g_platform_boot_mode==META_BOOT) || (g_platform_boot_mode==ADVMETA_BOOT)&&(upmu_get_rgs_baton_undet() ==1) )
     {   
         battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] In meta or advanced meta mode, disable charging.\n");    
         charging_enable = KAL_FALSE;
     }
+#else
+	else if( (g_platform_boot_mode==META_BOOT) || (g_platform_boot_mode==ADVMETA_BOOT) )
+	{
+		battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] In meta or advanced meta mode, disable charging.\n");
+		charging_enable = KAL_FALSE;
+	}
+#endif
     else
     {
         /*HW initialization*/
@@ -506,11 +613,26 @@ static void pchr_turn_on_charging (void)
 
 			/*Set CV Voltage*/
 			#if !defined(MTK_JEITA_STANDARD_SUPPORT)            
+#if defined(RIO_5_CHARGING_TEMPERATURE_PLOICY)
+    		  if((BMT_status.temperature >= CHARGE_TEMPERATURE_STEP3)||
+		((BMT_status.temperature >= CHARGE_TEMPERATURE_STEP2)&&(charge_temperature_above_step3==1)))
+			{
+				cv_voltage = BATTERY_VOLT_04_100000_V;//VREG 4.096V
+				Full_status_check = 0;
+			}
+		  	else
+			{
+    		    cv_voltage = BATTERY_VOLT_04_340000_V; //VREG 4.352V
+				Full_status_check = 1;
+
+			}
+#else			          
                 #ifdef HIGH_BATTERY_VOLTAGE_SUPPORT
                     cv_voltage = BATTERY_VOLT_04_340000_V;
                 #else
 	            cv_voltage = BATTERY_VOLT_04_200000_V;
                 #endif            
+#endif
 		    battery_charging_control(CHARGING_CMD_SET_CV_VOLTAGE,&cv_voltage);
 			#endif
         }

@@ -204,11 +204,7 @@ void __init mt_map_io(void)
     iotable_init(mt_io_desc, ARRAY_SIZE(mt_io_desc));
 }
 
-#ifdef MTK_TABLET_PLATFORM
-MACHINE_START(MT6582, MTK_TABLET_PLATFORM)
-#else
 MACHINE_START(MT6582, "MT6582")
-#endif
     .atag_offset    = 0x00000100,
     .map_io         = mt_map_io,
     .init_irq       = mt_init_irq,

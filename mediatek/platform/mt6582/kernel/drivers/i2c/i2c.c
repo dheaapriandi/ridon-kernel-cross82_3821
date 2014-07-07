@@ -869,25 +869,6 @@ static void mt_i2c_clock_disable(mt_i2c *i2c)
   #endif
   return;
 }
-/*
-static void mt_i2c_post_isr(mt_i2c *i2c)
-{
-  if (i2c->irq_stat & I2C_TRANSAC_COMP) {
-    atomic_set(&i2c->trans_err, 0);
-    atomic_set(&i2c->trans_comp, 1);
-  }
-
-  if (i2c->irq_stat & I2C_HS_NACKERR) {
-    if (i2c->filter_msg==FALSE)
-      I2CERR("I2C_HS_NACKERR\n");
-  }
-
-  if (i2c->irq_stat & I2C_ACKERR) {
-    if (i2c->filter_msg==FALSE)
-      I2CERR("I2C_ACKERR\n");
-  }
-  atomic_set(&i2c->trans_err, i2c->irq_stat & (I2C_HS_NACKERR | I2C_ACKERR));
-}*/
 
 /*interrupt handler function*/
 static irqreturn_t mt_i2c_irq(S32 irqno, void *dev_id)

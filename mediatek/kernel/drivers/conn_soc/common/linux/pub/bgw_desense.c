@@ -31,20 +31,10 @@ void bgw_destory_netlink_kernel()
 
 void send_command_to_daemon(const int command/*struct sk_buff *skb*/)
 {
-/*
-	struct iphdr *iph;
-	struct ethhdr *ehdr;
-	*/
 	struct nlmsghdr *nlh;
 	struct sk_buff *nl_skb;
 	int res;
 	MSG("here we will send command to native daemon\n");
-/*	if(skb == NULL)
-	{
-		ERR("invalid sk_buff\n");
-		return;
-	}
-*/
 	if(!g_nl_sk)
 	{
 		ERR("invalid socket\n");

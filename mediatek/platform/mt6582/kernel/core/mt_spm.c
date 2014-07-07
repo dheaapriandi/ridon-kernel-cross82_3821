@@ -118,11 +118,10 @@ void spm_module_init(void)
     spm_write(SPM_PCM_IM_PTR, 0);
     spm_write(SPM_PCM_IM_LEN, 0);
 
-    /* SRCLKENA: POWER_ON_VAL1 (PWR_IO_EN[7]=0) or POWER_ON_VAL1|r7 (PWR_IO_EN[7]=1) */
+    /* SRCLKENA: POWER_ON_VAL1 (PWR_IO_EN[7]=0) or r7|SRCLKENAI (PWR_IO_EN[7]=1) */
     /* CLKSQ: POWER_ON_VAL0 (PWR_IO_EN[0]=0) or r0 (PWR_IO_EN[0]=1) */
-    /* SRCLKENAI will trigger 26M-wake/sleep event */
-    spm_write(SPM_CLK_CON, CC_CXO32K_RM_EN_MD);
-    spm_write(SPM_PCM_SRC_REQ, (1U << 1));
+    spm_write(SPM_CLK_CON, CC_SYSCLK0_EN_0 | CC_CXO32K_RM_EN_MD);
+    spm_write(SPM_PCM_SRC_REQ, 0);
 
     /* clean wakeup event raw status */
     spm_write(SPM_SLEEP_WAKEUP_EVENT_MASK, 0xffffffff);

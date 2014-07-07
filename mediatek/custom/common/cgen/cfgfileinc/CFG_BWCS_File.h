@@ -1,34 +1,6 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- *   cfg_bwcs_file.h
- *
- * Project:
- * --------
- *   YuSu
- *
- * Description:
- * ------------
- *    header file of main function
- *
- * Author:
- * -------
- *   Saker Hsia(MTK02327)
- *
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- * 06 30 2010 saker.hsia
- * [ALPS00002764][Need Patch] [Volunteer Patch] ALPS.10X.W10.28 Volunteer patch for BWCS NVRAM customization 
- * .
- *
- * 05 05 2010 saker.hsia
- * [ALPS00001913][BWCS] BT WiFi Single Antenna Feature check in Android 2.1 
- * Check in BT/WiFi Single Antenna Feature
- *******************************************************************************/
+
+
+
 
 
 

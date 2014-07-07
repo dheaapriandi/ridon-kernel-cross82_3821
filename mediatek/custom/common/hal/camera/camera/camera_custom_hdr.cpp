@@ -1,3 +1,5 @@
+
+
 #include "camera_custom_hdr.h"
 #include <math.h>
 #include <cstdio>
@@ -8,22 +10,10 @@
 
 
 
-/**************************************************************************
- *                      D E F I N E S / M A C R O S                       *
- **************************************************************************/
 #define MAX_HDR_GAIN_ARRAY_ELEM		11	// Maximun HDR GainArray element number.
 
-/**************************************************************************
- *     E N U M / S T R U C T / T Y P E D E F    D E C L A R A T I O N     *
- **************************************************************************/
 
-/**************************************************************************
- *                 E X T E R N A L    R E F E R E N C E S                 *
- **************************************************************************/
 
-/**************************************************************************
- *                         G L O B A L    D A T A                         *
- **************************************************************************/
 static MUINT32 au4HdrGainArray[MAX_HDR_GAIN_ARRAY_ELEM] =
 {
 	CUST_HDR_GAIN_00,
@@ -39,9 +29,6 @@ static MUINT32 au4HdrGainArray[MAX_HDR_GAIN_ARRAY_ELEM] =
 	CUST_HDR_GAIN_10,
 };
 
-/**************************************************************************
- *       P R I V A T E    F U N C T I O N    D E C L A R A T I O N        *
- **************************************************************************/
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -143,9 +130,6 @@ MUINT32 CustomHdrTargetLevelSubGet(void)
 	return CUST_HDR_TARGET_LEVEL_SUB;
 }
 
-/*******************************************************************************
-* HDR exposure setting
-*******************************************************************************/
 #define MAX_LOG_BUF_SIZE	5000
 static unsigned char GS_ucLogBuf[MAX_LOG_BUF_SIZE];	// Buffer to put log message. Will be outputed to file.
 static char* pucLogBufPosition = NULL;	// A pointer pointing to some position in the GS_ucLogBuf[].
@@ -186,12 +170,6 @@ static unsigned int DumpToFile(
 
 }
 
-/*
-HDRFlag = 0;  // original version, always capture 3 frames
-HDRFlag = 1;  // adaptive version, if original version use -2EV less, we only capture 2 frames (0EV and +2EV). If original version use -2EV a lot, we still capture 3 frames.
-HDRFlag = 2;  // performance priority version, always capture 2 frames. The EV settings are decided adapively.
-HDR_NEOverExp_Percent = 15; // this is a customer tuning parameter. When HDRFlag==1, it means if there is less than HDR_NEOverExp_Percent/1000 pixels over saturation in 0EV, we capture 2 frames instead.
-*/
 
 MVOID getHDRExpSetting(const HDRExpSettingInputParam_T& rInput, HDRExpSettingOutputParam_T& rOutput)
 {
@@ -485,6 +463,3 @@ MVOID getHDRExpSetting(const HDRExpSettingInputParam_T& rInput, HDRExpSettingOut
 
 }
 
-/*******************************************************************************
-*
-*******************************************************************************/

@@ -418,12 +418,6 @@ int call_dummy_test_dci(void)
 //------------------------------------------------------------------------------
 
 
-/* This is our main function which will be called by the init function once the
- * module is loaded and our tplay thread is started.
- * For the example here we do everything, open, close, and call a function in the
- * driver. However you can implement this to wait for event from the driver, or
- * to do whatever is required.
- */
 int mainThread(void * uarg) {
     int ret = 0;
     //ret = late_init_session();

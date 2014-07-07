@@ -41,33 +41,4 @@ static int __init mt_reg_dump_init(void)
   return 0;
 }
 
-int reg_dump_platform(char *buf)
-{
-  /* Get core numbers */
-        int ret = -1, cnt = num_possible_cpus();
-        char *ptr = buf;
-        unsigned int pc_value;
-        unsigned int fp_value;
-        unsigned int sp_value;
-        unsigned long size = 0;
-        unsigned long offset = 0;
-        char str[KSYM_SYMBOL_LEN];
-        int i;
-        
-  if(cnt < 0)
-    return ret;
-  
-  /* Get PC, FP, SP and save to buf */
-  for (i = 0; i < cnt; i++) {
-      pc_value = readl(IOMEM(reg_dump_driver_data.mcu_regs + (i << 4)));
-      fp_value = readl(IOMEM((reg_dump_driver_data.mcu_regs+0x4) + (i << 4)));
-      sp_value = readl(IOMEM((reg_dump_driver_data.mcu_regs+0x8) + (i << 4)));
-      kallsyms_lookup((unsigned long)pc_value, &size, &offset, NULL, str);          
-      ptr += sprintf(ptr, "CORE_%d PC = 0x%x(%s + 0x%lx), FP = 0x%x, SP = 0x%x\n", i, pc_value, str, offset, fp_value, sp_value);
-      //printk("CORE_%d PC = 0x%x(%s), FP = 0x%x, SP = 0x%x\n", i, pc_value, str, fp_value, sp_value);
-  }
-  return 0;     
-                
-}
-
 arch_initcall(mt_reg_dump_init);

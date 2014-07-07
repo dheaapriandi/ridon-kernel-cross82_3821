@@ -130,28 +130,19 @@ static void init_lcm_registers(void)
 
 static void lcm_init(void)
 {
-#if 0
 	lcm_util.set_gpio_mode(GPIO112, GPIO_MODE_00);
 	lcm_util.set_gpio_dir(GPIO112, GPIO_DIR_OUT); 
 	lcm_util.set_gpio_pull_enable(GPIO112, GPIO_PULL_DISABLE); 
 
 	lcm_util.set_gpio_out(GPIO112 , 0);
-#else
-    SET_RESET_PIN(0);
-
-#endif
 	MDELAY(50);
 
 	SET_GPIO_OUT(LCD_LDO_ENP_GPIO_PIN , 1);
 	MDELAY(10);
 	SET_GPIO_OUT(LCD_LDO_ENN_GPIO_PIN , 1);
 	MDELAY(100);
-#if 0    
+    
 	lcm_util.set_gpio_out(GPIO112 , 1);
-#else
-    SET_RESET_PIN(1);
-
-#endif
 	MDELAY(20);
 
 	init_lcm_registers();
@@ -180,14 +171,12 @@ static void lcm_suspend(void)
 
 	data_array[0] = 0x01B12900;//Deep standby
 	dsi_set_cmdq(data_array, 1, 1);
-#if 0
+
 	lcm_util.set_gpio_mode(GPIO112, GPIO_MODE_00);
 	lcm_util.set_gpio_dir(GPIO112, GPIO_DIR_OUT); 
 	lcm_util.set_gpio_pull_enable(GPIO112, GPIO_PULL_DISABLE); 
 	lcm_util.set_gpio_out(GPIO112 , 0);
-#else
-    SET_RESET_PIN(0);
-#endif
+
 	MDELAY(2);
 	SET_GPIO_OUT(LCD_LDO_ENN_GPIO_PIN , 0);
 	MDELAY(10);
@@ -220,27 +209,20 @@ static unsigned int lcm_compare_id(void)
 	lcm_util.set_gpio_mode(LCD_LDO_ENN_GPIO_PIN, GPIO_MODE_00);
 	lcm_util.set_gpio_dir(LCD_LDO_ENN_GPIO_PIN, GPIO_DIR_OUT); 
 	lcm_util.set_gpio_pull_enable(LCD_LDO_ENN_GPIO_PIN, GPIO_PULL_DISABLE); 
-#if 0
+
 	lcm_util.set_gpio_mode(GPIO112, GPIO_MODE_00);
 	lcm_util.set_gpio_dir(GPIO112, GPIO_DIR_OUT); 
 	lcm_util.set_gpio_pull_enable(GPIO112, GPIO_PULL_DISABLE); 
 	lcm_util.set_gpio_out(GPIO112 , 0);
-#else
-    SET_RESET_PIN(0);
 
-#endif
 	MDELAY(50);
 	
 	SET_GPIO_OUT(LCD_LDO_ENP_GPIO_PIN , 1);//power on +5
 	MDELAY(10);
 	SET_GPIO_OUT(LCD_LDO_ENN_GPIO_PIN , 1);//power on -5
 	MDELAY(100);
-#if 0
-	lcm_util.set_gpio_out(GPIO112 , 1);
-#else
-    SET_RESET_PIN(1);
 
-#endif
+	lcm_util.set_gpio_out(GPIO112 , 1);
 	MDELAY(50);
 
 

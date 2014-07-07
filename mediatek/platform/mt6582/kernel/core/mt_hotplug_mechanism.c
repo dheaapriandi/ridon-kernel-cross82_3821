@@ -1,13 +1,4 @@
-/*
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- */
 
-/*********************************
-* include
-**********************************/
 #include <linux/kernel.h> 
 #include <linux/module.h>
 #include <linux/init.h>
@@ -22,9 +13,6 @@
 
 
 
-/*********************************
-* macro
-**********************************/
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #define STATE_INIT                          0
 #define STATE_ENTER_EARLY_SUSPEND           1
@@ -36,9 +24,6 @@
 
 
 
-/*********************************
-* glabal variable
-**********************************/
 static int g_enable = 1;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -76,9 +61,6 @@ static int g_test1 = 0;
 
 
 
-/*********************************
-* extern function
-**********************************/
 #ifdef CONFIG_CPU_FREQ_GOV_HOTPLUG
 extern int hp_get_cpu_rush_boost_enable(void);
 extern void hp_set_cpu_rush_boost_enable(int enable);
@@ -88,9 +70,6 @@ extern void hp_set_dynamic_cpu_hotplug_enable(int enable);
 
 
 
-/*********************************
-* early suspend callback function
-**********************************/
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void mt_hotplug_mechanism_early_suspend(struct early_suspend *h)
 {
@@ -116,9 +95,6 @@ early_suspend_end:
 
 
 
-/*******************************
-* late resume callback function
-********************************/
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void mt_hotplug_mechanism_late_resume(struct early_suspend *h)
 {
@@ -143,9 +119,6 @@ late_resume_end:
 
 
 
-/*******************************
-* probe callback function
-********************************/
 static int mt_hotplug_mechanism_probe(struct platform_device *pdev)
 {
     HOTPLUG_INFO("mt_hotplug_mechanism_probe\n");
@@ -155,9 +128,6 @@ static int mt_hotplug_mechanism_probe(struct platform_device *pdev)
 
 
 
-/*******************************
-* suspend callback function
-********************************/
 static int mt_hotplug_mechanism_suspend(struct platform_device *pdev, pm_message_t state)
 {
     HOTPLUG_INFO("mt_hotplug_mechanism_suspend\n");
@@ -178,9 +148,6 @@ static int mt_hotplug_mechanism_suspend(struct platform_device *pdev, pm_message
 
 
 
-/*******************************
-* resume callback function
-********************************/
 static int mt_hotplug_mechanism_resume(struct platform_device *pdev)
 {
     HOTPLUG_INFO("mt_hotplug_mechanism_resume\n");
@@ -200,9 +167,6 @@ static int mt_hotplug_mechanism_resume(struct platform_device *pdev)
 
 
 
-/**************************************************************
-* mt hotplug mechanism control interface for procfs test0
-***************************************************************/
 static int mt_hotplug_mechanism_read_test0(char *buf, char **start, off_t off, int count, int *eof, void *data)
 {
     char *p = buf;
@@ -252,9 +216,6 @@ static int mt_hotplug_mechanism_write_test0(struct file *file, const char *buffe
 
 
 
-/**************************************************************
-* mt hotplug mechanism control interface for procfs test1
-***************************************************************/
 extern int g_cpus_sum_load_current;   //set global for information purpose
 
 extern long g_cpu_up_sum_load;
@@ -322,9 +283,6 @@ static int mt_hotplug_mechanism_write_test1(struct file *file, const char *buffe
 
 
 
-/*******************************
-* kernel module init function
-********************************/
 static int __init mt_hotplug_mechanism_init(void)
 {
     struct proc_dir_entry *entry = NULL;
@@ -370,9 +328,6 @@ module_init(mt_hotplug_mechanism_init);
 
 
 
-/*******************************
-* kernel module exit function
-********************************/
 static void __exit mt_hotplug_mechanism_exit(void)
 {
     HOTPLUG_INFO("mt_hotplug_mechanism_exit");
@@ -381,9 +336,6 @@ module_exit(mt_hotplug_mechanism_exit);
 
 
 
-/**************************************************************
-* mt hotplug mechanism control interface for thermal protect
-***************************************************************/
 void mt_hotplug_mechanism_thermal_protect(int limited_cpus)
 {
     HOTPLUG_INFO("mt_hotplug_mechanism_thermal_protect\n");

@@ -1,36 +1,4 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- * audio_acf_default.h
- *
- * Project:
- * --------
- *   ALPS
- *
- * Description:
- * ------------
- * This file is the header of audio customization related parameters or definition.
- *
- * Author:
- * -------
- * Tina Tsai
- *
- *============================================================================
- *             HISTORY
- * Below this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- *
- *
- *
- *------------------------------------------------------------------------------
- * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *============================================================================
- ****************************************************************************/
+
 #ifndef AUDIO_ACF_DEFAULT_H
 #define AUDIO_ACF_DEFAULT_H
 #if defined(MTK_AUDIO_BLOUD_CUSTOMPARAMETER_V4)

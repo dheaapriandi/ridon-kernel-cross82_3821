@@ -1,29 +1,14 @@
 #!/usr/bin/perl
+# 
 ($rslt, $logFile, $act) = @ARGV;
-#if ($logFile eq "/dev/null") {
-if ($rslt == 0) {
+if ($logFile eq "/dev/null") {
+  if ($rslt == 0) {
     print "                    ==> [OK]    " . &CurrTimeStr . "\n";
-} else {
+  } else {
     print "                    ==> [FAIL]  " . &CurrTimeStr . "\n";
-}
-my $out_dir = "out";
-if (exists $ENV{"OUT_DIR"})
-{
-   $out_dir = $ENV{"OUT_DIR"};
- }
-if ($logFile =~ /\/([^\/]+)_([^_]+)\.log$/) {
-   $prj = $1;
-   $curMod = $2;
-} else {
-   warn "Can NOT match project and module\n";
-}
-$logpath="$out_dir/target/product/";
-if ($act eq "clean" && $curMod eq "android"){
-  p_system("mkdir -p $logpath");
-  p_system("mv $logFile $logpath");
-}
+  }
   exit $rslt;
-#}
+}
 
 (($#ARGV < 1) || ($#ARGV > 2)) && &Usage;
 
@@ -35,6 +20,18 @@ while (!-e $parseScrpt) {
   $parseScrpt = "../$parseScrpt";
   last if ($i > 8);
 }
+my $out_dir = "out";
+if (exists $ENV{"OUT_DIR"})
+{
+	$out_dir = $ENV{"OUT_DIR"};
+}
+if ($logFile =~ /\/([^\/]+)_([^_]+)\.log$/) {
+  $prj = $1;
+  $curMod = $2;
+} else {
+  warn "Can NOT match project and module\n";
+}
+
 $chkBin = 1;
 ($prj = "generic") if ($prj eq "emulator");
 if ($curMod eq "lk") {

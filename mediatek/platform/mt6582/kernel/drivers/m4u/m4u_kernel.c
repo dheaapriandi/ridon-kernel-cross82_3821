@@ -213,29 +213,29 @@ unsigned int m4u_user_v2p(unsigned int va)
     pud = pud_offset(pgd, va);
     if(pud_none(*pud)||pud_bad(*pud))
     {
-        M4UMSG("m4u_user_v2p(), va=0x%x, pud invalid! \n", va);
+        M4UDBG("m4u_user_v2p(), va=0x%x, pud invalid! \n", va);
         return 0;
     }
     
     pmd = pmd_offset(pud, va);
     if(pmd_none(*pmd)||pmd_bad(*pmd))
     {
-        M4UMSG("m4u_user_v2p(), va=0x%x, pmd invalid! \n", va);
+        M4UDBG("m4u_user_v2p(), va=0x%x, pmd invalid! \n", va);
         return 0;
     }
         
     pte = pte_offset_map(pmd, va);
     if(pte_present(*pte)) 
     { 
-/*
+
         if((long long)pte_val(pte[PTE_HWTABLE_PTRS]) == (long long)0)
         {
-        	M4UMSG("user_v2p, va=0x%x, *ppte=%08llx", va,
+        	M4UDBG("user_v2p, va=0x%x, *ppte=%08llx", va,
         	       (long long)pte_val(pte[PTE_HWTABLE_PTRS]));
             pte_unmap(pte);
             return 0;
         }
-*/        
+        
         pa=(pte_val(*pte) & (PAGE_MASK)) | pageOffset; 
         pte_unmap(pte);
         return pa; 
@@ -244,7 +244,7 @@ unsigned int m4u_user_v2p(unsigned int va)
     pte_unmap(pte);
 
 
-    M4UMSG("m4u_user_v2p(), va=0x%x, pte invalid! \n", va);
+    M4UDBG("m4u_user_v2p(), va=0x%x, pte invalid! \n", va);
     // m4u_dump_maps(va);
     
     return 0;

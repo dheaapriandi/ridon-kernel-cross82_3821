@@ -19,6 +19,7 @@
 #include <mach/dfo_boot.h>
 #include <asm/memblock.h>
 #include <mach/battery_common.h>
+#include <mach/pmic_mt6323_sw.h>
 
 #define SHOW_WARNING_NUM (5)
 
@@ -413,6 +414,32 @@ int eemcs_get_bat_info(unsigned int para)
 EXPORT_SYMBOL(eemcs_get_bat_info);
 
 
+static void eemcs_low_battery_cb(LOW_BATTERY_LEVEL level)
+{
+	int md_id;
+	int ret;
+	unsigned int reserve = 0xFFFFFFFF;
+	
+	/*
+	 * byte3 byte2 byte1 byte0
+	 *  0     4G    3G    2G
+	 */
+	if(level == LOW_BATTERY_LEVEL_0) {
+		reserve = 0;// 0
+	} else if(level == LOW_BATTERY_LEVEL_1 || level == LOW_BATTERY_LEVEL_2) {
+		reserve = (1<<6);// 64
+	}
+	
+	if(reserve!=0xFFFFFFFF) {
+		for(md_id = MD_EXT1; md_id < (MD_EXT1+MAX_EXT_MD_NUM); md_id++) {
+			ret = eemcs_notify_md_by_sys_msg(md_id, EXT_MD_LOW_BATTERY_LEVEL, reserve);
+			printk("[EEMCS/PLAT] eemcs_low_battery_cb: md_id=%d, msg=%x, reserve=%d, ret=%d\n", \
+				md_id, EXT_MD_LOW_BATTERY_LEVEL, reserve, ret);
+		}
+	}
+}
+
+
 /*********************************************************************************/
 /*  API about Security cipher MD image                                           */
 /*                                                                               */
@@ -664,8 +691,8 @@ EXPORT_SYMBOL(eemcs_exec_ccci_kern_func);
 
 
 /***************************************************************************/
-/* Register ccci suspend & resume function                                 */
-/*                                                                         */
+/* Register ccci suspend & resume function                                 					     */
+/*                                                                         							     */
 /***************************************************************************/
 typedef struct eemcs_pm_cb_item
 {
@@ -878,6 +905,8 @@ static int __init eemcs_helper_init(void)
 		printk("[EEMCS/PLAT] [Error]eemcs_helper_driver register fail: %d\n", ret);
 		return ret;
 	}
+
+	register_low_battery_notify(&eemcs_low_battery_cb, LOW_BATTERY_PRIO_MD5);
 	
 	return 0;
 }

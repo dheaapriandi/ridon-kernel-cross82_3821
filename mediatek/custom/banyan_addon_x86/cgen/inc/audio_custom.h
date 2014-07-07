@@ -1,50 +1,4 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- * aud_custom_exp.h
- *
- * Project:
- * --------
- *   DUMA
- *
- * Description:
- * ------------
- * This file is the header of audio customization related function or definition.
- *
- * Author:
- * -------
- * JY Huang
- *
- *============================================================================
- *             HISTORY
- * Below this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- * 05 26 2010 chipeng.chang
- * [ALPS00002287][Need Patch] [Volunteer Patch] ALPS.10X.W10.11 Volunteer patch for audio paramter 
- * modify audio parameter.
- *
- * 05 26 2010 chipeng.chang
- * [ALPS00002287][Need Patch] [Volunteer Patch] ALPS.10X.W10.11 Volunteer patch for audio paramter
- * modify for Audio parameter
- *
- *    mtk80306
- * [DUMA00132370] waveform driver file re-structure.
- * waveform driver file re-structure.
- *
- * Jul 28 2009 mtk01352
- * [DUMA00009909] Check in TWO_IN_ONE_SPEAKER and rearrange
- *
- *
- *
- *------------------------------------------------------------------------------
- * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *============================================================================
- ****************************************************************************/
+
 #ifndef AUDIO_CUSTOM_H
 #define AUDIO_CUSTOM_H
 
@@ -357,9 +311,6 @@
         0,     0,     0,     0,     0,     0,     0,     0,     0,     0, \
         0,     0,     0,     0,     0,     0,     0,     0,     0,     0  
 
-/*
- * The Bluetooth DAI Hardware COnfiguration Parameter
- */
 #define DEFAULT_BLUETOOTH_SYNC_TYPE               0
 #define DEFAULT_BLUETOOTH_SYNC_LENGTH             1
 

@@ -1,3 +1,5 @@
+
+
 #include <utils/Log.h>
 #include <fcntl.h>
 #include <math.h>
@@ -20,9 +22,6 @@
 //#include "msdk_isp_exp.h"
 
 
-/*************************************************************************
-*	FLASH_LIGHT_FUNC_STRUCT functions for Windows Mobile
-*************************************************************************/
 UINT32	FlashLightOpen(void)
 {
 	return ERROR_NONE;

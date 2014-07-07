@@ -1,4 +1,3 @@
-# include release policy
 RELEASE_FILE := $(BUILD_SYSTEM_MTK_EXTENSION)/release_file.mk
 include $(RELEASE_FILE)
 

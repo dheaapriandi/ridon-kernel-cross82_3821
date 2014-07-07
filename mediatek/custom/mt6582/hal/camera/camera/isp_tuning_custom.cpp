@@ -1,3 +1,5 @@
+
+
 #define LOG_TAG "isp_tuning_custom"
 
 #ifndef ENABLE_MY_LOG
@@ -21,73 +23,6 @@
 using namespace NSIspTuning;
 
 
-/*******************************************************************************
-*
-*   rCamInfo
-*       [in]    ISP Camera Info for RAW sensor. Its members are as below:
-*
-*           eCamMode:
-*               ECamMode_Video          = 0,
-*               ECamMode_Online_Preview,
-*               ECamMode_Online_Capture,
-*               ECamMode_Online_Capture_ZSD,
-*               ECamMode_Offline_Capture_Pass1,
-*               ECamMode_Offline_Capture_Pass2,
-*               ECamMode_HDR_Cap_Pass1_SF,  //  Pass1: Single Frame
-*               ECamMode_HDR_Cap_Pass1_MF1, //  Pass1: Multi Frame Stage1
-*               ECamMode_HDR_Cap_Pass1_MF2, //  Pass1: Multi Frame Stage2
-*               ECamMode_HDR_Cap_Pass2,     //  Pass2
-*
-*           eIdx_Scene:
-*               SCENE_MODE_OFF,             // Disable scene mode equal Auto mode
-*               SCENE_MODE_NORMAL,          // Normal mode
-*               SCENE_MODE_ACTION,          // Action mode
-*               SCENE_MODE_PORTRAIT,        // Portrait mode
-*               SCENE_MODE_LANDSCAPE,       // Landscape
-*               SCENE_MODE_NIGHTSCENE,      // Night Scene
-*               SCENE_MODE_NIGHTPORTRAIT,   // Night Portrait
-*               SCENE_MODE_THEATRE,         // Theatre mode
-*               SCENE_MODE_BEACH,           // Beach mode
-*               SCENE_MODE_SNOW,            // Snow mode
-*               SCENE_MODE_SUNSET,          // Sunset mode
-*               SCENE_MODE_STEADYPHOTO,     // Steady photo mode
-*               SCENE_MODE_FIREWORKS,       // Fireworks mode
-*               SCENE_MODE_SPORTS,          // Sports mode
-*               SCENE_MODE_PARTY,           // Party mode
-*               SCENE_MODE_CANDLELIGHT,     // Candle light mode
-*               SCENE_MODE_HDR,             // HDR mode
-*
-*           u4ISOValue:
-*               ISO value to determine eISO.
-*
-*           eIdx_ISO:
-*               eIDX_ISO_100,
-*               eIDX_ISO_200,
-*               eIDX_ISO_400,
-*               eIDX_ISO_800,
-*               eIDX_ISO_1600
-*
-*           i4CCT:
-*               Correlated color temperature
-*
-*           eCCTIndex_CCM:
-*               Correlated color temperature index for CCM
-*                   eIDX_CCM_TL84
-*                   eIDX_CCM_CWF
-*                   eIDX_CCM_D65
-*
-*           u4ZoomRatio_x100:
-*               zoom ratio (x100)
-*
-*           i4LightValue_x10:
-*               light value (x10)
-*
-*   rIdxMgr:
-*       [in]    The default ISP tuning index manager.
-*       [out]   The ISP tuning index manager after customizing.
-*
-*
-*******************************************************************************/
 MVOID
 IspTuningCustom::
 evaluate_nvram_index(RAWIspCamInfo const& rCamInfo, IndexMgr& rIdxMgr)
@@ -571,25 +506,6 @@ evaluate_PCA_LUT_index(RAWIspCamInfo const& rCamInfo)
     return eIdx_PCA_LUT_new;
 }
 
-/*******************************************************************************
-*
-* eIdx_Shading_CCT_old:
-*   [in] the previous color temperature index
-*           eIDX_Shading_CCT_ALight
-*           eIDX_Shading_CCT_CWF
-*           eIDX_Shading_CCT_D65
-*
-* i4CCT:
-*   [in] the current color temperature from 3A.
-*
-*
-* return:
-*   [out] the current color temperature index
-*           eIDX_Shading_CCT_ALight
-*           eIDX_Shading_CCT_CWF
-*           eIDX_Shading_CCT_D65
-*
-*******************************************************************************/
 EIndex_Shading_CCT_T
 IspTuningCustom::
 evaluate_Shading_CCT_index  (

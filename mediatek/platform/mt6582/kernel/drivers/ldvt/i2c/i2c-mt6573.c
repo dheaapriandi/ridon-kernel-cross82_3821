@@ -1,25 +1,3 @@
-/* 
- *
- * (C) Copyright 2010
- * MediaTek <www.mediatek.com>
- * Infinity Chen <infinity.chen@mediatek.com>
- *
- * mt6573 I2C Bus Controller
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
 
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -48,17 +26,6 @@
 #include <mach/dma.h>
 #include <asm/tcm.h>
 
-/* NOTE:
- * 01. There is no HS mode switching interface in Linux I2C subsystem. Thus, 
- *     we switch to HS mode in low-level bus driver by ourselves temporarily.
- * 02. mt6573 doesn't support to probe client device (only send slave addr)?
- *     => Not required.
- * 03. mt6573 doesn't support 10-bit slave address?
- *     => TBC
- * 04. In current i2c-core design, master_transfer function won't be invoked 
- *     simultaneously. Thus, we don't protect race-condition in low-level bus
- *     driver.
- */
 
 
 #define DRV_NAME                    "mt6573-i2c"
@@ -93,9 +60,6 @@ enum mt6573_trans_op {
 		__raw_readl((base) + (offset))
 
 
-/******************************************************
-	 	offset for I2C_REGS ADDRESS
-******************************************************/
 
 //the offset is based on 32-bit width
 enum I2C_REGS_OFFSET {
@@ -625,12 +589,6 @@ static int mt6573_i2c_start_xfer(struct mt6573_i2c *i2c, struct i2c_msg *msg)
 		dev_err(i2c->dev, "mt6573-i2c: addr is invalid.\n");
 
 	addr = read ? (addr | 0x1) : (addr & ~0x1);
-/*
-	control = I2C_CONTROL_ACKERR_DET_EN;
-	if(i2c->i2c_extclk_en) {
-		control |= I2C_CONTROL_CLK_EXT_EN;
-	}
-*/
 	control = I2C_CONTROL_ACKERR_DET_EN | I2C_CONTROL_CLK_EXT_EN;
 
 	if(i2c->dma_en) {
@@ -656,13 +614,6 @@ static int mt6573_i2c_start_xfer(struct mt6573_i2c *i2c, struct i2c_msg *msg)
 	if(~control & I2C_CONTROL_RS){	// bit is set to 1, i.e.,use repeated stop
 		I2C_WRITE_REG(base, OFFSET_DELAY_LEN, i2c->delay_len);
 	}
-/*
-	if(i2c->i2c_extclk_en){
-		I2C_WRITE_REG(base, OFFSET_IO_CONFIG, 0x1);
-	}
-	else
-		I2C_WRITE_REG(base, OFFSET_IO_CONFIG, 0x0);
-*/
 	//set data
 	I2C_WRITE_REG(base, OFFSET_TRANSFER_LEN, I2C_TRANSFER_LEN(trans_len, trans_auxlen));
 	I2C_WRITE_REG(base, OFFSET_TRANSAC_LEN, I2C_TRANSAC_LEN(trans_num));
@@ -1529,39 +1480,6 @@ static int i2c_loop_race_test(struct i2c_test* pstru_test)
 			   printk(KERN_INFO "I2C:TEST reads data error!! \n");
 			}
 			msleep(1);
-/*
-			number++;
-			printk(KERN_INFO "I2C: Fast Speed Mode + DMA Mode + Write-Read Mode Test......Stress number = %d\n", number);
-				
-				
-			byte[0] = 0x20;
-			byte[1] = 0x08;
-							
-			client->addr = client->addr & I2C_MASK_FLAG;
-			client->timing = 300;
-				
-			ret = i2c_master_send(client, byte, 2);
-				//			printk(KERN_INFO "client: %d, send ret = %d, write data = 0x%x\n", idx, ret, byte[1]);
-			if (ret < 0) {
-				printk(KERN_INFO "I2C:TEST sends command error!! \n");
-			}	
-							
-			msleep(1);
-							
-			client->addr = client->addr & I2C_MASK_FLAG | I2C_WR_FLAG | I2C_DMA_FLAG;
-				
-			virt[0] = 0x20;
-			ret = i2c_master_send(client, phys, (1<<8 | 1));
-			if (ret < 0) {
-			   printk(KERN_INFO "I2C:TEST sends command error!! \n");
-			}	
-				//			printk(KERN_INFO "client->timing: %d\n", client->timing);
-			printk(KERN_INFO "client: %d, recv ret = %d, read data = 0x%x\n", idx, ret, virt[0]);
-			if (ret < 0) {
-			   printk(KERN_INFO "I2C:TEST reads data error!! \n");
-			}
-			msleep(1);
-*/			
 			number++;
 			printk(KERN_INFO "I2C: Fast Speed Mode + DMA Mode + Multi Transac Mode Test......Stress number =%d\n", number); 
 			
@@ -1703,38 +1621,6 @@ static int i2c_loop_race_test(struct i2c_test* pstru_test)
 			   printk(KERN_INFO "I2C:TEST reads data error!! \n");
 			}
 			msleep(1);
-/*			number++;
-			printk(KERN_INFO "I2C: High Speed Mode + DMA Mode + Write-Read Mode Test....Stress number = %d\n", number);
-								
-			byte[0] = 0x20;
-			byte[1] = 0x14;
-											
-			client->addr = client->addr & I2C_MASK_FLAG;
-			client->timing = 300;
-								
-			ret = i2c_master_send(client, byte, 2);
-								//			printk(KERN_INFO "client: %d, send ret = %d, write data = 0x%x\n", idx, ret, byte[1]);
-			if (ret < 0) {
-			  printk(KERN_INFO "I2C:TEST sends command error!! \n");
-			}	
-											
-			msleep(1);
-											
-			client->addr = client->addr & I2C_MASK_FLAG | I2C_WR_FLAG | I2C_DMA_FLAG | I2C_HS_FLAG;
-			client->timing = 600;
-											
-			virt[0] = 0x20;
-			ret = i2c_master_send(client, phys, (1<<8 | 1));
-			if (ret < 0) {
-			   printk(KERN_INFO "I2C:TEST sends command error!! \n");
-			}	
-								//			printk(KERN_INFO "client->timing: %d\n", client->timing);
-			printk(KERN_INFO "client: %d, recv ret = %d, read data = 0x%x\n", idx, ret, virt[0]);
-			if (ret < 0) {
-			   printk(KERN_INFO "I2C:TEST reads data error!! \n");
-			}
-			msleep(1);
-*/
 
 			number++;
 			printk(KERN_INFO "I2C: High Speed Mode + DMA Mode + Multi Transac Mode Test....Stress number =%d\n", number); 

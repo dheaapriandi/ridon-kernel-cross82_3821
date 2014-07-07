@@ -1,29 +1,5 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- *   CFG_SDIO_Default.h
- *
- * Project:
- * --------
- *   YuSu
- *
- * Description:
- * ------------
- *    give the default SDIO config data.
- *
- * Author:
- * -------
- *  Juju Sung(MTK04314) 
- *
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- *
- * .
- *
- *******************************************************************************/
+
+
 #ifndef _CFG_SDIO_D_H
 #define _CFG_SDIO_D_H
 ap_nvram_sdio_config_struct stSDIOConfigDefault =

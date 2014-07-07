@@ -67,6 +67,8 @@ extern unsigned int get_devinfo_with_index(unsigned int index);
 extern void mt_fh_popod_save(void);
 extern void mt_fh_popod_restore(void);
 
+extern bool is_vcore_ss_corner(void);
+
 extern unsigned int mt_cpufreq_max_frequency_by_DVS(unsigned int num);
 extern void mt_cpufreq_return_default_DVS_by_ptpod(void);
 
@@ -485,7 +487,14 @@ unsigned int PTP_INIT_01(void)
     ptp_init_value.DETWINDOW   = 0xa28;   // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
     ptp_init_value.VMAX        = 0x5D;    // 1.28125v (700mv + n * 6.25mv)
     #ifdef MTK_SDIOAUTOK_SUPPORT
-    ptp_init_value.VMIN        = 0x4E;    // 1.1850v (700mv + n * 6.25mv)
+    if (is_vcore_ss_corner())
+    {
+        ptp_init_value.VMIN    = 0x4E;    // 1.1850v (700mv + n * 6.25mv)
+    }
+    else
+    {
+        ptp_init_value.VMIN    = 0x48;    // 1.1500v (700mv + n * 6.25mv)
+    }
     #else
     ptp_init_value.VMIN        = 0x48;    // 1.1500v (700mv + n * 6.25mv)
     #endif
@@ -571,7 +580,14 @@ unsigned int PTP_INIT_02(void)
     ptp_init_value.DETWINDOW   = 0xa28;   // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
     ptp_init_value.VMAX        = 0x5D;    // 1.28125v (700mv + n * 6.25mv)
     #ifdef MTK_SDIOAUTOK_SUPPORT
-    ptp_init_value.VMIN        = 0x4E;    // 1.1850v (700mv + n * 6.25mv)
+    if (is_vcore_ss_corner())
+    {
+        ptp_init_value.VMIN    = 0x4E;    // 1.1850v (700mv + n * 6.25mv)
+    }
+    else
+    {
+        ptp_init_value.VMIN    = 0x48;    // 1.1500v (700mv + n * 6.25mv)
+    }
     #else
     ptp_init_value.VMIN        = 0x48;    // 1.1500v (700mv + n * 6.25mv)
     #endif
@@ -666,7 +682,14 @@ unsigned int PTP_MON_MODE(void)
     ptp_init_value.DETWINDOW   = 0xa28;   // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
     ptp_init_value.VMAX        = 0x5D;    // 1.28125v (700mv + n * 6.25mv)
     #ifdef MTK_SDIOAUTOK_SUPPORT
-    ptp_init_value.VMIN        = 0x4E;    // 1.1850v (700mv + n * 6.25mv)
+    if (is_vcore_ss_corner())
+    {
+        ptp_init_value.VMIN    = 0x4E;    // 1.1850v (700mv + n * 6.25mv)
+    }
+    else
+    {
+        ptp_init_value.VMIN    = 0x48;    // 1.1500v (700mv + n * 6.25mv)
+    }
     #else
     ptp_init_value.VMIN        = 0x48;    // 1.1500v (700mv + n * 6.25mv)
     #endif
@@ -1097,7 +1120,14 @@ unsigned int PTP_INIT_01_API(void)
     ptp_init_value.DETWINDOW   = 0xa28;   // 100 us, This is the PTP Detector sampling time as represented in cycles of bclk_ck during INIT. 52 MHz
     ptp_init_value.VMAX        = 0x5D;    // 1.28125v (700mv + n * 6.25mv)
     #ifdef MTK_SDIOAUTOK_SUPPORT
-    ptp_init_value.VMIN        = 0x4E;    // 1.1850v (700mv + n * 6.25mv)
+    if (is_vcore_ss_corner())
+    {
+        ptp_init_value.VMIN    = 0x4E;    // 1.1850v (700mv + n * 6.25mv)
+    }
+    else
+    {
+        ptp_init_value.VMIN    = 0x48;    // 1.1500v (700mv + n * 6.25mv)
+    }
     #else
     ptp_init_value.VMIN        = 0x48;    // 1.1500v (700mv + n * 6.25mv)
     #endif
@@ -1322,9 +1352,6 @@ void ptp_disable(void)
     local_irq_restore(flags);
 }
 
-/***************************
-* show current PTP stauts
-****************************/
 static int ptp_debug_read(char *buf, char **start, off_t off, int count, int *eof, void *data)
 {
     int len = 0;
@@ -1339,9 +1366,6 @@ static int ptp_debug_read(char *buf, char **start, off_t off, int count, int *eo
     return len;
 }
 
-/************************************
-* set PTP stauts by sysfs interface
-*************************************/
 static ssize_t ptp_debug_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {
     int enabled = 0;
@@ -1365,9 +1389,6 @@ static ssize_t ptp_debug_write(struct file *file, const char *buffer, unsigned l
     return count;
 }
 
-/***************************
-* show current PTP data
-****************************/
 static int ptp_dump_read(char *buf, char **start, off_t off, int count, int *eof, void *data)
 {
     int len = 0;
@@ -1379,9 +1400,6 @@ static int ptp_dump_read(char *buf, char **start, off_t off, int count, int *eof
     return len;
 }
 
-/***********************
-* show current voltage
-************************/
 static int ptp_cur_volt_read(char *buf, char **start, off_t off, int count, int *eof, void *data)
 {
     int len = 0;
@@ -1401,9 +1419,6 @@ static int ptp_cur_volt_read(char *buf, char **start, off_t off, int count, int 
     return len;
 }
 
-/**************************
-* show current PTP status
-***************************/
 static int ptp_status_read(char *buf, char **start, off_t off, int count, int *eof, void *data)
 {
     int len = 0;
@@ -1432,9 +1447,6 @@ static int ptp_status_read(char *buf, char **start, off_t off, int count, int *e
     return len;
 }
 
-/***************************************
-* set PTP log enable by sysfs interface
-****************************************/
 static ssize_t ptp_log_en_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {
     int enabled = 0;

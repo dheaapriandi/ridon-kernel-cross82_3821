@@ -296,7 +296,7 @@ int mtk_hibernate(void)
 }
 EXPORT_SYMBOL(mtk_hibernate);
 
-#define HIB_PAGE_FREE_DELTA ((40*1024*1024) >> (PAGE_SHIFT))
+#define HIB_PAGE_FREE_DELTA ((96*1024*1024) >> (PAGE_SHIFT))
 int bad_memory_status(void)
 {
     struct zone *zone;
@@ -322,13 +322,13 @@ int pre_hibernate(void)
 {
     int err = 0;
 
-    hib_ftrace_buffer(0);
-
-    // check free memory status.
+    // check free memory status
     if (bad_memory_status()) {
         err = -1;
         goto ERR;
     }
+
+    hib_ftrace_buffer(0);
 
     // Adding userspace program stuffs here before hibernation start
     // ...

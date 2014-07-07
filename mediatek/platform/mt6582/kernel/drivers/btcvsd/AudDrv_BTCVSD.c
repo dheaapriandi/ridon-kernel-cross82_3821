@@ -1,53 +1,7 @@
-/*
- * Copyright (C) 2007 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/*******************************************************************************
- *
- * Filename:
- * ---------
- *   AudDrv_Kernelc
- *
- * Project:
- * --------
- *   MT6583  Audio Driver Kernel Function
- *
- * Description:
- * ------------
- *   Audio register
- *
- * Author:
- * -------
- * Chipeng Chang
- *
- *------------------------------------------------------------------------------
- * $Revision: #1 $
- * $Modtime:$
- * $Log:$
- *
- *
- *******************************************************************************/
 
 
-/*****************************************************************************
- *                     C O M P I L E R   F L A G S
- *****************************************************************************/
 
 
-/*****************************************************************************
- *                E X T E R N A L   R E F E R E N C E S
- *****************************************************************************/
 #include "AudDrv_BTCVSD.h"
 #include "AudDrv_BTCVSD_ioctl.h"
 
@@ -86,10 +40,6 @@
 
 //#define TEST_PACKETLOSS
 
-/*****************************************************************************
-*           DEFINE AND CONSTANT
-******************************************************************************
-*/
 #define MT6582_AP_BT_CVSD_IRQ_LINE (218)
 
 #define AUDIO_BTSYS_PKV_PHYSICAL_BASE  (0x18000000)
@@ -102,9 +52,6 @@
 //#define MT6572_BT_MCU_IRQ_LINE (121 + 32)  //use define in mt_irq.h
 #define MASK_ALL          (0xFFFFFFFF)
 
-/*****************************************************************************
-*           V A R I A B L E     D E L A R A T I O N
-*******************************************************************************/
 
 static char       auddrv_btcvsd_name[]       = "AudioMTKBTCVSD";
 
@@ -273,15 +220,6 @@ static int AudDrv_btcvsd_Free_Buffer(struct file *fp, kal_uint8 isRX)
 }
 
 
-/*****************************************************************************
- * FILE OPERATION FUNCTION
- *  AudDrv_btcvsd_ioctl
- *
- * DESCRIPTION
- *  IOCTL Msg handle
- *
- *****************************************************************************
- */
 static long AudDrv_btcvsd_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
     int  ret = 0;
@@ -964,11 +902,6 @@ static ssize_t AudDrv_btcvsd_read(struct file *fp,  char __user *data, size_t co
 }
 
 
-/**************************************************************************
- * STRUCT
- *  File Operations and misc device
- *
- **************************************************************************/
 
 static struct file_operations AudDrv_btcvsd_fops =
 {
@@ -986,14 +919,6 @@ static struct miscdevice AudDrv_btcvsd_device =
     .fops = &AudDrv_btcvsd_fops,
 };
 
-/***************************************************************************
- * FUNCTION
- *  AudDrv_btcvsd_mod_init / AudDrv_btcvsd_mod_exit
- *
- * DESCRIPTION
- *  Module init and de-init (only be called when system boot up)
- *
- **************************************************************************/
 
 static struct platform_driver AudDrv_btcvsd =
 {

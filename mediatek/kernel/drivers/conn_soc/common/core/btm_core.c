@@ -255,7 +255,7 @@ INT32 _stp_trigger_firmware_assert_via_emi(VOID)
 		j++;
 		STP_BTM_INFO_FUNC("Wait for assert message (%d)\n", j);
 		osal_sleep_ms(20); 
-        if(j > 24) 
+        if(j > 4) 
             break;   
 
     } while(1);

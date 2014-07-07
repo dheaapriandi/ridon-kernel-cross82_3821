@@ -66,9 +66,6 @@ static int debug_enable_led_hal = 1;
 	}\
 }while(0)
 
-#ifdef MTK_HDMI_SUPPORT
-extern BOOL hdmi_is_active;
-#endif
 /****************************************************************************
  * custom APIs
 ***************************************************************************/
@@ -803,9 +800,10 @@ int mt_brightness_set_pmic(enum mt65xx_led_pmic pmic_type, u32 level, u32 div)
 				upmu_set_rg_isink3_ck_pdn(0);
 				upmu_set_rg_isink3_ck_sel(0);
 				upmu_set_isink_ch3_mode(PMIC_PWM_0);
-				upmu_set_isink_ch3_step(0x3);//16mA
+				upmu_set_rg_isink3_double_en(0x1);
+				upmu_set_isink_ch3_step(0x5);//24mA
 				//hwPWMsetting(PMIC_PWM_1, 15, 8);
-				upmu_set_isink_dim3_duty(15);
+				upmu_set_isink_dim3_duty(25);
 				upmu_set_isink_dim3_fsel(0);//6323 1KHz
 
 			
@@ -892,12 +890,6 @@ int mt_mt65xx_led_set_cust(struct cust_mt65xx_led *cust, int level)
 	*/	
     LEDS_DEBUG("mt65xx_leds_set_cust: set brightness, name:%s, mode:%d, level:%d\n", 
 		cust->name, cust->mode, level);
-#ifdef MTK_HDMI_SUPPORT
-    if(hdmi_is_active) {
-        printk("mt_mt65xx_led_set_cust hdmi active, return!\n");
-        return 0;
-    }
-#endif		
 	switch (cust->mode) {
 		
 		case MT65XX_LED_MODE_PWM:
@@ -942,11 +934,11 @@ int mt_mt65xx_led_set_cust(struct cust_mt65xx_led *cust, int level)
               
 		case MT65XX_LED_MODE_PMIC:
 			//for button baclight used SINK channel, when set button ISINK, don't do disable other ISINK channel
-			if((strcmp(cust->name,"button-backlight") == 0)) {
+			if((strcmp(cust->name,"button-backlight") == 0)||(strcmp(cust->name,"red") == 0)) {
 				if(button_flag==false) {
 					switch (cust->data) {
 						case MT65XX_LED_PMIC_NLED_ISINK0:
-							button_flag_isink0 = 1;
+							button_flag_isink0 = 1;						
 							break;
 						case MT65XX_LED_PMIC_NLED_ISINK1:
 							button_flag_isink1 = 1;
@@ -962,7 +954,8 @@ int mt_mt65xx_led_set_cust(struct cust_mt65xx_led *cust, int level)
 					}
 					button_flag=true;
 				}
-			}					
+			}
+							
 			return mt_brightness_set_pmic(cust->data, level, bl_div_hal);
             
 		case MT65XX_LED_MODE_CUST_LCM:
@@ -1050,8 +1043,8 @@ void mt_mt65xx_led_set(struct led_classdev *led_cdev, enum led_brightness level)
 		}
 		else
 		{
-			if(led_data->level != level)
-			{
+			//if(led_data->level != level)
+			//{
 				led_data->level = level;
 				if(strcmp(led_data->cust.name,"lcd-backlight") != 0)
 				{
@@ -1071,7 +1064,7 @@ void mt_mt65xx_led_set(struct led_classdev *led_cdev, enum led_brightness level)
 						mt_mt65xx_led_set_cust(&led_data->cust, led_data->level);	
 					}	
 				}
-			}
+			//}
 		}						
 #else
 	// do something only when level is changed

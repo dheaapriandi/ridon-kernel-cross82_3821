@@ -1,6 +1,3 @@
-# custom.mk - add supports for custom folder generation
-
-#internal functions supporting custom folder generation
 define .mtk.custom.delete-rule
 $(1): $(2).delete
 $(2).delete: 
@@ -45,7 +42,7 @@ $(eval _flvlist_     := $(strip $(subst +, ,$(word 2,$(_mtk_project_))))) \
 $(eval _prjlist_     := $(call .mtk.custom.split-project,$(subst .,/,$(word 1,$(_mtk_project_))))) \
 $(eval _fplist_     := $(foreach p,$(_prjlist_),$(foreach f,$(_flvlist_),$(p)[$(f)]))) \
 $(foreach d,$(_fplist_),\
-    $(if $(call wildcard2,$(addprefix $(MTK_ROOT_CUSTOM)/,$(d))),$(error $(d):Flavor project can not be used under $(MTK_ROOT_CUSTOM)),)) \
+    $(if $(call wildcard,$(addprefix $(MTK_ROOT_CUSTOM)/,$(d))),$(error $(d):Flavor project can not be used under $(MTK_ROOT_CUSTOM)),)) \
 $(eval _cust_list_   := $(if $(CUSTOMER),$(CUSTOMER))) \
 $(_prjlist_) $(_cust_list_) $(call lc,$(MTK_PLATFORM)) common)
 endef

@@ -1,48 +1,5 @@
-/*******************************************************************************
- *
- * Filename:
- * ---------
- * audio_gain_table_default.h
- *
- * Project:
- * --------
- *   ALPS
- *
- * Description:
- * ------------
- * This file is the header of audio cgain table parameters
- *
- * Author:
- * -------
- * ChiPeng Chang
- *
- *============================================================================
- *             HISTORY
- * Below this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *------------------------------------------------------------------------------
- * $Revision:$
- * $Modtime:$
- * $Log:$
- * 
- * 08 28 2012 weiguo.li
- * [ALPS00347285] [Need Patch] [Volunteer Patch]LGE AudioGainTable modification
- * .
- * 
- * 08 26 2012 weiguo.li
- * [ALPS00347285] [Need Patch] [Volunteer Patch]LGE AudioGainTable modification
- * .
- * 
- * 07 29 2012 weiguo.li
- * [ALPS00319405] ALPS.JB.BSP.PRA check in CR for Jades
- * .
- *
- *
- *
- *
- *------------------------------------------------------------------------------
- * Upper this line, this part is controlled by CC/CQ. DO NOT MODIFY!!
- *============================================================================
- ****************************************************************************/
+
+
 #ifndef AUDIO_GAIN_TABLE_DEFAULT_H
 #define AUDIO_GAIN_TABLE_DEFAULT_H
 

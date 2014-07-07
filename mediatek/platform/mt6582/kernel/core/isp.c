@@ -1,12 +1,3 @@
-/******************************************************************************
- * isp.c - MT6589 Linux ISP Device Driver
- *
- * Copyright 2008-2009 MediaTek Co.,Ltd.
- *
- * DESCRIPTION:
- *     This file provid the other drivers ISP relative functions
- *
- ******************************************************************************/
 
 #include <linux/types.h>
 #include <linux/device.h>
@@ -31,9 +22,6 @@
 #include <mach/isp.h>  //seanlin 111223
 //
 
-/*******************************************************************************
-*
-********************************************************************************/
 #define ISP_TAG                 "[ISP] "
 #define ISP_LOG(fmt, arg...)     printk(ISP_TAG fmt, ##arg)//printk()//seanlin@110715
 #define ISP_ERR(fmt, arg...)    printk(ISP_TAG "Err: %5d:, "fmt, __LINE__, ##arg)
@@ -47,9 +35,6 @@
 #define ISP_BASE_SHIFT         (CAMINF_BASE+0x4000) //seanlin 120105
 #define ISP_DEV_NAME            "mt-isp" // senalin111228 "mt6589-isp"
 
-/*******************************************************************************
-*
-********************************************************************************/
 // Register definition
 #define ISP_PHSCNT              (ISP_BASE + 0x000)
 #define ISP_VFCON               (ISP_BASE + 0x018)
@@ -80,9 +65,6 @@
 #define ISP_DBG_TASKLET         0x0020
 #define ISP_DBG_WORKQUEUE       0x0040
 //
-/*******************************************************************************
-*
-********************************************************************************/
 static spinlock_t isp_lock;
 static u8 *pcmd_buf = NULL;
 static u8 *pread_buf = NULL;
@@ -96,17 +78,11 @@ static u32 irq_status;
 static u32 dbgMask = 0x000000FF;
 static struct work_struct isp_work_queue;
 
-/*******************************************************************************
-*
-********************************************************************************/
 static unsigned long ms_to_jiffies(unsigned long ms)
 {
     return ((ms * HZ + 512) >> 10);
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_clk_ctrl(int en)
 {
     if (dbgMask & ISP_DBG_CLK) {
@@ -127,9 +103,6 @@ static int mt_isp_clk_ctrl(int en)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static inline void mt_isp_reset(void)
 {
 #if 0 //seanlin 111226
@@ -145,9 +118,6 @@ static inline void mt_isp_reset(void)
 #endif
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_read_reg(mt_isp_reg_io_t *preg_io)
 {
     int ret = 0;
@@ -187,9 +157,6 @@ mt_isp_read_reg_exit:
     return ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_write_reg_to_hw(mt_isp_reg_t *preg, u32 count)
 {
     int ret = 0;
@@ -216,9 +183,6 @@ static int mt_isp_write_reg_to_hw(mt_isp_reg_t *preg, u32 count)
     return ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 void mt_isp_tasklet_write_reg(unsigned long arg)
 {
     mt_isp_reg_t *preg = (mt_isp_reg_t *) pwrite_buf;
@@ -236,9 +200,6 @@ void mt_isp_tasklet_write_reg(unsigned long arg)
 
 DECLARE_TASKLET(tasklet_write_reg, mt_isp_tasklet_write_reg, 0);
 
-/*******************************************************************************
-*
-********************************************************************************/
 //extern int kdSensorSyncFunctionPtr(UINT16 *pRAWGain);
 //extern int kdSetSensorSyncFlag(BOOL bSensorSync);
 void mt_isp_work_queue(unsigned long param)
@@ -255,9 +216,6 @@ void mt_isp_work_queue(unsigned long param)
     }
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_write_reg(mt_isp_reg_io_t *preg_io)
 {
     int ret = 0;
@@ -315,9 +273,6 @@ mt_isp_write_reg_exit:
     return ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_hold_reg(u32 is_hold)
 {
     int ret = 0;
@@ -338,9 +293,6 @@ static int mt_isp_hold_reg(u32 is_hold)
     return ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_wait_irq(u32 wait_irq_status)
 {
     int ret = 0;
@@ -370,9 +322,6 @@ static int mt_isp_wait_irq(u32 wait_irq_status)
     return ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_dump_reg(void)
 {
     int ret = 0;
@@ -393,9 +342,6 @@ static int mt_isp_dump_reg(void)
     return ret;
 }
 #if 0 // seanlin 111223 fix conpilier error
-/*******************************************************************************
-*
-********************************************************************************/
 static __tcmfunc irqreturn_t mt_isp_irq(int irq, void *dev_id)
 {
     // Read irq status
@@ -466,9 +412,6 @@ static __tcmfunc irqreturn_t mt_isp_irq(int irq, void *dev_id)
     return IRQ_HANDLED;
 }
 #endif
-/*******************************************************************************
-*
-********************************************************************************/
 static long mt_isp_ioctl(struct file *file, 
                         unsigned int cmd, 
                         unsigned long arg)
@@ -533,9 +476,6 @@ static long mt_isp_ioctl(struct file *file,
     return ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_open(struct inode *inode, struct file *file)
 {
     int ret = 0;
@@ -609,9 +549,6 @@ mt_isp_open_exit:
     return ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_release(struct inode *inode, struct file *file)
 {
     ISP_LOG("[mt_isp_release] \n");
@@ -635,9 +572,6 @@ static int mt_isp_release(struct inode *inode, struct file *file)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_mmap(struct file *file, struct vm_area_struct *vma)
 {
 //    ISP_LOG("[mt_isp_mmap] \n");
@@ -651,9 +585,6 @@ static int mt_isp_mmap(struct file *file, struct vm_area_struct *vma)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static dev_t dev_isp;
 static struct cdev *pcdev_isp = NULL;
 static struct class *pclass_isp = NULL;
@@ -668,9 +599,6 @@ static const struct file_operations mt_isp_fops = {
 };
 static int isp_irq_num;
 
-/*******************************************************************************
-*
-********************************************************************************/
 inline static void mt_isp_unregister_char_driver(void)
 {
 //    ISP_LOG("[mt_isp_unregister_char_driver] \n");
@@ -684,9 +612,6 @@ inline static void mt_isp_unregister_char_driver(void)
     unregister_chrdev_region(dev_isp, 1);
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 inline static int mt_isp_register_char_driver(void)
 {
     int ret = 0;
@@ -727,9 +652,6 @@ mt_isp_register_char_driver_exit:
     return ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_probe(struct platform_device *pdev)
 {
     int ret = 0;
@@ -798,9 +720,6 @@ mt_isp_probe_exit:
     return ret;
 }
 
-/*******************************************************************************
-* Called when the device is being detached from the driver
-********************************************************************************/
 static int mt_isp_remove(struct platform_device *pdev)
 {
     struct resource *pres;
@@ -828,25 +747,16 @@ static int mt_isp_remove(struct platform_device *pdev)
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_suspend(struct platform_device *pdev, pm_message_t mesg)
 {
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int mt_isp_resume(struct platform_device *pdev)
 {
     return 0;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static struct platform_driver isp_driver = {
     .probe   = mt_isp_probe,
     .remove  = mt_isp_remove,
@@ -858,9 +768,6 @@ static struct platform_driver isp_driver = {
     }
 };
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int
 mt_isp_dump_reg_to_proc(
     char *page, char **start, off_t off, int count, int *eof, void *data
@@ -908,9 +815,6 @@ mt_isp_dump_reg_to_proc(
     return len < count ? len : count;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int  mt_isp_reg_debug(
     struct file *file, const char *buffer, unsigned long count, void *data
 )
@@ -934,9 +838,6 @@ static int  mt_isp_reg_debug(
     return count;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static int __init mt_isp_init(void)
 {
     int ret = 0;
@@ -962,9 +863,6 @@ static int __init mt_isp_init(void)
     return ret;
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 static void __exit mt_isp_exit(void)
 {
     ISP_LOG("[mt_isp_exit] \n");
@@ -972,9 +870,6 @@ static void __exit mt_isp_exit(void)
     platform_driver_unregister(&isp_driver);
 }
 
-/*******************************************************************************
-*
-********************************************************************************/
 module_init(mt_isp_init);
 module_exit(mt_isp_exit);
 MODULE_DESCRIPTION("MT6589 ISP driver");

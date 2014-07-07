@@ -1,12 +1,3 @@
-/******************************************************************************
- * mt6575_vibrator.c - MT6575 Android Linux Vibrator Device Driver
- * 
- * Copyright 2009-2010 MediaTek Co.,Ltd.
- * 
- * DESCRIPTION:
- *     This file provid the other drivers vibrator relative functions
- *
- ******************************************************************************/
 
 #include <linux/init.h>
 #include <linux/module.h>

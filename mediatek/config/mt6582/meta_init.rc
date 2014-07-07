@@ -111,6 +111,11 @@ on fs_property:ro.mount.fs=EXT4
     #mount ext4 emmc@android /system wait commit=1,data=journal,noauto_da_alloc
     mount ext4 /emmc@android /system wait commit=1,noauto_da_alloc
     mount ext4 /emmc@android /system noatime ro remount wait 
+    mkdir /custpack
+    #Mount custpack
+    mount ext4 /emmc@custpack /custpack commit=1,noauto_da_alloc
+    mount ext4 /emmc@custpack /custpack noatime ro remount
+
     exec /sbin/e2fsck -pfD /emmc@usrdata
     exec /sbin/tune2fs -O has_journal /emmc@usrdata
     exec /system/bin/ext4_resize
@@ -249,14 +254,6 @@ on post-fs
     chmod 0660 /dev/Vcodec
     chown system media /dev/Vcodec
 
-    #Display
-    chmod 0440 /dev/mtk_disp
-    chown system system /dev/mtk_disp
-
-    #Camera
-    chmod 0660 /dev/camera-isp
-    chown system camera /dev/camera-isp
-
     # Android SEC related device nodes
     mknod /dev/sec c 182 0
     chmod 0660 /dev/sec
@@ -306,14 +303,17 @@ on post-fs
     mkdir /data/key_provisioning
     chmod 0770 /data/key_provisioning
     chown system system /data/key_provisioning    
-
+    
     #autok
     chown root system /sys/autok/debug
     chown root system /sys/autok/param_count
     chown root system /sys/autok/ready
+    chown root system /sys/autok/ss_corner
+    chown root system /sys/autok/suggest_vol
     chown root system /sys/autok/stage1/2/DONE
     chown root system /sys/autok/stage1/2/PARAMS
     chown root system /sys/autok/stage1/2/VOLTAGE
+    chown root system /sys/autok/stage1/2/LOG
     chown root system /sys/autok/stage2/2
     
 on post-fs-data

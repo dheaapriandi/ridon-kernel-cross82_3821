@@ -865,14 +865,6 @@ static long vcodec_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned 
                 {
                     // [TODO] error handling
                     MFV_LOGE("[ERROR] Not owner trying to unlock enc hardware 0x%x, pa:%x, va:%x type:%d\n", grVcodecEncHWLock.pvHandle, pmem_user_v2p_video((unsigned int)rHWLock.pvHandle), (unsigned int)rHWLock.pvHandle, rHWLock.eDriverType);
-                    grVcodecEncHWLock.pvHandle = 0;
-                    grVcodecEncHWLock.eDriverType = VAL_DRIVER_TYPE_NONE;
-                    if (rHWLock.eDriverType == VAL_DRIVER_TYPE_H264_ENC)
-                    {                        
-                        disable_irq(MT_VENC_IRQ_ID);
-                        // turn venc power off
-                        venc_power_off();
-                    }
                     mutex_unlock(&VencHWLock);
                     return -EFAULT;
                 }

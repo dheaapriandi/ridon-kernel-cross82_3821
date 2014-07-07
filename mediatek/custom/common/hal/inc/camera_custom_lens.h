@@ -1,3 +1,4 @@
+
 #ifndef __CAMERA_CUSTOM_LENS_H_
 #define __CAMERA_CUSTOM_LENS_H_
 
@@ -19,6 +20,10 @@
 #define OV8825AF_LENS_ID					 0x0003
 #define BU6429AF_LENS_ID					 0x0004
 #define BU6424AF_LENS_ID					 0x0005
+//begin zhaozhen.wu@tcl.com add for ov5648 compatibility
+#define BU6424QTAF_LENS_ID					 0x0006
+#define BU6424STAF_LENS_ID					 0x0007
+//end
 #define AD5823AF_LENS_ID					 0x5823
 #define DW9718AF_LENS_ID 					 0x9718
 

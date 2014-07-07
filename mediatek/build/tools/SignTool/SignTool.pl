@@ -1,5 +1,4 @@
 #!usr/bin/perl
-
 my $prj = $ARGV[0];
 my $custom_dir = $ARGV[1];
 my $secro_ac = $ARGV[2];

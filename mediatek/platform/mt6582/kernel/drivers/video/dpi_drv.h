@@ -70,14 +70,11 @@ DPI_STATUS DPI_PowerOff(void);
 
 DPI_STATUS DPI_EnableClk(void);
 DPI_STATUS DPI_DisableClk(void);
-DPI_STATUS DPI_DisableMipiClk(void);
 
 DPI_STATUS DPI_EnableSeqOutput(BOOL enable);
 DPI_STATUS DPI_SetRGBOrder(DPI_RGB_ORDER input, DPI_RGB_ORDER output);
 
 DPI_STATUS DPI_ConfigPixelClk(DPI_POLARITY polarity, UINT32 divisor, UINT32 duty);
-DPI_STATUS DPI_ConfigBG(BOOL enable, UINT32 BG_W, UINT32 GB_H);
-DPI_STATUS DPI_ConfigInRBSwap(BOOL enable);
 DPI_STATUS DPI_ConfigDataEnable(DPI_POLARITY polarity);
 DPI_STATUS DPI_ConfigVsync(DPI_POLARITY polarity,
                            UINT32 pulseWidth, UINT32 backPorch, UINT32 frontPorch);
@@ -121,7 +118,7 @@ void DPI_InitVSYNC(unsigned int vsync_interval);
 void DPI_PauseVSYNC(bool enable);
 
 DPI_STATUS DPI_ConfigLVDS(LCM_PARAMS *lcm_params);
-DPI_STATUS DPI_ConfigDualEdge(bool enable);
+
 DPI_STATUS DPI_ConfigHDMI(void);
 DPI_STATUS DPI_EnableColorBar(BOOL enable);
 

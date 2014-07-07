@@ -1,8 +1,6 @@
+
 #include "camera_custom_n3d.h"
 
-/*******************************************************************************
-* N3D sensor position
-*******************************************************************************/
 customSensorPos_N3D_t const&
 getSensorPosN3D()
 {
@@ -12,10 +10,6 @@ getSensorPosN3D()
     return inst;
 }
 
-/*******************************************************************************
-* Author : cotta
-* brief : Return enable/disable flag of N3D
-*******************************************************************************/
 MBOOL get_N3DFeatureFlag(void)
 {
 #ifdef MTK_NATIVE_3D_SUPPORT

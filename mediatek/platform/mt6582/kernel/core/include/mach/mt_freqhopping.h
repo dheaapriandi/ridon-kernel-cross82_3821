@@ -1,18 +1,3 @@
-/*
- * Copyright (C) 2011 MediaTek, Inc.
- *
- * Author: Holmes Chiou <holmes.chiou@mediatek.com>
- *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- */
 
 #ifndef __MT_FREQHOPPING_H__
 #define __MT_FREQHOPPING_H__
@@ -76,24 +61,8 @@ enum FH_CMD{
  FH_CMD_ENABLE_USR_DEFINED,
  FH_CMD_DISABLE_USR_DEFINED,
  FH_CMD_INTERNAL_MAX_CMD,
-/* TODO:  do we need these cmds ?
- FH_CMD_PLL_ENABLE,
- FH_CMD_PLL_DISABLE,
- FH_CMD_EXT_ALL_FULL_RANGE_CMD,
- FH_CMD_EXT_ALL_HALF_RANGE_CMD,
- FH_CMD_EXT_DISABLE_ALL_CMD,
- FH_CMD_EXT_DESIGNATED_PLL_FULL_RANGE_CMD,
- FH_CMD_EXT_DESIGNATED_PLL_AND_SETTING_CMD
-*/ 
 };
 
-/*
-enum FH_OPCODE{
- FH_OPCODE_ENABLE_WITH_ID = 1,
- FH_OPCODE_ENABLE_WITHOUT_ID,
- FH_OPCODE_DISABLE,
-};
-*/
 
 enum FH_PLL_ID {
  MT658X_FH_MINIMUMM_PLL = 0,		

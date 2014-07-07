@@ -1285,7 +1285,7 @@ static int __init etm_init(void)
 {
 	int err;
 
-	memset(&tracer, 0,sizeof(struct etm_trace_context_t));
+	memset(&tracer, sizeof(struct etm_trace_context_t), 0);
 	mutex_init(&tracer.mutex);
 	tracer.trace_range_start = TRACE_RANGE_START;
 	tracer.trace_range_end = TRACE_RANGE_END;

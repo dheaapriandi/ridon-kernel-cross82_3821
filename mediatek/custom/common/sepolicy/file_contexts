@@ -572,3 +572,4 @@
 /dev/ccci.* u:object_r:ccci_device:s0
 /dev/mt6605 u:object_r:mt6605_device:s0
 
+/custpack(/.*)?		u:object_r:system_file:s0

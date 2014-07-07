@@ -1,4 +1,3 @@
-# default TARGET_CPU_ABI
 TARGET_CPU_ABI := armeabi
 board_config_mk := $(MTK_ROOT_CONFIG_OUT)/BoardConfig.mk
 

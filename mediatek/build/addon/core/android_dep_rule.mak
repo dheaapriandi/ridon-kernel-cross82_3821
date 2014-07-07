@@ -1136,14 +1136,9 @@ ifeq (yes,$(strip $(MTK_PLAYREADY_SUPPORT)))
     $(call dep-err-ona-or-offb,MTK_PERSIST_PARTITION_SUPPORT,MTK_PLAYREADY_SUPPORT)
   endif
 endif
-#########################################################
-ifneq ($(filter yes,$(MTK_DM_APP) $(MTK_DEVREG_APP) $(MTK_MDM_APP) $(MTK_SMSREG_APP)),)
-  ifneq ($(strip $(MTK_DM_AGENT_SUPPORT)), yes)
-    $(call dep-err-common, please set MTK_DM_APP and MTK_DEVREG_APP and MTK_MDM_APP and MTK_SMSREG_APP as no or set MTK_DM_AGENT_SUPPORT as yes)
-  endif
-endif
-ifeq ($(strip $(MTK_DM_AGENT_SUPPORT)), yes)
-  ifeq ($(filter yes,$(MTK_DM_APP) $(MTK_DEVREG_APP) $(MTK_MDM_APP) $(MTK_SMSREG_APP)),)
-    $(call dep-err-common, please set MTK_DM_APP or MTK_DEVREG_APP or MTK_MDM_APP or MTK_SMSREG_APP as yes or set MTK_DM_AGENT_SUPPORT as no)
+
+ifeq ($(strip $(MTK_PRIVACY_PROTECTION_LOCK)),yes)
+  ifneq ($(strip $(MTK_MOBILE_MANAGEMENT)),yes)
+  $(call dep-err-ona-or-offb,MTK_MOBILE_MANAGEMENT,MTK_PRIVACY_PROTECTION_LOCK)
   endif
 endif

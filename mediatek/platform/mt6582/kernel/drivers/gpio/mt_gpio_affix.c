@@ -1,12 +1,3 @@
-/******************************************************************************
- * mt_gpio_affix.c - MTKLinux GPIO Device Driver
- * 
- * Copyright 2008-2009 MediaTek Co.,Ltd.
- * 
- * DESCRIPTION:
- *     This file provid the other drivers GPIO relative functions
- *
- ******************************************************************************/
 
 #include <linux/types.h>
 #include <mach/sync_write.h>
@@ -24,7 +15,7 @@ void mt_gpio_pin_decrypt(unsigned long *cipher)
 	//just for debug, find out who used pin number directly
 	if((*cipher & (0x80000000)) == 0){
 		GPIOERR("Pin %u decrypt warning! \n",(unsigned int)(*cipher));	
-		//dump_stack();
+		dump_stack();
 		//return;
 	}
 

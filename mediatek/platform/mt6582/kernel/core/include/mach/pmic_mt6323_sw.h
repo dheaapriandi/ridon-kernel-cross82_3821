@@ -30,6 +30,28 @@
 #define PMIC6323_E2_CID_CODE    0x2023
 
 //==============================================================================
+// Low battery level define
+//==============================================================================
+typedef enum LOW_BATTERY_LEVEL_TAG 
+{
+    LOW_BATTERY_LEVEL_0 = 0,
+    LOW_BATTERY_LEVEL_1 = 1,
+    LOW_BATTERY_LEVEL_2 = 2
+} LOW_BATTERY_LEVEL;
+
+typedef enum LOW_BATTERY_PRIO_TAG 
+{
+    LOW_BATTERY_PRIO_CPU = 0,
+    LOW_BATTERY_PRIO_MD = 1,
+    LOW_BATTERY_PRIO_MD5 = 2,
+    LOW_BATTERY_PRIO_FLASHLIGHT = 3,
+    LOW_BATTERY_PRIO_BACKLIGHT = 4
+} LOW_BATTERY_PRIO;
+
+extern void (*low_battery_callback)(LOW_BATTERY_LEVEL);
+extern void register_low_battery_notify( void (*low_battery_callback)(LOW_BATTERY_LEVEL), LOW_BATTERY_PRIO prio_val );
+
+//==============================================================================
 // The CHIP SPEC of each block
 //==============================================================================
 typedef enum

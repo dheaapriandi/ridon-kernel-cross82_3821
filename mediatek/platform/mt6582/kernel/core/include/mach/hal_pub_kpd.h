@@ -26,14 +26,6 @@ void kpd_pmic_pwrkey_hal(unsigned long pressed);
 void kpd_pwrkey_handler_hal(unsigned long data);
 void mt_eint_register(void);
 
-#ifdef MTK_SMARTBOOK_SUPPORT
-void sb_kpd_enable(void);
-void sb_kpd_disable(void);
-#else
-void sb_kpd_enable(void);
-void sb_kpd_disable(void);
-#endif
-
 #define KPD_NUM_MEMS	5
 #define KPD_MEM5_BITS	8
 

@@ -15,10 +15,6 @@ KBUILD_CFLAGS += -DMTK_SEC_FASTBOOT_UNLOCK_SUPPORT
 endif
 endif
 
-ifeq ($(MTK_TB_WIFI_3G_MODE), WIFI_ONLY)
-KBUILD_CFLAGS += -DMTK_TB_WIFI_3G_MODE_WIFI_ONLY
-endif
-
 obj-y := core.o irq.o timer.o mt_dbg.o
 obj-y += mt_devs.o mt_gpt.o mt_boot.o board.o 
 obj-y += ca7_timer.o

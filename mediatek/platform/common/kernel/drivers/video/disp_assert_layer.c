@@ -221,6 +221,7 @@ DAL_STATUS DAL_Init(UINT32 layerVA, UINT32 layerPA)
     return DAL_STATUS_OK;
 }
 
+
 DAL_STATUS DAL_SetColor(unsigned int fgColor, unsigned int bgColor)
 {
     if (NULL == mfc_handle) 
@@ -603,6 +604,7 @@ DAL_STATUS DAL_LowMemoryOff(void)
 UINT32 DAL_GetLayerSize(void)
 {
 	// xuecheng, avoid lcdc read buffersize+1 issue
+    //return DAL_WIDTH * DAL_HEIGHT * DAL_BPP + 4096;
     return DAL_PITCH * DAL_HEIGHT * DAL_BPP + 4096;
 }
 

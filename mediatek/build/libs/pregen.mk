@@ -1,3 +1,4 @@
+
 MTK_DFO_TARGET_OUT_HEADERS := $(OUT_DIR)/target/product/$(PROJECT)/obj/include/dfo
 MTK_DFO_ALL_GENERATED_SOURCES := \
   $(MTK_DFO_TARGET_OUT_HEADERS)/CFG_Dfo_File.h \

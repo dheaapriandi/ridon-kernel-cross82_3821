@@ -1,558 +1,9 @@
-/*
-** $Id: @(#) gl_p2p.c@@
-*/
-
-/*! \file   gl_p2p.c
-    \brief  Main routines of Linux driver interface for Wi-Fi Direct
-
-    This file contains the main routines of Linux driver for MediaTek Inc. 802.11
-    Wireless LAN Adapters.
-*/
 
 
 
-/*
-** $Log: gl_p2p.c $
-** 
-** 09 12 2012 wcpadmin
-** [ALPS00276400] Remove MTK copyright and legal header on GPL/LGPL related packages
-** .
-** 
-** 08 17 2012 yuche.tsai
-** NULL
-** Fix compile warning.
-** 
-** 08 16 2012 yuche.tsai
-** NULL
-** Fix compile warning.
-** 
-** 08 14 2012 yuche.tsai
-** NULL
-** FPB from ALPS.JB to phase 2 release.
-** 
-** 07 26 2012 yuche.tsai
-** [ALPS00324337] [ALPS.JB][Hot-Spot] Driver update for Hot-Spot
-** Update driver code of ALPS.JB for hot-spot.
-**
-** 07 19 2012 yuche.tsai
-** NULL
-** Code update for JB.
- *
- * 07 17 2012 yuche.tsai
- * NULL
- * Fix compile error for JB.
- *
- * 07 17 2012 yuche.tsai
- * NULL
- * Let netdev bring up.
- *
- * 07 17 2012 yuche.tsai
- * NULL
- * Compile no error before trial run.
- *
- * 01 09 2012 terry.wu
- * [WCXRP00001166] [Wi-Fi] [Driver] cfg80211 integration for p2p newtork
- * cfg80211 integration for p2p network.
- *
- * 12 19 2011 terry.wu
- * [WCXRP00001142] [Wi-Fi] [P2P Driver] XOR local admin bit to generate p2p net device MAC
- * XOR local administrated bit to generate net device MAC of p2p network.
- *
- * 12 02 2011 yuche.tsai
- * NULL
- * Fix possible KE when unload p2p.
- *
- * 11 24 2011 yuche.tsai
- * NULL
- * Fix P2P IOCTL of multicast address bug, add low power driver stop control.
- *
- * 11 22 2011 yuche.tsai
- * NULL
- * Update RSSI link quality of P2P Network query method. (Bug fix)
- *
- * 11 19 2011 yuche.tsai
- * NULL
- * Add RSSI support for P2P network.
- *
- * 11 16 2011 yuche.tsai
- * [WCXRP00001107] [Volunteer Patch][Driver] Large Network Type index assert in FW issue.
- * Avoid using work thread in set p2p multicast address callback.
- *
- * 11 11 2011 yuche.tsai
- * NULL
- * Fix work thread cancel issue.
- *
- * 11 11 2011 yuche.tsai
- * NULL
- * Fix default device name issue.
- *
- * 11 08 2011 yuche.tsai
- * [WCXRP00001094] [Volunteer Patch][Driver] Driver version & supplicant version query & set support for service discovery version check.
- * Add support for driver version query & p2p supplicant verseion set.
- * For new service discovery mechanism sync.
- *
- * 11 07 2011 yuche.tsai
- * NULL
- * [ALPS 00087243] KE in worker thread.
- * The multicast address list is scheduled in worker thread.
- * Before the worker thread is excuted, if P2P is unloaded, a KE may occur.
- *
- * 10 26 2011 terry.wu
- * [WCXRP00001066] [MT6620 Wi-Fi] [P2P Driver] Fix P2P Oid Issue
- * Fix some P2P OID functions didn't raise its flag "fgIsP2pOid" issue.
- *
- * 10 25 2011 cm.chang
- * [WCXRP00001058] [All Wi-Fi][Driver] Fix sta_rec's phyTypeSet and OBSS scan in AP mode
- * .
- *
- * 10 18 2011 yuche.tsai
- * [WCXRP00001045] [WiFi Direct][Driver] Check 2.1 branch.
- * Support Channle Query.
- *
- * 10 18 2011 yuche.tsai
- * [WCXRP00001045] [WiFi Direct][Driver] Check 2.1 branch.
- * New 2.1 branch
 
- *
- * 08 26 2011 yuche.tsai
- * NULL
- * Fix bug of parsing secondary device list type issue.
- *
- * 08 24 2011 yuche.tsai
- * [WCXRP00000919] [Volunteer Patch][WiFi Direct][Driver] Invitation New Feature.
- * Invitation Abort.
- *
- * 08 23 2011 yuche.tsai
- * NULL
- * Fix multicast address list issue of P2P.
- *
- * 08 22 2011 chinglan.wang
- * NULL
- * Fix invitation indication bug..
- *
- * 08 16 2011 cp.wu
- * [WCXRP00000934] [MT6620 Wi-Fi][Driver][P2P] Wi-Fi hot spot with auto sparse channel residence
- * auto channel decision for 2.4GHz hot spot mode
- *
- * 08 16 2011 chinglan.wang
- * NULL
- * Add the group id information in the invitation indication.
- *
- * 08 09 2011 yuche.tsai
- * [WCXRP00000919] [Volunteer Patch][WiFi Direct][Driver] Invitation New Feature.
- * Invitation Feature add on.
- *
- * 08 05 2011 yuche.tsai
- * [WCXRP00000856] [Volunteer Patch][WiFi Direct][Driver] MT6620 WiFi Direct IOT Issue with BCM solution.
- * Add Password ID check for quick connection.
- * Also modify some connection policy.
- *
- * 07 18 2011 chinglan.wang
- * NULL
- * Add IOC_P2P_GO_WSC_IE (p2p capability).
- *
- * 06 14 2011 yuche.tsai
- * NULL
- * Add compile flag to disable persistent group support.
- *
- * 05 04 2011 chinglan.wang
- * [WCXRP00000698] [MT6620 Wi-Fi][P2P][Driver] Add p2p invitation command for the p2p driver
- * .
- *
- * 05 02 2011 yuche.tsai
- * [WCXRP00000693] [Volunteer Patch][MT6620][Driver] Clear Formation Flag after TX lifetime timeout.
- * Clear formation flag after formation timeout.
- *
- * 04 22 2011 george.huang
- * [WCXRP00000621] [MT6620 Wi-Fi][Driver] Support P2P supplicant to set power mode
- * .
- *
- * 04 21 2011 george.huang
- * [WCXRP00000621] [MT6620 Wi-Fi][Driver] Support P2P supplicant to set power mode
- * 1. Revise P2P power mode setting.
- * 2. Revise fast-PS for concurrent
- *
- * 04 19 2011 wh.su
- * NULL
- * Adding length check before doing WPA RSN IE parsing for scan results indicate.
- *
- * 04 14 2011 yuche.tsai
- * [WCXRP00000646] [Volunteer Patch][MT6620][FW/Driver] Sigma Test Modification for some test case.
- * Connection flow refine for Sigma test.
- *
- * 04 08 2011 yuche.tsai
- * [WCXRP00000624] [Volunteer Patch][MT6620][Driver] Add device discoverability support for GO.
- * Add device discoverability support.
- *
- * 04 08 2011 george.huang
- * [WCXRP00000621] [MT6620 Wi-Fi][Driver] Support P2P supplicant to set power mode
- * separate settings of P2P and AIS
- *
- * 04 07 2011 terry.wu
- * [WCXRP00000619] [MT6620 Wi-Fi][Driver] fix kernel panic may occur when removing wlan
- * Fix kernel panic may occur when removing wlan driver.
- *
- * 03 31 2011 wh.su
- * [WCXRP00000614] [MT6620 Wi-Fi][Driver] P2P: Update beacon content while setting WSC IE
- * Update the wsc ie to beacon content.
- *
- * 03 25 2011 wh.su
- * NULL
- * add the sample code for set power mode and get power mode.
- *
- * 03 25 2011 yuche.tsai
- * NULL
- * Improve some error handleing.
- *
- * 03 22 2011 george.huang
- * [WCXRP00000504] [MT6620 Wi-Fi][FW] Support Sigma CAPI for power saving related command
- * link with supplicant commands
- *
- * 03 22 2011 yuche.tsai
- * [WCXRP00000584] [Volunteer Patch][MT6620][Driver] Add beacon timeout support for WiFi Direct.
- * Modify formation policy.
- *
- * 03 22 2011 yuche.tsai
- * NULL
- * Modify formation policy setting.
- *
- * 03 18 2011 yuche.tsai
- * [WCXRP00000574] [Volunteer Patch][MT6620][Driver] Modify P2P FSM Connection Flow
- * Modify connection flow after Group Formation Complete, or device connect to a GO.
- * Instead of request channel & connect directly, we use scan to allocate channel bandwidth & connect after RX BCN.
- *
- * 03 15 2011 wh.su
- * [WCXRP00000563] [MT6620 Wi-Fi] [P2P] Set local config method while set password Id ready
- * set lccal config method method while set password Id ready.
- *
- * 03 15 2011 yuche.tsai
- * [WCXRP00000560] [Volunteer Patch][MT6620][Driver] P2P Connection from UI using KEY/DISPLAY issue
- * Fix some configure method issue.
- *
- * 03 15 2011 jeffrey.chang
- * [WCXRP00000558] [MT6620 Wi-Fi][MT6620 Wi-Fi][Driver] refine the queue selection algorithm for WMM
- * refine queue_select function
- *
- * 03 13 2011 wh.su
- * [WCXRP00000530] [MT6620 Wi-Fi] [Driver] skip doing p2pRunEventAAAComplete after send assoc response Tx Done
- * add code for avoid compiling warning.
- *
- * 03 10 2011 yuche.tsai
- * NULL
- * Add P2P API.
- *
- * 03 10 2011 terry.wu
- * [WCXRP00000505] [MT6620 Wi-Fi][Driver/FW] WiFi Direct Integration
- * Remove unnecessary assert and message.
- *
- * 03 08 2011 wh.su
- * [WCXRP00000488] [MT6620 Wi-Fi][Driver] Support the SIGMA set p2p parameter to driver
- * support the power save related p2p setting.
- *
- * 03 07 2011 wh.su
- * [WCXRP00000506] [MT6620 Wi-Fi][Driver][FW] Add Security check related code
- * rename the define to anti_pviracy.
- *
- * 03 05 2011 wh.su
- * [WCXRP00000506] [MT6620 Wi-Fi][Driver][FW] Add Security check related code
- * add the code to get the check rsponse and indicate to app.
- *
- * 03 03 2011 jeffrey.chang
- * [WCXRP00000512] [MT6620 Wi-Fi][Driver] modify the net device relative functions to support the H/W multiple queue
- * support concurrent network
- *
- * 03 03 2011 jeffrey.chang
- * [WCXRP00000512] [MT6620 Wi-Fi][Driver] modify the net device relative functions to support the H/W multiple queue
- * modify P2P's netdevice  functions to support multiple H/W queues
- *
- * 03 03 2011 cp.wu
- * [WCXRP00000283] [MT6620 Wi-Fi][Driver][Wi-Fi Direct] Implementation of interface for supporting Wi-Fi Direct Service Discovery
- * for get request, the buffer length to be copied is header + payload.
- *
- * 03 02 2011 wh.su
- * [WCXRP00000506] [MT6620 Wi-Fi][Driver][FW] Add Security check related code
- * add code to let the beacon and probe response for Auto GO WSC .
- *
- * 03 02 2011 cp.wu
- * [WCXRP00000283] [MT6620 Wi-Fi][Driver][Wi-Fi Direct] Implementation of interface for supporting Wi-Fi Direct Service Discovery
- * add a missed break.
- *
- * 03 01 2011 yuche.tsai
- * [WCXRP00000501] [Volunteer Patch][MT6620][Driver] No common channel issue when doing GO formation
- * Update channel issue when doing GO formation..
- *
- * 02 25 2011 wh.su
- * [WCXRP00000488] [MT6620 Wi-Fi][Driver] Support the SIGMA set p2p parameter to driver
- * add the Operation channel setting.
- *
- * 02 23 2011 wh.su
- * [WCXRP00000488] [MT6620 Wi-Fi][Driver] Support the SIGMA set p2p parameter to driver
- * fixed the set int ioctl set index and value map to driver issue.
- *
- * 02 22 2011 wh.su
- * [WCXRP00000488] [MT6620 Wi-Fi][Driver] Support the SIGMA set p2p parameter to driver
- * adding the ioctl set int from supplicant, and can used to set the p2p paramters
- *
- * 02 21 2011 terry.wu
- * [WCXRP00000476] [MT6620 Wi-Fi][Driver] Clean P2P scan list while removing P2P
- * Clean P2P scan list while removing P2P.
- *
- * 02 18 2011 wh.su
- * [WCXRP00000471] [MT6620 Wi-Fi][Driver] Add P2P Provison discovery append Config Method attribute at WSC IE
- * fixed the ioctl setting that index not map to spec defined config method.
- *
- * 02 17 2011 wh.su
- * [WCXRP00000471] [MT6620 Wi-Fi][Driver] Add P2P Provison discovery append Config Method attribute at WSC IE
- * append the WSC IE config method attribute at provision discovery request.
- *
- * 02 17 2011 wh.su
- * [WCXRP00000448] [MT6620 Wi-Fi][Driver] Fixed WSC IE not send out at probe request
- * modify the structure pointer for set WSC IE.
- *
- * 02 16 2011 wh.su
- * [WCXRP00000448] [MT6620 Wi-Fi][Driver] Fixed WSC IE not send out at probe request
- * fixed the probe request send out without WSC IE issue (at P2P).
- *
- * 02 09 2011 cp.wu
- * [WCXRP00000283] [MT6620 Wi-Fi][Driver][Wi-Fi Direct] Implementation of interface for supporting Wi-Fi Direct Service Discovery
- * fix typo
- *
- * 02 09 2011 yuche.tsai
- * [WCXRP00000431] [Volunteer Patch][MT6620][Driver] Add MLME support for deauthentication under AP(Hot-Spot) mode.
- * Add Support for MLME deauthentication for Hot-Spot.
- *
- * 01 25 2011 terry.wu
- * [WCXRP00000393] [MT6620 Wi-Fi][Driver] Add new module insert parameter
- * Add a new module parameter to indicate current runnig mode, P2P or AP.
- *
- * 01 12 2011 yuche.tsai
- * [WCXRP00000352] [Volunteer Patch][MT6620][Driver] P2P Statsion Record Client List Issue
- * 1. Modify Channel Acquire Time of AP mode from 5s to 1s.
- * 2. Call cnmP2pIsPermit() before active P2P network.
- * 3. Add channel selection support for AP mode.
- *
- * 01 05 2011 cp.wu
- * [WCXRP00000283] [MT6620 Wi-Fi][Driver][Wi-Fi Direct] Implementation of interface for supporting Wi-Fi Direct Service Discovery
- * ioctl implementations for P2P Service Discovery
- *
- * 01 04 2011 cp.wu
- * [WCXRP00000338] [MT6620 Wi-Fi][Driver] Separate kalMemAlloc into kmalloc and vmalloc implementations to ease physically continous memory demands
- * separate kalMemAlloc() into virtually-continous and physically-continous type to ease slab system pressure
- *
- * 12 22 2010 cp.wu
- * [WCXRP00000283] [MT6620 Wi-Fi][Driver][Wi-Fi Direct] Implementation of interface for supporting Wi-Fi Direct Service Discovery
- * 1. header file restructure for more clear module isolation
- * 2. add function interface definition for implementing Service Discovery callbacks
- *
- * 12 15 2010 cp.wu
- * NULL
- * invoke nicEnableInterrupt() before leaving from wlanAdapterStart()
- *
- * 12 08 2010 yuche.tsai
- * [WCXRP00000245] [MT6620][Driver] Invitation & Provision Discovery Feature Check-in
- * [WCXRP000000245][MT6620][Driver] Invitation Request Feature Add
- *
- * 11 30 2010 yuche.tsai
- * NULL
- * Invitation & Provision Discovery Indication.
- *
- * 11 17 2010 wh.su
- * [WCXRP00000164] [MT6620 Wi-Fi][Driver] Support the p2p random SSID[WCXRP00000179] [MT6620 Wi-Fi][FW] Set the Tx lowest rate at wlan table for normal operation
- * fixed some ASSERT check.
- *
- * 11 04 2010 wh.su
- * [WCXRP00000164] [MT6620 Wi-Fi][Driver] Support the p2p random SSID
- * adding the p2p random ssid support.
- *
- * 10 20 2010 wh.su
- * [WCXRP00000124] [MT6620 Wi-Fi] [Driver] Support the dissolve P2P Group
- * Add the code to support disconnect p2p group
- *
- * 10 04 2010 wh.su
- * [WCXRP00000081] [MT6620][Driver] Fix the compiling error at WinXP while enable P2P
- * add a kal function for set cipher.
- *
- * 10 04 2010 wh.su
- * [WCXRP00000081] [MT6620][Driver] Fix the compiling error at WinXP while enable P2P
- * fixed compiling error while enable p2p.
- *
- * 09 28 2010 wh.su
- * NULL
- * [WCXRP00000069][MT6620 Wi-Fi][Driver] Fix some code for phase 1 P2P Demo.
- *
- * 09 21 2010 kevin.huang
- * [WCXRP00000054] [MT6620 Wi-Fi][Driver] Restructure driver for second Interface
- * Isolate P2P related function for Hardware Software Bundle
- *
- * 09 21 2010 kevin.huang
- * [WCXRP00000052] [MT6620 Wi-Fi][Driver] Eliminate Linux Compile Warning
- * Eliminate Linux Compile Warning
- *
- * 09 10 2010 george.huang
- * NULL
- * update iwpriv LP related
- *
- * 09 10 2010 wh.su
- * NULL
- * fixed the compiling error at win XP.
- *
- * 09 09 2010 cp.wu
- * NULL
- * add WPS/WPA/RSN IE for Wi-Fi Direct scanning result.
- *
- * 09 07 2010 wh.su
- * NULL
- * adding the code for beacon/probe req/ probe rsp wsc ie at p2p.
- *
- * 09 06 2010 wh.su
- * NULL
- * let the p2p can set the privacy bit at beacon and rsn ie at assoc req at key handshake state.
- *
- * 08 25 2010 cp.wu
- * NULL
- * add netdev_ops(NDO) for linux kernel 2.6.31 or greater
- *
- * 08 23 2010 cp.wu
- * NULL
- * revise constant definitions to be matched with implementation (original cmd-event definition is deprecated)
- *
- * 08 20 2010 cp.wu
- * NULL
- * correct typo.
- *
- * 08 20 2010 yuche.tsai
- * NULL
- * Invert Connection request provision status parameter.
- *
- * 08 19 2010 cp.wu
- * NULL
- * add set mac address interface for further possibilities of wpa_supplicant overriding interface address.
- *
- * 08 18 2010 cp.wu
- * NULL
- * modify pwp ioctls attribution by removing FIXED_SIZE.
- *
- * 08 18 2010 jeffrey.chang
- * NULL
- * support multi-function sdio
- *
- * 08 17 2010 cp.wu
- * NULL
- * correct p2p net device registration with NULL pointer access issue.
- *
- * 08 16 2010 cp.wu
- * NULL
- * P2P packets are now marked when being queued into driver, and identified later without checking MAC address
- *
- * 08 16 2010 cp.wu
- * NULL
- * add subroutines for P2P to set multicast list.
- *
- * 08 16 2010 george.huang
- * NULL
- * add wext handlers to link P2P set PS profile/ network address function (TBD)
- *
- * 08 16 2010 cp.wu
- * NULL
- * revised implementation of Wi-Fi Direct io controls.
- *
- * 08 12 2010 cp.wu
- * NULL
- * follow-up with ioctl interface update for Wi-Fi Direct application
- *
- * 08 06 2010 cp.wu
- * NULL
- * driver hook modifications corresponding to ioctl interface change.
- *
- * 08 03 2010 cp.wu
- * NULL
- * add basic support for ioctl of getting scan result. (only address and SSID are reporterd though)
- *
- * 08 03 2010 cp.wu
- * NULL
- * [Wi-Fi Direct Driver Hook] change event indication API to be consistent with supplicant
- *
- * 08 03 2010 cp.wu
- * NULL
- * surpress compilation warning.
- *
- * 08 03 2010 cp.wu
- * NULL
- * [Wi-Fi Direct] add framework for driver hooks
- *
- * 07 08 2010 cp.wu
- *
- * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
- *
- * 06 23 2010 cp.wu
- * [WPD00003833][MT6620 and MT5931] Driver migration
- * p2p interface revised to be sync. with HAL
- *
- * 06 06 2010 kevin.huang
- * [WPD00003832][MT6620 5931] Create driver base
- * [MT6620 5931] Create driver base
- *
- * 06 01 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * add ioctl to configure scan mode for p2p connection
- *
- * 05 31 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * add cfg80211 interface, which is to replace WE, for further extension
- *
- * 05 17 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * implement private io controls for Wi-Fi Direct
- *
- * 05 17 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * implement get scan result.
- *
- * 05 17 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * add basic handling framework for wireless extension ioctls.
- *
- * 05 17 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * 1) add timeout handler mechanism for pending command packets
- * 2) add p2p add/removal key
- *
- * 05 14 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * implement wireless extension ioctls in iw_handler form.
- *
- * 05 14 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * add ioctl framework for Wi-Fi Direct by reusing wireless extension ioctls as well
- *
- * 05 11 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * p2p ioctls revised.
- *
- * 05 11 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * add ioctl for controlling p2p scan phase parameters
- *
- * 05 10 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * implement basic wi-fi direct framework
- *
- * 05 07 2010 cp.wu
- * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
- * add basic framework for implementating P2P driver hook.
- *
-**
-*/
 
-/*******************************************************************************
-*                         C O M P I L E R   F L A G S
-********************************************************************************
-*/
 
-/*******************************************************************************
-*                    E X T E R N A L   R E F E R E N C E S
-********************************************************************************
-*/
 #include "gl_os.h"
 #include "debug.h"
 #include "wlan_lib.h"
@@ -565,30 +16,14 @@
 
 #include "precomp.h"
 
-/*******************************************************************************
-*                              C O N S T A N T S
-********************************************************************************
-*/
 #define ARGV_MAX_NUM        (4)
 
 /*For CFG80211 - wiphy parameters*/
 #define MAX_SCAN_LIST_NUM   (1)
 #define MAX_SCAN_IE_LEN     (512)
 
-/*******************************************************************************
-*                             D A T A   T Y P E S
-********************************************************************************
-*/
 
-/*******************************************************************************
-*                            P U B L I C   D A T A
-********************************************************************************
-*/
 
-/*******************************************************************************
-*                           P R I V A T E   D A T A
-********************************************************************************
-*/
 
 #if CFG_ENABLE_WIFI_DIRECT_CFG_80211
 /* for cfg80211 - frequency table */
@@ -929,15 +364,7 @@ const struct iw_handler_def mtk_p2p_wext_handler_def = {
 #endif
 };
 
-/*******************************************************************************
-*                                 M A C R O S
-********************************************************************************
-*/
 
-/*******************************************************************************
-*                   F U N C T I O N   D E C L A R A T I O N S
-********************************************************************************
-*/
 /* for IE Searching */
 extern BOOLEAN
 wextSrchDesiredWPAIE (
@@ -999,14 +426,6 @@ p2pSetMACAddress(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Override the implementation of select queue
-*
-* \param[in] dev Pointer to struct net_device
-* \param[in] skb Pointer to struct skb_buff
-*
-* \return (none)
-*/
 /*----------------------------------------------------------------------------*/
 
 unsigned int _p2p_cfg80211_classify8021d(struct sk_buff *skb)
@@ -1047,14 +466,6 @@ static struct net_device *g_P2pPrDev;
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief A function for prDev->init
-*
-* \param[in] prDev      Pointer to struct net_device.
-*
-* \retval 0         The execution of wlanInit succeeds.
-* \retval -ENXIO    No such device.
-*/
 /*----------------------------------------------------------------------------*/
 static int
 p2pInit(
@@ -1070,13 +481,6 @@ p2pInit(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief A function for prDev->uninit
-*
-* \param[in] prDev      Pointer to struct net_device.
-*
-* \return (none)
-*/
 /*----------------------------------------------------------------------------*/
 static void
 p2pUninit (
@@ -1115,21 +519,8 @@ static const struct net_device_ops p2p_netdev_ops = {
 #endif
 
 
-/*******************************************************************************
-*                              F U N C T I O N S
-********************************************************************************
-*/
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Allocate memory for P2P_INFO, GL_P2P_INFO, P2P_CONNECTION_SETTINGS
-*                                          P2P_SPECIFIC_BSS_INFO, P2P_FSM_INFO
-*
-* \param[in] prGlueInfo      Pointer to glue info
-*
-* \return   TRUE
-*           FALSE
-*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 p2PAllocInfo (
@@ -1223,15 +614,6 @@ p2PAllocInfo (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Free memory for P2P_INFO, GL_P2P_INFO, P2P_CONNECTION_SETTINGS
-*                                          P2P_SPECIFIC_BSS_INFO, P2P_FSM_INFO
-*
-* \param[in] prGlueInfo      Pointer to glue info
-*
-* \return   TRUE
-*           FALSE
-*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 p2PFreeInfo(
@@ -1270,14 +652,6 @@ p2PFreeInfo(
 }
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Enable Channel  for cfg80211 for Wi-Fi Direct based on current country code
-*
-* \param[in] prGlueInfo      Pointer to glue info
-*
-* \return   TRUE
-*           FALSE
-*/
 /*----------------------------------------------------------------------------*/
 VOID
 p2pEnableChannel(
@@ -1418,14 +792,6 @@ p2pNetUnregister(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Update Channel table for cfg80211 for Wi-Fi Direct based on current country code
-*
-* \param[in] prGlueInfo      Pointer to glue info
-*
-* \return   TRUE
-*           FALSE
-*/
 /*----------------------------------------------------------------------------*/
 VOID
 p2pUpdateChannelTableByDomain(
@@ -1471,14 +837,6 @@ p2pUpdateChannelTableByDomain(
 }
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Register for cfg80211 for Wi-Fi Direct
-*
-* \param[in] prGlueInfo      Pointer to glue info
-*
-* \return   TRUE
-*           FALSE
-*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 glRegisterP2P(
@@ -1675,14 +1033,6 @@ err_alloc_wiphy:
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Unregister Net Device for Wi-Fi Direct
-*
-* \param[in] prGlueInfo      Pointer to glue info
-*
-* \return   TRUE
-*           FALSE
-*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 glUnregisterP2P(
@@ -1748,14 +1098,6 @@ glUnregisterP2P(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
- * \brief A function for stop p2p fsm immediate
- *
- * \param[in] prGlueInfo      Pointer to struct P_GLUE_INFO_T.
- *
- * \retval TRUE     The execution succeeds.
- * \retval FALSE   The execution failed.
- */
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 p2pStopImmediate(
@@ -1809,14 +1151,6 @@ p2pStopImmediate(
 
 /* Net Device Hooks */
 /*----------------------------------------------------------------------------*/
-/*!
- * \brief A function for net_device open (ifup)
- *
- * \param[in] prDev      Pointer to struct net_device.
- *
- * \retval 0     The execution succeeds.
- * \retval < 0   The execution failed.
- */
 /*----------------------------------------------------------------------------*/
 static int
 p2pOpen(
@@ -1867,14 +1201,6 @@ p2pOpen(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
- * \brief A function for net_device stop (ifdown)
- *
- * \param[in] prDev      Pointer to struct net_device.
- *
- * \retval 0     The execution succeeds.
- * \retval < 0   The execution failed.
- */
 /*----------------------------------------------------------------------------*/
 static int
 p2pStop(
@@ -1947,17 +1273,6 @@ p2pStop(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
- * \brief A method of struct net_device, to get the network interface statistical
- *        information.
- *
- * Whenever an application needs to get statistics for the interface, this method
- * is called. This happens, for example, when ifconfig or netstat -i is run.
- *
- * \param[in] prDev      Pointer to struct net_device.
- *
- * \return net_device_stats buffer pointer.
- */
 /*----------------------------------------------------------------------------*/
 struct net_device_stats *
 p2pGetStats (
@@ -2026,13 +1341,6 @@ p2pSetMulticastList (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
- * \brief This function is to set multicast list and set rx mode.
- *
- * \param[in] prDev  Pointer to struct net_device
- *
- * \return (none)
- */
 /*----------------------------------------------------------------------------*/
 void
 mtk_p2p_wext_set_Multicastlist (
@@ -2115,15 +1423,6 @@ mtk_p2p_wext_set_Multicastlist (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
- * * \brief This function is TX entry point of NET DEVICE.
- * *
- * * \param[in] prSkb  Pointer of the sk_buff to be sent
- * * \param[in] prDev  Pointer to struct net_device
- * *
- * * \retval NETDEV_TX_OK - on success.
- * * \retval NETDEV_TX_BUSY - on failure, packet will be discarded by upper layer.
- * */
 /*----------------------------------------------------------------------------*/
 int
 p2pHardStartXmit(
@@ -2195,22 +1494,6 @@ p2pHardStartXmit(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
- * \brief A method of struct net_device, a primary SOCKET interface to configure
- *        the interface lively. Handle an ioctl call on one of our devices.
- *        Everything Linux ioctl specific is done here. Then we pass the contents
- *        of the ifr->data to the request message handler.
- *
- * \param[in] prDev      Linux kernel netdevice
- *
- * \param[in] prIFReq    Our private ioctl request structure, typed for the generic
- *                       struct ifreq so we can use ptr to function
- *
- * \param[in] cmd        Command ID
- *
- * \retval WLAN_STATUS_SUCCESS The IOCTL command is executed successfully.
- * \retval OTHER The execution of IOCTL command is failed.
- */
 /*----------------------------------------------------------------------------*/
 int
 p2pDoIOCTL(
@@ -2339,18 +1622,6 @@ p2pDoIOCTL(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
- * \brief To report the private supported IOCTLs table to user space.
- *
- * \param[in] prDev Net device requested.
- * \param[out] prIfReq Pointer to ifreq structure, content is copied back to
- *                  user space buffer in gl_iwpriv_table.
- *
- * \retval 0 For success.
- * \retval -E2BIG For user's buffer size is too small.
- * \retval -EFAULT For fail.
- *
- */
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_get_priv (
@@ -2385,16 +1656,6 @@ mtk_p2p_wext_get_priv (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
- * \brief To indicate P2P-FSM for re-associate to the connecting device
- *
- * \param[in] prDev      Net device requested.
- * \param[inout] wrqu    Pointer to iwreq_data
- *
- * \retval 0 For success.
- * \retval -EFAULT For fail.
- *
- */
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_reconnect (
@@ -2440,18 +1701,6 @@ mtk_p2p_wext_reconnect (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief MLME command handler
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_mlme_handler(
@@ -2522,18 +1771,6 @@ mtk_p2p_wext_mlme_handler(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_PROVISION_COMPLETE)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_set_provision_complete(
@@ -2592,18 +1829,6 @@ mtk_p2p_wext_set_provision_complete(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_START_STOP_DISCOVERY)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_start_stop_discovery(
@@ -2720,18 +1945,6 @@ mtk_p2p_wext_start_stop_discovery(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_SET_INT)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Setting parameters not support.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_invitation_request (
@@ -2814,18 +2027,6 @@ mtk_p2p_wext_invitation_request (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_SET_INT)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Setting parameters not support.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_invitation_abort (
@@ -2904,17 +2105,6 @@ mtk_p2p_wext_invitation_abort (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
- * \brief To override p2p interface address
- *
- * \param[in] prDev Net device requested.
- * \param[in] addr  Pointer to address
- *
- * \retval 0 For success.
- * \retval -E2BIG For user's buffer size is too small.
- * \retval -EFAULT For fail.
- *
- */
 /*----------------------------------------------------------------------------*/
 int
 p2pSetMACAddress(
@@ -2944,18 +2134,6 @@ p2pSetMACAddress(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief To set encryption cipher suite
-*
-* \param[in] prDev Net device requested.
-* \param[out]
-*
-* \retval 0 Success.
-* \retval -EINVAL Invalid parameter
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_set_auth (
@@ -3002,19 +2180,6 @@ mtk_p2p_wext_set_auth (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief To set encryption cipher and key.
-*
-* \param[in] prDev Net device requested.
-* \param[out] prIfReq Pointer to ifreq structure, content is copied back to
-*                  user space buffer in gl_iwpriv_table.
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note Securiry information is stored in pEnc.
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_set_key(
@@ -3157,18 +2322,6 @@ mtk_p2p_wext_set_key(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief set the p2p gc power mode
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_set_powermode(
@@ -3245,18 +2398,6 @@ mtk_p2p_wext_set_powermode(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief get the p2p gc power mode
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_get_powermode(
@@ -3332,18 +2473,6 @@ mtk_p2p_wext_get_powermode(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_CFG_DEVICE)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_set_local_dev_info(
@@ -3442,19 +2571,6 @@ mtk_p2p_wext_set_local_dev_info(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
- * \brief I/O Control handler for both
- *          IOC_P2P_START_STOP_DISCOVERY & SIOCGIWSCAN
- *
- * \param[in] prDev      Net device requested.
- * \param[inout] wrqu    Pointer to iwreq_data
- *
- * \retval 0 Success.
- * \retval -EFAULT Setting parameters to driver fail.
- * \retval -EOPNOTSUPP Key size not supported.
- *
- * \note
- */
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_discovery_results(
@@ -3616,18 +2732,6 @@ mtk_p2p_wext_discovery_results(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_WSC_BEACON_PROBE_RSP_IE)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_wsc_ie(
@@ -3675,18 +2779,6 @@ mtk_p2p_wext_wsc_ie(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_CONNECT_DISCONNECT)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_connect_disconnect(
@@ -3763,18 +2855,6 @@ mtk_p2p_wext_connect_disconnect(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_PASSWORD_READY)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_password_ready(
@@ -3847,18 +2927,6 @@ mtk_p2p_wext_password_ready(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_GET_REQ_DEVICE_INFO)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_request_dev_info(
@@ -3897,18 +2965,6 @@ mtk_p2p_wext_request_dev_info(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_GET_STRUCT)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_invitation_indicate(
@@ -3948,18 +3004,6 @@ mtk_p2p_wext_invitation_indicate(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_GET_STRUCT)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_invitation_status(
@@ -3992,14 +3036,6 @@ mtk_p2p_wext_invitation_status(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief indicate an event to supplicant for device found
-*
-* \param[in] prGlueInfo Pointer of GLUE_INFO_T
-*
-* \retval TRUE  Success.
-* \retval FALSE Failure
-*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 kalP2PIndicateFound(
@@ -4133,18 +3169,6 @@ mtk_p2p_wext_set_pm_param (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_SET_INT)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Setting parameters not support.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_start_formation (
@@ -4194,18 +3218,6 @@ mtk_p2p_wext_start_formation (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_SET_INT)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Setting parameters not support.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_set_int (
@@ -4344,18 +3356,6 @@ mtk_p2p_wext_set_int (
 }
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_SET_STRUCT)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_set_struct (
@@ -4502,18 +3502,6 @@ mtk_p2p_wext_set_struct (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler (IOC_P2P_GET_STRUCT)
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_get_struct (
@@ -4737,19 +3725,6 @@ mtk_p2p_wext_get_struct (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler for
-*        getting service discovery request frame from driver
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_get_service_discovery_request (
@@ -4799,19 +3774,6 @@ mtk_p2p_wext_get_service_discovery_request (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler for
-*        getting service discovery response frame from driver
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_get_service_discovery_response (
@@ -4861,19 +3823,6 @@ mtk_p2p_wext_get_service_discovery_response (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler for
-*        sending service discovery request frame
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_send_service_discovery_request (
@@ -4913,19 +3862,6 @@ mtk_p2p_wext_send_service_discovery_request (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler for
-*        sending service discovery response frame
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_send_service_discovery_response (
@@ -4965,18 +3901,6 @@ mtk_p2p_wext_send_service_discovery_response (
 
 #if CFG_SUPPORT_ANTI_PIRACY
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler for
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_set_sec_check_request (
@@ -5016,18 +3940,6 @@ mtk_p2p_wext_set_sec_check_request (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler for
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_get_sec_check_response (
@@ -5078,19 +3990,6 @@ mtk_p2p_wext_get_sec_check_response (
 #endif
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler for
-*        terminating service discovery phase
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_terminate_service_discovery_phase (
@@ -5129,18 +4028,6 @@ mtk_p2p_wext_terminate_service_discovery_phase (
 }
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler for
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_set_noa_param (
@@ -5182,18 +4069,6 @@ mtk_p2p_wext_set_noa_param (
 }
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief P2P Private I/O Control handler for
-*
-* \param[in] prDev      Net device requested.
-* \param[inout] wrqu    Pointer to iwreq_data
-*
-* \retval 0 Success.
-* \retval -EFAULT Setting parameters to driver fail.
-* \retval -EOPNOTSUPP Key size not supported.
-*
-* \note
-*/
 /*----------------------------------------------------------------------------*/
 int
 mtk_p2p_wext_set_oppps_param (

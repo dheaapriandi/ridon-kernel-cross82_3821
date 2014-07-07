@@ -18,10 +18,6 @@
 #include <linux/sched.h>
 #include <linux/module.h>
 #include "mali_osk.h"
-#include "mt_reg_base.h"
-
-extern void smi_dumpDebugMsg(void);
-extern int m4u_dump_debug_registers(void);;
 
 void _mali_osk_dbgmsg( const char *fmt, ... )
 {
@@ -43,31 +39,10 @@ u32 _mali_osk_snprintf( char *buf, u32 size, const char *fmt, ... )
 	return res;
 }
 
-#define CLK_CFG_0           (INFRA_BASE + 0x0040)
-#define VENCPLL_CON0        (DDRPHY_BASE+0x800)
-#define MMPLL_CON0          (APMIXEDSYS_BASE + 0x0230)
-
 void _mali_osk_abort(void)
 {
-    int index;
-
 	/* make a simple fault by dereferencing a NULL pointer */
 	dump_stack();
-
-    for (index = 0; index < 5; index++)
-    {
-        MALI_DEBUG_PRINT(2, ("=== [MALI] PLL Dump %d ===\n", index));       
-        MALI_DEBUG_PRINT(2, ("CLK_CFG_0: 0x%08x\n", *((volatile unsigned int*)CLK_CFG_0)));
-        MALI_DEBUG_PRINT(2, ("VENCPLL_CON0: 0x%08x\n", *((volatile unsigned int*)VENCPLL_CON0)));
-        MALI_DEBUG_PRINT(2, ("MMPLL_CON0: 0x%08x\n", *((volatile unsigned int*)MMPLL_CON0)));
-
-        MALI_DEBUG_PRINT(2, ("=== [MALI] SMI Dump %d ===\n", index));
-        smi_dumpDebugMsg();
-
-        MALI_DEBUG_PRINT(2, ("=== [MALI] M4U Dump %d ===\n", index));
-        m4u_dump_debug_registers();
-    }
-
 	*(int *)0 = 0;
 }
 

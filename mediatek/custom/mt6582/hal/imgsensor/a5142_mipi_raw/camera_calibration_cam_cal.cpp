@@ -148,14 +148,6 @@ enum
 };
 //}CAM_CAL_MODULE_TYPE;
 
-/*
-typedef enum
-{
-    CAM_CAL_LAYOUT_PASS,    
-    CAM_CAL_LAYOUT_FAILED,
-    CAM_CAL_LAYOUT_QUEUE
-}CAM_CAL_LAYOUT_T;
-*/
 #else
 #define 	CALIBRATION_LAYOUT_SLIM_LSC1  0 //Legnacy module for 657x
 #define 	CALIBRATION_LAYOUT_N3D_DATA1 1 //N3D module for 658x
@@ -175,11 +167,6 @@ typedef enum // : MUINT32
 #define CAM_CAL_LAYOUT_RTN_QUEUE  0x2
 
 #endif
-/*
-#define CAL_DATA_SIZE_SLIM_LSC1_CC 	(0x290)//656
-#define CAL_DATA_SIZE_N3D_DATA1_CC	(0x1C84)
-#define CAL_DATA_SIZE_SUNNY_LSC1_CC   (0x290)//656 //SL 110317
-*/
 
 typedef struct
 {
@@ -199,9 +186,6 @@ typedef struct
 	CALIBRATION_ITEM_STRUCT CalItemTbl[CAMERA_CAM_CAL_DATA_LIST];
 } CALIBRATION_LAYOUT_STRUCT;
 
-/*
-//Const variable
-*/
 
 //static UINT8 gIsInitedCamCal = 0;//seanlin 121017 why static? Because cam_cal_drv will get data one block by one block instead of overall in one time.
 const MUINT8 CamCalPartNumber[24]={0x57,0x61,0x6E,0x70,0x65,0x69,0x20,0x4C,0x69,0x61,0x6E,0x67,
@@ -251,9 +235,6 @@ const CALIBRATION_LAYOUT_STRUCT CalLayoutTbl[MAX_CALIBRATION_LAYOUT_NUM]=
 	}	
 };
 
-/****************************************************************
-//Global variable
-****************************************************************/
 //static CAM_CAL_LAYOUT_T gIsInitedCamCal = CAM_CAL_LAYOUT_RTN_QUEUE;//seanlin 121017 why static? Because cam_cal_drv will get data one block by one block instead of overall in one time.
 static UINT16 LayoutType = (MAX_CALIBRATION_LAYOUT_NUM+1); //seanlin 121017 why static? Because cam_cal_drv will get data one block by one block instead of overall in one time.
 static bool bFirstLoad = TRUE;    
@@ -943,11 +924,6 @@ UINT32 DoCamCal3DGeo(INT32 CamcamFID, UINT32 start_addr, UINT32 BlockSize, UINT3
     return err;
 }
 
-/******************************************************************************
-*seanlin 121017, MT658x
-*In order to get data one block by one block instead of overall data in one time
-*It must extract FileID and LayoutType from CAM_CALGetCalData()
-*******************************************************************************/
 UINT32 DoCamCalLayoutCheck(void)
 {
     MINT32 lCamcamFID = -1;  //seanlin 121017 01 local for layout check
@@ -1024,9 +1000,6 @@ UINT32 DoCamCalLayoutCheck(void)
     return  result;
 }
 
-/******************************************************************************
-*
-*******************************************************************************/
 UINT32 CAM_CALGetCalData(UINT32* pGetSensorCalData)
 {	
     UCHAR cBuf[128] = "/dev/";	
@@ -1100,11 +1073,6 @@ UINT32 CAM_CALGetCalData(UINT32* pGetSensorCalData)
 }
 
 
-/******************************************************************************
-*seanlin 121017, MT658x
-*In order to get data one block by one block instead of overall data in one time
-*It must add reset function if destory in cam cal drv instance
-*******************************************************************************/
 UINT32 DoCamCalDataReset(INT32 CamcamFID, UINT32 start_addr, UINT32 BlockSize, UINT32* pGetSensorCalData)
 {
     gIsInitedCamCal = CAM_CAL_LAYOUT_RTN_QUEUE;//seanlin 121017 why static? Because cam_cal_drv will get data one block by one block instead of overall in one time.

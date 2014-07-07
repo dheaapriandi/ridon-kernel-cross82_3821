@@ -20,14 +20,6 @@ static unsigned long mtkpasr_pfn_start = 0;
 /* Set pageblock's mobility */
 extern void set_pageblock_mobility(struct page *page, int mobility);
 
-/* From dram_overclock.c */
-extern bool pasr_is_valid(void);
-/* To confirm PASR is valid */
-static inline bool could_do_mtkpasr(void)
-{
-	return pasr_is_valid();
-}
-
 /* 
  * We will set an offset on which active PASR will be imposed. 
  * This is done by setting those pages as MIGRATE_MTKPASR type.
@@ -41,11 +33,6 @@ void __meminit init_mtkpasr_range(struct zone *zone)
 	unsigned long pfn_bank_alignment;
 	unsigned long pfn;
 	struct page *page;
-
-	/* Check whether our platform supports PASR */
-	if (!could_do_mtkpasr()) {
-		return;
-	}
 
 	/* Indicate node */
 	pgdat = zone->zone_pgdat;
@@ -128,11 +115,6 @@ int __init compute_valid_pasr_range(unsigned long *start_pfn, unsigned long *end
 	int num_banks;
 	unsigned long rank_start_pfn, rank_end_pfn;
 	
-	/* Check whether our platform supports PASR */
-	if (!could_do_mtkpasr()) {
-		return -1;
-	}
-
 #ifdef CONFIG_HIGHMEM
 	/* We only focus on HIGHMEM zone */
 	zone = NODE_DATA(0)->node_zones + ZONE_HIGHMEM;
@@ -156,9 +138,6 @@ int __init compute_valid_pasr_range(unsigned long *start_pfn, unsigned long *end
 
 	/* Compute number of banks */
 	num_banks = (*end_pfn - *start_pfn)/pasrbank_pfns;
-	if (num_banks < 0) {
-		return -1;
-	}
 
 	/* Compute number of ranks */
 	*num_ranks = 0;

@@ -166,12 +166,15 @@ unsigned int osc_value = 0;
 #define DAT_TIMEOUT                      (HZ    * 5)   /* 1000ms x5 */
 #define CLK_TIMEOUT                      (HZ    * 5)  /* 5s    */ 
 #define POLLING_BUSY                     (HZ     * 3)
+
+#define SS_CORE_RING_TH           (3162)
+
 #ifdef MTK_SDIO30_ONLINE_TUNING_SUPPORT
-//#define OT_PERIOD           60000          /* 60s    */ 
+    #ifdef MTK_SDIO30_DETECT_THERMAL
 #define OT_PERIOD           (HZ    * 60)   /* 1000ms x60 */
-#define OT_RX_TIMEOUT       (HZ/10)        /* 100ms */
-#define OT_TIMEOUT          (HZ/50)           /* 20ms */
 #define OT_TEMPDIFF_BOUNDRY 10000          /* 10 degree */ /* trigger online tuning if temperature difference exceed this value */
+    #endif
+#define OT_TIMEOUT          (HZ/50)           /* 20ms */
 #define OT_BLK_SIZE         0x100
 #define OT_START_TUNEWND    3
 #endif // MTK_SDIO30_ONLINE_TUNING_SUPPORT
@@ -223,34 +226,6 @@ static unsigned int msdc_online_tuning(struct msdc_host   *host, unsigned fn, un
 #define PWR_MASK_EN_MASK                 (~(1 << 8))
 #define PWR_GPIO_L4_DIR_MASK             (~(1 << 11))
 
-/*
-#define MBR_START_ADDRESS_BYTE (0x660000)
-
-#define PART_NUM  20
-
-struct excel_info PartInfo[PART_NUM]={
-    {"preloader",262144,0x0,0},
-    {"dsp_bl",1966080,0x40000,0},
-    {"mbr",16384,0x220000,0},
-    {"ebr1",376832,0x224000,1},
-    {"pmt",4194304,0x280000,0},
-    {"nvram",3145728,0x680000,0},
-    {"seccfg",131072,0x980000,0},
-    {"uboot",393216,0x9a0000,0},
-    {"bootimg",6291456,0xa00000,0},
-    {"recovery",6291456,0x1000000,0},
-    {"sec_ro",6291456,0x1600000,5},
-    {"misc",393216,0x1c00000,0},
-    {"logo",3145728,0x1c60000,0},
-    {"expdb",655360,0x1f60000,0},
-    {"ebr2",16384,0x2000000,0},
-    {"android",537919488,0x2004000,6},
-    {"cache",537919488,0x22104000,2},
-    {"usrdata",537919488,0x42204000,3},
-    {"fat",0,0x62304000,4},
-    {"bmtpool",10485760,0xFFFF0050,0},
- };
-*/
 bool hwPowerOn_fpga(void){
     volatile u16 l_val;
     
@@ -394,8 +369,25 @@ static int msdc_rsp[] = {
 #define msdc_fifo_read32()   sdr_read32(MSDC_RXDATA)
 #define msdc_fifo_read8()    sdr_read8(MSDC_RXDATA)  
 
-#define msdc_dma_on()        sdr_clr_bits(MSDC_CFG, MSDC_CFG_PIO)
-#define msdc_dma_off()       sdr_set_bits(MSDC_CFG, MSDC_CFG_PIO)
+int dma_count = 0;
+int dma_count_off = 0;
+char prev_dma_on_func_name[256];
+char prev_dma_off_func_name[256];
+#define msdc_dma_on()        \
+        if(is_card_sdio(host)) { \
+            dma_count++;    \
+            dma_count_off = 0;   \
+            strcpy(prev_dma_on_func_name, __func__);  \
+        }   \
+        sdr_clr_bits(MSDC_CFG, MSDC_CFG_PIO)    
+
+#define msdc_dma_off()  \
+        if(is_card_sdio(host)) { \
+            dma_count = 0;    \
+            dma_count_off++;   \
+            strcpy(prev_dma_off_func_name, __func__);  \
+        }   \
+        sdr_set_bits(MSDC_CFG, MSDC_CFG_PIO)
 #define msdc_dma_status()    ((sdr_read32(MSDC_CFG) & MSDC_CFG_PIO) >> 3)
 
 u32 msdc_dump_padctl0(u32 id)
@@ -685,30 +677,6 @@ static void msdc_hw_compara_enable(int id)
 {  
     MSDC_POWER_DOMAIN power_domain;
     int msdc_en18io_sel;
-/*
-#ifdef MSDC_VIO28_MC1
-#define MSDC1_EN18IO_SEL_VAL  (0x1)
-#endif
-
-#ifdef MSDC_VIO18_MC1
-#define MSDC1_EN18IO_SEL_VAL  (0x1)
-#endif
-
-#ifdef MSDC_VMC
-#define MSDC1_EN18IO_SEL_VAL  (0x0)
-#endif
-#endif
-
-#ifdef MSDC_VIO28_MC2
-#define MSDC2_EN18IO_SEL1_VAL  (0x1)
-#endif
-#ifdef MSDC_VIO18_MC2
-#define MSDC2_EN18IO_SEL1_VAL  (0x1)
-#endif
-#ifdef MSDC_VGP6
-#define MSDC2_EN18IO_SEL1_VAL  (0x0)
-#endif
-*/
     switch(id){
         case 1:
             power_domain = MSDC_POWER_MC1;
@@ -739,10 +707,6 @@ static void msdc_hw_compara_enable(int id)
 #endif /* end of REMOVEED_FOR_MT6582 */
 
 #endif
-/*
- * for AHB read / write debug
- * return DMA status. 
- */
 int msdc_get_dma_status(int host_id)
 {
     int result = -1;
@@ -972,10 +936,6 @@ static u32 hclks[] = {12000001, 12000000, 12000000, 0};
 #else
 static u32 hclks[] = {200000000, 200000001, 197000000, 0};
 #endif
-/* VMCH is for T-card main power.
- * VMC for T-card when no emmc, for eMMC when has emmc. 
- * VGP for T-card when has emmc.
- */
 u32 g_msdc0_io     = 0;
 u32 g_msdc0_flash  = 0;
 u32 g_msdc1_io     = 0; 
@@ -1718,8 +1678,6 @@ static void msdc_reset_crc_tune_counter(struct msdc_host *host,TUNE_COUNTER inde
     }
 }
 
-extern void mmc_remove_card(struct mmc_card *card);
-
 static void msdc_set_bad_card_and_remove(struct msdc_host *host)
 {
     int got_polarity = 0;
@@ -1744,8 +1702,6 @@ static void msdc_set_bad_card_and_remove(struct msdc_host *host)
         spin_unlock_irqrestore(&host->remove_bad_card,flags);
         if(((host->hw->flags & MSDC_CD_PIN_EN) && (got_polarity ^ host->hw->cd_level)) || (!(host->hw->flags & MSDC_CD_PIN_EN)))
             tasklet_hi_schedule(&host->card_tasklet);
-
-        mmc_remove_card(host->mmc->card);
 
         ERR_MSG("Do remove the bad card, block_bad_card=%d, card_inserted=%d", host->block_bad_card, host->card_inserted);
     }
@@ -1794,6 +1750,9 @@ static void msdc_suspend_clock(struct msdc_host* host)
         msdc_clksrc_onoff(host, 0);
         N_MSG(CLK, "[%s]: msdc%d, successfully gate clock, clk_gate_count=%d\n", __func__, host->id, host->clk_gate_count);
     } else {
+        if (is_card_sdio(host))
+            host->error = -EBUSY;
+
         ERR_MSG("[%s]: msdc%d, the clock is still needed by host, clk_gate_count=%d\n", __func__, host->id, host->clk_gate_count);
     }
     spin_unlock_irqrestore(&host->clk_gate_lock, flags); 
@@ -2011,8 +1970,6 @@ static void msdc_tasklet_card(unsigned long arg)
 #ifdef MTK_SDIOAUTOK_SUPPORT
 extern void autok_claim_host(struct msdc_host *host);
 extern void autok_release_host(struct msdc_host *host);
-
-extern int mtk_wdt_swsysret_config(int bit,int set_value);
 #endif  // MTK_SDIOAUTOK_SUPPORT
 
 #ifdef MTK_SDIO30_ONLINE_TUNING_SUPPORT
@@ -2042,7 +1999,7 @@ static int ot_thread_func(void *data)
 		{
 			host->ot_work.chg_volt = 0;
 			atomic_set(&host->sdio_stopping, 0);
-			//mmc_release_host(host->mmc);
+			complete(&host->ot_work.ot_complete);
 			autok_release_host(host);
 			return -1;
 		}
@@ -2051,12 +2008,12 @@ static int ot_thread_func(void *data)
 
 	if(atomic_read(&host->ot_work.autok_done) == 0)
 	{
-		xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "[%s] auto-K have not done\n", __func__);
+		xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "[%s] auto-K haven't done\n", __func__);
 		if(chg_volt)
 		{
 			host->ot_work.chg_volt = 0;
 			atomic_set(&host->sdio_stopping, 0);
-			//mmc_release_host(host->mmc);
+			complete(&host->ot_work.ot_complete);
 			autok_release_host(host);
 			return -1;
 		}
@@ -2070,7 +2027,7 @@ static int ot_thread_func(void *data)
 		{
 		    host->ot_work.chg_volt = 0;
 			atomic_set(&host->sdio_stopping, 0);
-			//mmc_release_host(host->mmc);
+			complete(&host->ot_work.ot_complete);
 			autok_release_host(host);
 		}
         return -1;
@@ -2083,7 +2040,7 @@ static int ot_thread_func(void *data)
 		{
 		    host->ot_work.chg_volt = 0;
 			atomic_set(&host->sdio_stopping, 0);
-			//mmc_release_host(host->mmc);
+			complete(&host->ot_work.ot_complete);
 			autok_release_host(host);
 		}
         return -1;
@@ -2096,7 +2053,7 @@ static int ot_thread_func(void *data)
 		{
 			host->ot_work.chg_volt = 0;
 			atomic_set(&host->sdio_stopping, 0);
-			//mmc_release_host(host->mmc);
+			complete(&host->ot_work.ot_complete);
 			autok_release_host(host);
 			return -1;
 		}
@@ -2113,7 +2070,6 @@ static int ot_thread_func(void *data)
     }
 #else
     
-    //xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "[%s] chg_volt = %d \n", __func__, chg_volt);
   #ifdef MTK_SDIO30_DETECT_THERMAL
     if(chg_volt == 0)
     {
@@ -2124,9 +2080,9 @@ static int ot_thread_func(void *data)
     
         xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "[%s] cur_temperature = %d, host->pre_temper = %d\n", __func__, cur_temperature, host->pre_temper);
     
-        if(cur_temperature != -127000 && host->pre_temper != -127000 && abs(cur_temperature-host->pre_temper) > OT_TEMPDIFF_BOUNDRY) {
+        if((cur_temperature != -127000) && (host->pre_temper != -127000) && (abs(cur_temperature-host->pre_temper) > OT_TEMPDIFF_BOUNDRY)) {
             if((err = msdc_online_tuning(host, 1, 0x00B0)) != 0) {
-                //print err
+                //xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "[%s] msdc_online_tuning fail, err = %d\n", __func__, err);
             }
             host->pre_temper = cur_temperature;
         }
@@ -2136,7 +2092,7 @@ static int ot_thread_func(void *data)
     {
         xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "[%s] change volt\n", __func__);
         if((err = msdc_online_tuning(host, 1, 0x00B0)) != 0) {
-            //print err
+            //xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "[%s] msdc_online_tuning fail, err = %d\n", __func__, err);
         }
         xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "[%s] onine tuning done (change volt)\n", __func__);
         return 0;
@@ -2157,6 +2113,10 @@ static void start_online_tuning(unsigned long data)
     struct task_struct *task;
     
     task = kthread_run(&ot_thread_func,(void *)(&host->ot_work),"online tuning");
+    if (IS_ERR(task)) {
+        printk("[%s][SDIO_TEST_MODE] create thread fail, do online tuning directly\n", __func__);
+        ot_thread_func((void *)(&host->ot_work));
+    }
 }
 
 #endif // MTK_SDIO30_ONLINE_TUNING_SUPPORT
@@ -2190,6 +2150,31 @@ static void msdc_select_clksrc(struct msdc_host* host, int clksrc)
     host->hw->clk_src = clksrc;
 }
 
+void msdc_sdio_set_long_timing_delay_by_freq(struct msdc_host *host, u32 clock)
+{
+#ifdef MTK_SDIOAUTOK_SUPPORT
+    u32 base = host->base;
+    
+    if(clock >= 200000000){
+        sdr_set_field(MSDC_PATCH_BIT1, MSDC_PATCH_BIT1_WRDAT_CRCS, host->hw->wdatcrctactr_sdr200); 
+        sdr_set_field(MSDC_PATCH_BIT1, MSDC_PATCH_BIT1_CMD_RSP,    host->hw->cmdrtactr_sdr200);
+        sdr_set_field(MSDC_PATCH_BIT0, MSDC_INT_DAT_LATCH_CK_SEL,  host->hw->intdatlatcksel_sdr200);
+        host->saved_para.cmd_resp_ta_cntr = host->hw->cmdrtactr_sdr200;
+        host->saved_para.wrdat_crc_ta_cntr = host->hw->wdatcrctactr_sdr200;
+        host->saved_para.int_dat_latch_ck_sel = host->hw->intdatlatcksel_sdr200;
+    } else {
+        sdr_set_field(MSDC_PATCH_BIT1, MSDC_PATCH_BIT1_WRDAT_CRCS, host->hw->wdatcrctactr_sdr50); 
+        sdr_set_field(MSDC_PATCH_BIT1, MSDC_PATCH_BIT1_CMD_RSP,    host->hw->cmdrtactr_sdr50);
+        sdr_set_field(MSDC_PATCH_BIT0, MSDC_INT_DAT_LATCH_CK_SEL,  host->hw->intdatlatcksel_sdr50);
+        host->saved_para.cmd_resp_ta_cntr = host->hw->cmdrtactr_sdr50;
+        host->saved_para.wrdat_crc_ta_cntr = host->hw->wdatcrctactr_sdr50;
+        host->saved_para.int_dat_latch_ck_sel = host->hw->intdatlatcksel_sdr50;
+    }
+#else
+    return;
+#endif
+}
+
 volatile int sdio_autok_processed = 0;
 
 static void msdc_set_mclk(struct msdc_host *host, int ddr, u32 hz)
@@ -2217,7 +2202,10 @@ static void msdc_set_mclk(struct msdc_host *host, int ddr, u32 hz)
         return;
     }
     if(host->hw->host_function == MSDC_SDIO && hz >= 100*1000*1000 && sdio_autok_processed == 0)
+    {
         hz = 50*1000*1000;
+        msdc_sdio_set_long_timing_delay_by_freq(host, hz);
+    }
     printk("[%s] hz = %d\n", __func__, hz);
 
     if((host->hw->flags & MSDC_SDIO_IRQ) && (hz > 25000000)){
@@ -2436,6 +2424,7 @@ static void msdc_send_stop(struct msdc_host *host)
     err = msdc_do_command(host, &stop, 0, CMD_TIMEOUT);
 }
 
+extern void mmc_remove_card(struct mmc_card *card);
 extern void mmc_detach_bus(struct mmc_host *host);
 extern void mmc_power_off(struct mmc_host *host);
 
@@ -3036,10 +3025,6 @@ static void msdc_clksrc_onoff(struct msdc_host *host, u32 on)
     }
 }
 
-/*
-   register as callback function of WIFI(combo_sdio_register_pm) .    
-   can called by msdc_drv_suspend/resume too. 
-*/
 static void msdc_save_emmc_setting(struct msdc_host *host)
 {
     u32 base = host->base;
@@ -3156,6 +3141,8 @@ static void msdc_pm(pm_message_t state, void *data)
             host->mmc->pm_flags |= MMC_PM_IGNORE_PM_NOTIFY;  /* just for double confirm */       
             mmc_remove_host(host->mmc);
         }
+        
+        host->sdio_suspend = 1;
     } else if (evt == PM_EVENT_RESUME || evt == PM_EVENT_USER_RESUME) {
         if (!host->suspend){
             //ERR_MSG("warning: already resume");       
@@ -3169,6 +3156,7 @@ static void msdc_pm(pm_message_t state, void *data)
         }
         
         host->suspend = 0;
+        host->sdio_suspend = 0;
         host->pm_state = state;
         
         printk(KERN_ERR "msdc%d -> %s Resume",host->id,evt == PM_EVENT_RESUME ? "PM" : "USR");                
@@ -3756,9 +3744,6 @@ end:
     return cmd->error;
 }
     
-/* The abort condition when PIO read/write 
-   tmo: 
-*/
 static int msdc_pio_abort(struct msdc_host *host, struct mmc_data *data, unsigned long tmo)
 {
     int  ret = 0;     
@@ -3771,6 +3756,9 @@ static int msdc_pio_abort(struct msdc_host *host, struct mmc_data *data, unsigne
     if (time_after(jiffies, tmo)) {
         data->error = (unsigned int)-ETIMEDOUT;
         ERR_MSG("XXX PIO Data Timeout: CMD<%d>", host->mrq->cmd->opcode);
+        if(dma_count > 0) {
+            ERR_MSG("XXX dma turned on in func. [%s], dma_count = %d", prev_dma_on_func_name, dma_count);
+        }
         msdc_dump_info(host->id);          
         ret = 1;        
     }
@@ -3782,9 +3770,6 @@ static int msdc_pio_abort(struct msdc_host *host, struct mmc_data *data, unsigne
     return ret; 
 }
 
-/*
-   Need to add a timeout, or WDT timeout, system reboot.      
-*/
 // pio mode data read/write
 int msdc_pio_read(struct msdc_host *host, struct mmc_data *data)
 {
@@ -3840,7 +3825,7 @@ int msdc_pio_read(struct msdc_host *host, struct mmc_data *data)
             subpage = (left + sg->offset)%PAGE_SIZE;
             
             if(subpage!=0|| (sg->offset!=0))
-                N_MSG(OPS, "msdc0: This read size or start not align %x,%x, hmpage %x",subpage,left,(unsigned int)hmpage);
+                N_MSG(OPS, "msdc0: This read size or start not align %x,%x, hmpage %x\n",subpage,left,(unsigned int)hmpage);
             
             
             for(i=0;i< totalpages;i++)
@@ -3850,12 +3835,12 @@ int msdc_pio_read(struct msdc_host *host, struct mmc_data *data)
                 {
                     if((kaddr[i]-kaddr[i-1])!=PAGE_SIZE)
                     {
-                        //printk(KERN_ERR "msdc0: kmap not continous %x %x %x \n",left,kaddr[i],kaddr[i-1]);
-                        flag =1;
+                    //printk(KERN_ERR "msdc0: kmap not continous %x %x %x \n",left,kaddr[i],kaddr[i-1]);
+                    flag =1;
                     }
                 }
-                if(!kaddr[i])
-                    ERR_MSG("msdc0:kmap failed %x", kaddr[i]);
+                if((u32 *)kaddr[i]==NULL)
+                ERR_MSG("msdc0:kmap failed %x\n", kaddr[i]);
             
             }
             
@@ -3863,7 +3848,7 @@ int msdc_pio_read(struct msdc_host *host, struct mmc_data *data)
             ptr = sg_virt(sg);
             
             if(ptr==NULL)
-                ERR_MSG("msdc0:sg_virt %x", ptr);
+                ERR_MSG("msdc0:sg_virt %x\n", ptr);
             
             
             if (flag==1)  // High memory and more than 1 va address va and  not continous
@@ -3871,12 +3856,12 @@ int msdc_pio_read(struct msdc_host *host, struct mmc_data *data)
                 for(i=0;i<totalpages;i++)
                 {              
                     left = PAGE_SIZE;
-                    ptr = (u32*)kaddr[i];
+                    ptr = (u32 *)kaddr[i];
                     
                     if(i==0)
                     {
                         left = PAGE_SIZE-sg->offset;
-                        ptr = (u32*)(kaddr[i]+sg->offset);
+                        ptr = (u32 *)kaddr[i] + sg->offset;
                     }
                     if(subpage!=0&&(i==(totalpages-1)))
                     {
@@ -3886,11 +3871,11 @@ int msdc_pio_read(struct msdc_host *host, struct mmc_data *data)
                     
                     while (left) {
                         if ((left >=  MSDC_FIFO_THD) && (msdc_rxfifocnt() >= MSDC_FIFO_THD)) {
-                            count = MSDC_FIFO_THD >> 2;
-                            do {
-                                *ptr++ = msdc_fifo_read32();
-                            } while (--count);
-                            left -= MSDC_FIFO_THD;
+                        count = MSDC_FIFO_THD >> 2;
+                        do {
+                            *ptr++ = msdc_fifo_read32();
+                        } while (--count);
+                        left -= MSDC_FIFO_THD;
                         } else if ((left < MSDC_FIFO_THD) && msdc_rxfifocnt() >= left) {
                             while (left > 3) {
                                 *ptr++ = msdc_fifo_read32();
@@ -3901,24 +3886,6 @@ int msdc_pio_read(struct msdc_host *host, struct mmc_data *data)
                             while(left) {
                                 * u8ptr++ = msdc_fifo_read8();
                                 left--;       
-                            }
-                        }else {
-                            ints = sdr_read32(MSDC_INT);
-
-                            if ((ints & MSDC_INT_DATCRCERR) || (ints & MSDC_INT_DATTMO)) {
-                                if (ints & MSDC_INT_DATCRCERR){
-                                    ERR_MSG("[msdc%d] DAT CRC error (0x%x), Left DAT: %d bytes\n",  host->id, ints, left);
-                                    data->error = (unsigned int)-EIO;
-                                }
-                                if (ints & MSDC_INT_DATTMO){
-                                    ERR_MSG("[msdc%d] DAT TMO error (0x%x), Left DAT: %d bytes\n",  host->id, ints, left);
-                                    data->error = (unsigned int)-ETIMEDOUT;
-                                }
-
-                                msdc_dump_info(host->id);
-                                sdr_write32(MSDC_INT, ints);
-                                msdc_reset_hw(host->id);
-                                goto end;
                             }
                         }
                         
@@ -3948,24 +3915,21 @@ int msdc_pio_read(struct msdc_host *host, struct mmc_data *data)
                     * u8ptr++ = msdc_fifo_read8();
                     left--;       
                 }
-            }else {
+            } else if (is_card_sdio(host)) {
                 ints = sdr_read32(MSDC_INT);
+                ints &= wints;
 
                 if ((ints & MSDC_INT_DATCRCERR) || (ints & MSDC_INT_DATTMO)) {
-                    if (ints & MSDC_INT_DATCRCERR){
-                        ERR_MSG("[msdc%d] DAT CRC error (0x%x), Left DAT: %d bytes\n",  host->id, ints, left);
-                        data->error = (unsigned int)-EIO;
-                   }
-                   if (ints & MSDC_INT_DATTMO){
-                        ERR_MSG("[msdc%d] DAT TMO error (0x%x), Left DAT: %d bytes\n",  host->id, ints, left);
-                        data->error = (unsigned int)-ETIMEDOUT;
-                   }
+                    sdr_write32(MSDC_INT, ints);
 
-                   msdc_dump_info(host->id);
-                   sdr_write32(MSDC_INT, ints);
-                   msdc_reset_hw(host->id);
-                   goto end;
-               }
+                    if (ints & MSDC_INT_DATCRCERR)
+                        data->error = (unsigned int)-EIO;
+                    if (ints & MSDC_INT_DATTMO)
+                        data->error = (unsigned int)-ETIMEDOUT;
+                        
+                    msdc_reset_hw(host->id);
+                    goto end;
+                }
             }
             
             if (msdc_pio_abort(host, data, tmo)) {
@@ -3981,8 +3945,7 @@ int msdc_pio_read(struct msdc_host *host, struct mmc_data *data)
             hmpage = NULL;
         }
         size += sg_dma_len(sg);
-        sg = sg_next(sg); 
-        num--;
+        sg = sg_next(sg); num--;
     }
 end:
     if(hmpage !=NULL)
@@ -4005,10 +3968,6 @@ end:
     return data->error;
 }
 
-/* please make sure won't using PIO when size >= 512 
-   which means, memory card block read/write won't using pio
-   then don't need to handle the CMD12 when data error. 
-*/
 int msdc_pio_write(struct msdc_host* host, struct mmc_data *data)
 {
     u32  base = host->base;
@@ -4081,7 +4040,7 @@ int msdc_pio_write(struct msdc_host* host, struct mmc_data *data)
                     flag =1;    
                     }
                 }
-                if(!kaddr[i])
+                if((u32 *)kaddr[i]==NULL)
                     ERR_MSG("msdc0:kmap failed %x\n", kaddr[i]);
             }
             
@@ -4098,12 +4057,12 @@ int msdc_pio_write(struct msdc_host* host, struct mmc_data *data)
                 {
                 
                     left = PAGE_SIZE;
-                    ptr = (u32*)kaddr[i];
+                    ptr = (u32 *)kaddr[i];
                     
                     if(i==0)
                     {
                         left = PAGE_SIZE-sg->offset;
-                        ptr = (u32*)(kaddr[i]+sg->offset);
+                        ptr = (u32 *)kaddr[i]+sg->offset;
                     }
                     if (subpage!=0 && (i==(totalpages-1)))
                     {
@@ -4127,26 +4086,7 @@ int msdc_pio_write(struct msdc_host* host, struct mmc_data *data)
                                 msdc_fifo_write8(*u8ptr);    u8ptr++;
                                 left--;
                             }
-                        } else {
-                            ints = sdr_read32(MSDC_INT);
-
-                            if ((ints & MSDC_INT_DATCRCERR) || (ints & MSDC_INT_DATTMO)) {
-                                if (ints & MSDC_INT_DATCRCERR){
-                                    ERR_MSG("[msdc%d] DAT CRC error (0x%x), Left DAT: %d bytes\n",  host->id, ints, left);
-                                    data->error = (unsigned int)-EIO;
-                                }
-                                if (ints & MSDC_INT_DATTMO){
-                                    ERR_MSG("[msdc%d] DAT TMO error (0x%x), Left DAT: %d bytes\n",  host->id, ints, left);
-                                    data->error = (unsigned int)-ETIMEDOUT;
-                                }
-
-                                msdc_dump_info(host->id);
-                                sdr_write32(MSDC_INT, ints);
-                                msdc_reset_hw(host->id);
-                                goto end;
-                            }
                         }
-                        
                         if (msdc_pio_abort(host, data, tmo)) {
                             goto end;     
                         }                   
@@ -4172,24 +4112,6 @@ int msdc_pio_write(struct msdc_host* host, struct mmc_data *data)
                   msdc_fifo_write8(*u8ptr);  u8ptr++;
                   left--;
                }
-           }else {
-                ints = sdr_read32(MSDC_INT);
-
-                if ((ints & MSDC_INT_DATCRCERR) || (ints & MSDC_INT_DATTMO)) {
-                    if (ints & MSDC_INT_DATCRCERR){
-                        ERR_MSG("[msdc%d] DAT CRC error (0x%x), Left DAT: %d bytes\n",  host->id, ints, left);
-                        data->error = (unsigned int)-EIO;
-                   }
-                   if (ints & MSDC_INT_DATTMO){
-                        ERR_MSG("[msdc%d] DAT TMO error (0x%x), Left DAT: %d bytes\n",  host->id, ints, left);
-                        data->error = (unsigned int)-ETIMEDOUT;
-                   }
-
-                   msdc_dump_info(host->id);
-                   sdr_write32(MSDC_INT, ints);
-                   msdc_reset_hw(host->id);
-                   goto end;
-               }
            }
             
            if (msdc_pio_abort(host, data, tmo)) {
@@ -4205,8 +4127,7 @@ int msdc_pio_write(struct msdc_host* host, struct mmc_data *data)
         
         }
         size += sg_dma_len(sg);
-        sg = sg_next(sg);
-        num--;
+        sg = sg_next(sg); num--;
     }
 end:    
     if(hmpage !=NULL)
@@ -4881,20 +4802,6 @@ static unsigned int ot_init(struct msdc_host *host, struct ot_data *potData)
     potData->cmdrdly = potData->orig_cmdrdly;
     xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "cmd delay = 0x%x\n", potData->orig_cmdrdly);
     
-    rxdly0 = sdr_read32(MSDC_DAT_RDDLY0);
-    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "DAT read delay line 0 = 0x%x\n", rxdly0);
-    if (potData->eco_ver >= 4) {
-        potData->orig_dat0rddly = (rxdly0 >> 24) & 0x1F;
-        potData->orig_dat1rddly = (rxdly0 >> 16) & 0x1F;
-        potData->orig_dat2rddly = (rxdly0 >>  8) & 0x1F;
-        potData->orig_dat3rddly = (rxdly0 >>  0) & 0x1F;
-    } else {   
-        potData->orig_dat0rddly = (rxdly0 >>  0) & 0x1F;
-        potData->orig_dat1rddly = (rxdly0 >>  8) & 0x1F;
-        potData->orig_dat2rddly = (rxdly0 >> 16) & 0x1F;
-        potData->orig_dat3rddly = (rxdly0 >> 24) & 0x1F;
-    }
-
     if(potData->orig_ddlsel == 0)
     {
         sdr_get_field(MSDC_PAD_TUNE, MSDC_PAD_TUNE_DATRRDLY, potData->orig_paddatrddly);    // Get read delay
@@ -4906,6 +4813,21 @@ static unsigned int ot_init(struct msdc_host *host, struct ot_data *potData)
     }
     else
     {
+        rxdly0 = sdr_read32(MSDC_DAT_RDDLY0);
+        xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "DAT read delay line 0 = 0x%x\n", rxdly0);
+        
+        if (potData->eco_ver >= 4) {
+            potData->orig_dat0rddly = (rxdly0 >> 24) & 0x1F;
+            potData->orig_dat1rddly = (rxdly0 >> 16) & 0x1F;
+            potData->orig_dat2rddly = (rxdly0 >>  8) & 0x1F;
+            potData->orig_dat3rddly = (rxdly0 >>  0) & 0x1F;
+        } else {   
+            potData->orig_dat0rddly = (rxdly0 >>  0) & 0x1F;
+            potData->orig_dat1rddly = (rxdly0 >>  8) & 0x1F;
+            potData->orig_dat2rddly = (rxdly0 >> 16) & 0x1F;
+            potData->orig_dat3rddly = (rxdly0 >> 24) & 0x1F;
+        }
+        
         potData->dat0rddly = potData->orig_dat0rddly;
         potData->dat1rddly = potData->orig_dat1rddly;
         potData->dat2rddly = potData->orig_dat2rddly;
@@ -4948,9 +4870,13 @@ static unsigned int ot_deinit(struct msdc_host *host, struct ot_data otData)
     
     /* Set original DMA status */
     if(otData.orig_dma == DMA_ON)
+    {
         msdc_dma_on();
+    }
     else if(otData.orig_dma == DMA_OFF)
+    {
         msdc_dma_off();
+    }
     
     return 0;
 }
@@ -4961,6 +4887,10 @@ static int ot_adjust_tunewnd(struct msdc_host *host, u32 *fTestedGear, u32 *tune
 
     if(*fTestedGear == 0xFFFFFFFF)
     {
+        *fTestedGear = 0;
+#if 1
+        return -1;
+#else
         *tuneWnd = *tuneWnd - 1;
 
         /* Set gear window size */
@@ -4973,8 +4903,7 @@ static int ot_adjust_tunewnd(struct msdc_host *host, u32 *fTestedGear, u32 *tune
 
         *CRCPass = 0xFFFFFFFF >> (32 - (2 * (*tuneWnd) + 1));
         //xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "CRCPass = %d\n", *CRCPass);
-
-        *fTestedGear = 0;
+#endif
     }
 
 	return 0;
@@ -5002,12 +4931,11 @@ static int ot_process(struct msdc_host *host, struct ot_data *potData, u32 rawcm
         rawarg |= 1 << 31;
     }
 
-    //xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "enter command start, rw = %d, rawcmd = 0x%x, rawarg = 0x%x\n", rw, rawcmd, rawarg);
+    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "enter command start, rw = %d, rawcmd = 0x%x, rawarg = 0x%x\n", rw, rawcmd, rawarg);
     if (ot_do_command(host, rawcmd, rawarg, &intsts) != 0) {
         xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "command start fail, err = %d\n", host->cmd->error);
-        xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "command = 0x%x, arg = 0x%x\n", rawcmd, rawarg);
         ret = host->cmd->error;
-
+#if 0
         if(ret == (unsigned int)-ETIMEDOUT)
         {
             int ret1 = 0;
@@ -5020,10 +4948,9 @@ static int ot_process(struct msdc_host *host, struct ot_data *potData, u32 rawcm
                 if((CRCStatus_CMD != CRCPass) && (potData->cmddlypass == 0))
                 {
                     /* Reset delay gear */
-                    potData->cmdrdly = (potData->cmdrdly + 1) & 0x1F;
+                    potData->cmdrdly = ot_find_next_gear(CRCStatus_CMD, potData->tune_wind_size, potData->cmdrdly, &potData->fCmdTestedGear);
                     sdr_set_field(MSDC_PAD_TUNE, MSDC_PAD_TUNE_CMDRDLY, potData->cmdrdly);    // Set cmd delay
-                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) cmd delay = %d \n", potData->cmdrdly);
-                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) CRCStatus_CMD = 0x%x \n", CRCStatus_CMD);
+                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) CRCStatus_CMD = 0x%x, next cmd delay = %d \n", CRCStatus_CMD, potData->cmdrdly);
                 }
                 
                 reset = 0;
@@ -5032,49 +4959,47 @@ static int ot_process(struct msdc_host *host, struct ot_data *potData, u32 rawcm
                 {
                     /* Reset delay gear */
                     if(potData->orig_ddlsel == 1)
-                        potData->dat0rddly = (potData->dat0rddly + 1) & 0x1F;
+                        potData->dat0rddly = ot_find_next_gear(host->cmd->resp[0], potData->tune_wind_size, potData->dat0rddly, &potData->fDat0TestedGear);
                     reset++;
-                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) dat0 delay = %d \n", potData->dat0rddly);
-                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) host->cmd->resp[0] = 0x%x \n", host->cmd->resp[0]);
+                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) host->cmd->resp[0] = 0x%x, next dat0 delay = %d \n", host->cmd->resp[0], potData->dat0rddly);
                 }
                 
                 if((host->cmd->resp[1] != CRCPass) && (potData->dat1rddlypass == 0))
                 {
                     /* Reset delay gear */
                     if(potData->orig_ddlsel == 1)
-                        potData->dat1rddly = (potData->dat1rddly + 1) & 0x1F;
+                        potData->dat1rddly = ot_find_next_gear(host->cmd->resp[1], potData->tune_wind_size, potData->dat1rddly, &potData->fDat1TestedGear);
                     reset++;
-                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) dat1 delay = %d \n", potData->dat1rddly);
-                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) host->cmd->resp[1] = 0x%x \n", host->cmd->resp[1]);
+                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) host->cmd->resp[1] = 0x%x, next dat1 delay = %d \n", host->cmd->resp[1], potData->dat1rddly);
                 }
                 
                 if((host->cmd->resp[2] != CRCPass) && (potData->dat2rddlypass == 0))
                 {
                     /* Reset delay gear */
                     if(potData->orig_ddlsel == 1)
-                        potData->dat2rddly = (potData->dat2rddly + 1) & 0x1F;
+                        potData->dat2rddly = ot_find_next_gear(host->cmd->resp[2], potData->tune_wind_size, potData->dat2rddly, &potData->fDat2TestedGear);
                     reset++;
-                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) dat2 delay = %d \n", potData->dat2rddly);
-                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) host->cmd->resp[2] = 0x%x \n", host->cmd->resp[2]);
+                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) host->cmd->resp[2] = 0x%x, next dat2 delay = %d \n", host->cmd->resp[2], potData->dat2rddly);
                 }
                 
                 if((host->cmd->resp[3] != CRCPass) && (potData->dat3rddlypass == 0))
                 {
                     /* Reset delay gear */
                     if(potData->orig_ddlsel == 1)
-                        potData->dat3rddly = (potData->dat3rddly + 1) & 0x1F;
+                        potData->dat3rddly = ot_find_next_gear(host->cmd->resp[3], potData->tune_wind_size, potData->dat3rddly, &potData->fDat3TestedGear);
                     reset++;
-                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) dat3 delay = %d \n", potData->dat3rddly);
-                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) host->cmd->resp[3] = 0x%x \n", host->cmd->resp[3]);
+                    xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "(TMO) host->cmd->resp[3] = 0x%x, next dat3 delay = %d \n", host->cmd->resp[3], potData->dat3rddly);
                 }
                 
                 if(reset) {
                     if(potData->orig_ddlsel == 0)
                     {
-                        potData->dat0rddly = (potData->dat0rddly + 1) & 0x1F;
-                        potData->dat1rddly = (potData->dat1rddly + 1) & 0x1F;
-                        potData->dat2rddly = (potData->dat2rddly + 1) & 0x1F;
-                        potData->dat3rddly = (potData->dat3rddly + 1) & 0x1F;
+                        u32 crcsts = (host->cmd->resp[0] & host->cmd->resp[1] & host->cmd->resp[2] & host->cmd->resp[3]);
+                        u32 datrddly = ot_find_next_gear(crcsts, potData->tune_wind_size, potData->dat0rddly, &potData->fDatTestedGear);
+                        potData->dat0rddly = datrddly;
+                        potData->dat1rddly = datrddly;
+                        potData->dat2rddly = datrddly;
+                        potData->dat3rddly = datrddly;
                     }
                     /* Reset delay gear */
                     if (potData->eco_ver >= 4) {
@@ -5085,11 +5010,12 @@ static int ot_process(struct msdc_host *host, struct ot_data *potData, u32 rawcm
                     sdr_write32(MSDC_DAT_RDDLY0, rxdly0);
                 }
 
-                xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "goto _end (TMO) \n");
-                potData->retry = 0;
-				return -1;
+                xlog_printk(ANDROID_LOG_DEBUG, "SDIO_TEST_MODE", "goto _retry (TMO) \n");
+                potData->retry = 1;
+                return 0;
             }
         }
+#endif
         return ret;
     }
     
@@ -5241,7 +5167,6 @@ static unsigned int msdc_online_tuning(struct msdc_host *host, unsigned fn, unsi
     /* Claim host */
     if(host->ot_work.chg_volt == 0)
     {
-        //mmc_claim_host(mmc);
         autok_claim_host(host);
     }
     
@@ -5392,7 +5317,7 @@ out:
     /* release host */
     host->ot_work.chg_volt = 0;
     atomic_set(&host->sdio_stopping, 0);
-    //mmc_release_host(mmc);
+    complete(&host->ot_work.ot_complete);
     autok_release_host(host);
     
     atomic_set(&host->ot_done, 1);
@@ -5413,7 +5338,7 @@ static int msdc_do_request(struct mmc_host*mmc, struct mmc_request*mrq)
 {
     struct msdc_host *host = mmc_priv(mmc);
     struct mmc_command *cmd;
-    struct mmc_data *data;    
+    struct mmc_data *data = NULL;    
     u32 l_autocmd23_is_set = 0;
 #ifdef MTK_MSDC_USE_CMD23 
     u32 l_card_no_cmd23 = 0;
@@ -5426,7 +5351,12 @@ static int msdc_do_request(struct mmc_host*mmc, struct mmc_request*mrq)
     unsigned long pio_tmo;
 #define SND_DAT 0
 #define SND_CMD 1
-    
+
+    if (is_card_sdio(host) && host->sdio_suspend) {
+        mrq->cmd->error = -EHOSTDOWN;
+        goto done;
+    }
+
     if (is_card_sdio(host) || (host->hw->flags & MSDC_SDIO_IRQ)) {
         mb();
         if (host->saved_para.hz)
@@ -5621,6 +5551,9 @@ static int msdc_do_request(struct mmc_host*mmc, struct mmc_request*mrq)
             spin_unlock(&host->lock);
             if(!wait_for_completion_timeout(&host->xfer_done, DAT_TIMEOUT)){
                 ERR_MSG("XXX CMD<%d> ARG<0x%x> wait xfer_done<%d> timeout!!", cmd->opcode, cmd->arg,data->blocks * data->blksz);
+                if(dma_count_off > 0) {
+                    ERR_MSG("XXX dma turned off in func. [%s], dma_count_off = %d", prev_dma_off_func_name, dma_count_off);
+                }
             
                 host->sw_timeout++;
                 if (unlikely(dumpMSDC()))
@@ -5641,6 +5574,10 @@ static int msdc_do_request(struct mmc_host*mmc, struct mmc_request*mrq)
             if (unlikely(dumpMSDC()))
                 AddStorageTrace(STORAGE_LOGGER_MSG_MSDC_DO,msdc_do_request,"msdc_dma_stop"); 
         } else {
+            /* Turn off dma */
+            if(is_card_sdio(host))
+                msdc_dma_off();
+
             /* Firstly: send command */
             host->autocmd &= ~MSDC_AUTOCMD12;  /* need ask the designer, how about autocmd12 or autocmd23 with pio mode */
 
@@ -6903,6 +6840,17 @@ static void msdc_dump_trans_error(struct msdc_host   *host,
         ERR_MSG("XXX SBC<%d><0x%x> Error<%d> Resp<0x%x>", sbc->opcode, sbc->arg, sbc->error, sbc->resp[0]);                            
     }
 
+#ifdef MTK_SDIO30_ONLINE_TUNING_SUPPORT    
+    if((host->hw->host_function == MSDC_SDIO) && 
+        ((cmd->error == -EIO) || (data->error == -EIO)))
+    {
+        u32 vcore_uv = autok_get_current_vcore_offset();
+        int cur_temperature = mtk_thermal_get_temp(MTK_THERMAL_SENSOR_CPU);
+        
+        ERR_MSG("XXX Vcore<0x%x> CPU_Temperature<%d> OSC_RING<0x%x>", vcore_uv, cur_temperature, osc_value);
+    }
+#endif
+
     if((host->hw->host_function == MSDC_SD) && 
             (host->sclk > 100000000) && 
             (data) &&
@@ -7058,6 +7006,10 @@ static void msdc_ops_request_legacy(struct mmc_host *mmc, struct mmc_request *mr
                 goto out;
             }
         } 
+
+        if ( cmd->error == (unsigned int)-ENOMEDIUM ) {
+            goto out;
+        }
 
         // [ALPS114710] Patch for data timeout issue.
         if (data && (data->error == (unsigned int)-ETIMEDOUT)) {  
@@ -7342,6 +7294,10 @@ static void msdc_tune_async_request(struct mmc_host *mmc, struct mmc_request *mr
                 goto out;
             }
         } 
+
+        if ( cmd->error == (unsigned int)-ENOMEDIUM ) {
+            goto out;
+        }
 
         // [ALPS114710] Patch for data timeout issue.
         if (data && (data->error == (unsigned int)-ETIMEDOUT)) {  
@@ -7917,15 +7873,6 @@ out:
     return err;
 }
 
-/*                          mmc_pre_req()                                                                                     __mmc_start_req()
- *                              | |                                                                                                  | |
- * async way: mmc_start_req() ->  __mmc_start_req() -> mmc_start_request() -> request() -> mmc_wait_for_req_done() -> msdc_ops_stop()  -> mmc_post_req()
- * legacy way: mmc_wait_for_req() -> __mmc_start_req -> mmc_start_request() -> request() 
- * msdc_send_stop() just for async way. for when to trigger stop cmd(arg=0):
- * 1 aysnc way but used pio mode will call msdc_ops_request_legacy(), and pio mode will disable autocmd12, so cmd12 will send in msdc_do_request() 
- * 2 aysnc way with non-cmd23 mode: if host not used autocmd12, sw need send cmd12 after mrq->completion(polling under mmc_core.c) is done 
- * 3 aysnc way with cmd23 mode: no need to send cmd12 here 
- * sd card will not enable cmd23 */
 static void msdc_ops_stop(struct mmc_host *mmc,struct mmc_request *mrq)
 {
     //struct mmc_command stop = {0};    
@@ -8502,7 +8449,11 @@ static void msdc_init_hw(struct msdc_host *host)
     host->saved_para.ddly0 = cur_rxdly0; //sdr_read32(MSDC_DAT_RDDLY0);
     host->saved_para.ddly1 = cur_rxdly1; //sdr_read32(MSDC_DAT_RDDLY1);
     sdr_get_field(MSDC_PATCH_BIT1, MSDC_PATCH_BIT1_CMD_RSP,    host->saved_para.cmd_resp_ta_cntr);
-    sdr_get_field(MSDC_PATCH_BIT1, MSDC_PATCH_BIT1_WRDAT_CRCS, host->saved_para.wrdat_crc_ta_cntr);     
+    sdr_get_field(MSDC_PATCH_BIT1, MSDC_PATCH_BIT1_WRDAT_CRCS, host->saved_para.wrdat_crc_ta_cntr);
+    
+    if(is_card_sdio(host)) {
+        msdc_sdio_set_long_timing_delay_by_freq(host, 50*1000*1000);     
+    }
 
     /* for write: 3T need wait before host check busy after crc status 
      * for write: host check timeout change to 16T */
@@ -8861,8 +8812,6 @@ static void msdc_set_host_power_control(struct msdc_host *host)
 #endif /* end of FPGA_PLATFORM */
 
 #if (0 == REMOVEED_FOR_MT6582)
-/* cause every module have it bus ID under MT6582, no need share bus with others, 
-   so mask the callback function */
 static void msdc_check_mpu_voilation(u32 addr,int wr_vio)
 {
     int index = 0;
@@ -8947,19 +8896,6 @@ void SRC_trigger_signal(int i_on)
 EXPORT_SYMBOL(SRC_trigger_signal);
 
 #ifdef MTK_SDIOAUTOK_SUPPORT
-/*************************************************************************
-* FUNCTION
-*  sdio_stop_transfer
-*
-* DESCRIPTION
-*  This function for DVFS, stop SDIO transfer and wait for transfer complete
-*
-* PARAMETERS
-*
-* RETURN VALUES
-*    0: transfer complete
-*    <0: error code
-*************************************************************************/
 
 //static DEFINE_SPINLOCK(mt_sdio_stop_lock);
 static int count = 0;
@@ -8970,8 +8906,6 @@ int sdio_stop_transfer(void)
 //    unsigned long flags;
     //printk("[%s] Enter\n", __func__);
 	
-	count++;
-    
     for(hostidx = 0; hostidx < HOST_MAX_NUM; hostidx++)
     {
         if(mtk_msdc_host[hostidx]==NULL)
@@ -8986,7 +8920,7 @@ int sdio_stop_transfer(void)
             while(1)
             {
                 if (atomic_read(&host->ot_done)) {
-                    printk("[%s] msdc%d online tuning done, host->ot_work.chg_volt = %d\n", __func__, host->id, host->ot_work.chg_volt);	
+                    printk("[%s] msdc%d prev. online tuning done, host->ot_work.chg_volt = %d\n", __func__, host->id, host->ot_work.chg_volt);	
                     break;
                 }
                 
@@ -8996,21 +8930,22 @@ int sdio_stop_transfer(void)
             if(atomic_read(&host->sdio_stopping))
             {
                 printk("[%s] msdc%d sdio stopping\n", __func__, host->id);
-                return -1;
+                wait_for_completion_interruptible(&host->ot_work.ot_complete);
+                //return -1;
             }
 #ifdef MTK_SDIO30_ONLINE_TUNING_SUPPORT	
 			else if(atomic_read(&host->ot_done) == 0)
 			{
 				printk("[%s] msdc%d online tuning is working\n", __func__, host->id);
-				return -1;
+				wait_for_completion_interruptible(&host->ot_work.ot_complete);
+				//return -1;
 			}
 #endif
-            else
+            //else
             {
                 atomic_set(&host->sdio_stopping, 1);
-                //mmc_claim_host(host->mmc);
                 autok_claim_host(host);
-                //printk("[%s] msdc%d host claimed\n", __func__, host->id);
+                count++;
             }
         }
     }
@@ -9021,21 +8956,8 @@ int sdio_stop_transfer(void)
 }
 EXPORT_SYMBOL(sdio_stop_transfer);
 
-/*************************************************************************
-* FUNCTION
-*  sdio_start_ot_transfer
-*
-* DESCRIPTION
-*  This function for DVFS, start online tuning and start SDIO transfer
-*
-* PARAMETERS
-*    voltage: The voltage that DVFS changes to
-*
-* RETURN VALUES
-*    0: success
-*    <0: error code
-*************************************************************************/
-
+extern unsigned int mt65x2_vcore_tbl[];
+extern unsigned int msdc_autok_get_vcore(unsigned int vcore_uv, unsigned int *pfIdentical);
 int sdio_start_ot_transfer(void)
 {
     int hostidx = 0;
@@ -9055,15 +8977,29 @@ int sdio_start_ot_transfer(void)
         {
             struct msdc_host *host = mtk_msdc_host[hostidx];
 #ifdef MTK_SDIO30_ONLINE_TUNING_SUPPORT
-			host->ot_work.chg_volt = 1;
-			start_online_tuning((unsigned long)host);
+            u32 vcore_uv_off, vcore_sel, vcore_uv, fIdent = 0;
+            static u32 prev_vcore_sel = 0;
+            
+            printk("[%s] msdc%d Check vcore\n", __func__, host->id);
+            
+            vcore_uv_off = autok_get_current_vcore_offset();
+            vcore_uv = mt65x2_vcore_tbl[vcore_uv_off];
+            vcore_sel = msdc_autok_get_vcore(vcore_uv, &fIdent);
+            if(vcore_sel == prev_vcore_sel) {
+                atomic_set(&host->sdio_stopping, 0);
+                complete(&host->ot_work.ot_complete);
+                autok_release_host(host);
+                continue;
+            } else {
+                prev_vcore_sel = vcore_sel;
+    			host->ot_work.chg_volt = 1;
+ 			    init_completion(&host->ot_work.ot_complete);
+    			start_online_tuning((unsigned long)host);
+    		}
 #else
-            //printk("[%s] msdc%d release host, host->mmc = 0x%x, host->sdio_stopping = %d (1)\n", __func__, host->id, host->mmc, atomic_read(&host->sdio_stopping));
             atomic_set(&host->sdio_stopping, 0);
-            //mmc_release_host(host->mmc);
+            complete(&host->ot_work.ot_complete);
             autok_release_host(host);
-            //printk("[%s] msdc%d host released\n", __func__, host->id);
-			//printk("[%s] msdc%d host->sdio_stopping = %d (0)\n", __func__, host->id, atomic_read(&host->sdio_stopping));
 #endif  // MTK_SDIO30_ONLINE_TUNING_SUPPORT
         }
     }
@@ -9074,32 +9010,35 @@ EXPORT_SYMBOL(sdio_start_ot_transfer);
 
 #endif  // MTK_SDIOAUTOK_SUPPORT
 
-/*************************************************************************
-* FUNCTION
-*  sdio_get_rings
-*
-* DESCRIPTION
-*  This function for AUTOK, return io ring value
-*
-* PARAMETERS
-*  *io_ring: return io_ring value
-*  *core_ring: return core_ring value
-* RETURN VALUES
-*  0
-*************************************************************************/
 unsigned int sdio_get_rings(unsigned int *io_ring, unsigned int *core_ring)
 {
 #ifdef MTK_SDIOAUTOK_SUPPORT
     *io_ring = ((osc_value & 0xFFFF0000) >> 16);
     *core_ring = (osc_value & 0x0000FFFF);
 #else   // MTK_SDIOAUTOK_SUPPORT
-    *io_ring = 0;
-    *core_ring = 0;
+    *io_ring = 0xFFFFFFFF;
+    *core_ring = 0xFFFFFFFF;
 #endif  // MTK_SDIOAUTOK_SUPPORT
     
     printk("[%s] io ring = 0x%x, core ring = 0x%x\n", __func__, *io_ring, *core_ring);
     return 0;
 }
+
+bool is_vcore_ss_corner()
+{
+    unsigned int io_ring, core_ring;
+    sdio_get_rings(&io_ring, &core_ring);
+    
+    if (core_ring < SS_CORE_RING_TH) {
+        printk("[%s] It is SS core ring, core ring = 0x%x, SS_CORE_RING_TH = 0x%x\n", __func__, core_ring, SS_CORE_RING_TH);
+        return true;
+    } else {
+        return false;
+    }
+    
+    return false;
+}
+EXPORT_SYMBOL(is_vcore_ss_corner);
 
 #ifdef CONFIG_MTK_HIBERNATION
 extern unsigned int mt_eint_get_polarity(unsigned int eint_num);
@@ -9181,21 +9120,6 @@ static int msdc_drv_probe(struct platform_device *pdev)
         
     }
 
-/*
-    if (pdev->id == 0) {
-#ifndef FPGA_PLATFORM
-        msdc_sd0_power(1, VOL_3300);
-#else
-        msdc_sd0_power(1, 3300);
-#endif
-
-    } else if (pdev->id == 1) {
-#ifndef FPGA_PLATFORM
-        msdc_sd1_power(1, VOL_3300);      
-#else
-        msdc_sd1_power(1, 3300);      
-#endif
-    }*/
       
     /* Allocate MMC host for this device */
     mmc = mmc_alloc_host(sizeof(struct msdc_host), &pdev->dev);
@@ -9285,6 +9209,7 @@ static int msdc_drv_probe(struct platform_device *pdev)
     host->sclk           = 0;                   /* sclk: the really clock after divition */
     host->pm_state       = PMSG_RESUME;
     host->suspend        = 0;
+    host->sdio_suspend   = 0;
     host->core_clkon     = 0;
     host->card_clkon     = 0;    
     host->clk_gate_count = 0;  
@@ -9386,6 +9311,7 @@ static int msdc_drv_probe(struct platform_device *pdev)
     host->ot_work.chg_volt = 0;
     atomic_set(&host->ot_work.ot_disable, 0);
 	atomic_set(&host->ot_work.autok_done, 0);
+	init_completion(&host->ot_work.ot_complete);
   #ifdef MTK_SDIO30_DETECT_THERMAL
     host->pre_temper = -127000;
     host->ot_period_check_start = 0;
@@ -9556,12 +9482,13 @@ static int msdc_drv_suspend(struct platform_device *pdev, pm_message_t state)
 
     if (is_card_sdio(host) || (host->hw->flags & MSDC_SDIO_IRQ)) 
     {
+        if(host->clk_gate_count > 0){
+            host->error = 0;
+            return -EBUSY;
+        }
+        
         if (host->saved_para.suspend_flag==0)
         {
-            if(host->clk_gate_count > 0){
-              host->error = 0;
-              return -EBUSY;
-            }
             host->saved_para.hz = host->mclk;
             if (host->saved_para.hz)
             {
@@ -9631,6 +9558,10 @@ static struct platform_driver mt_msdc_driver = {
 /*--------------------------------------------------------------------------*/
 /* module init/exit                   */
 /*--------------------------------------------------------------------------*/
+#ifdef MTK_SDIOAUTOK_SUPPORT
+extern int mtk_wdt_swsysret_config(int bit,int set_value);
+#endif  // MTK_SDIOAUTOK_SUPPORT
+
 static int __init mt_msdc_init(void)
 {
     int ret;

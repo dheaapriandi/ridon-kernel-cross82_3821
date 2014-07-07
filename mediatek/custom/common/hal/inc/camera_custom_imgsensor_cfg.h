@@ -28,47 +28,15 @@ enum EMipiPort
     ePort_3 = 0x2, // 2 lane   
 };
 
-/*******************************************************************************
-* Sensor Input Data Bit Order
-*   Return:
-*       0   : raw data input [9:2]
-*       1   : raw data input [7:0]
-*       -1  : error
-*******************************************************************************/
 MINT32  getSensorInputDataBitOrder(EDevId const eDevId);
 
-/*******************************************************************************
-* Sensor Pixel Clock Inverse in PAD side.
-*   Return:
-*       0   : no inverse
-*       1   : inverse
-*       -1  : error
-*******************************************************************************/
 MINT32  getSensorPadPclkInv(EDevId const eDevId);
 
-/*******************************************************************************
-* Sensor Placement Facing Direction
-*   Return:
-*       0   : Back side  
-*       1   : Front side (LCD side)
-*       -1  : error
-*******************************************************************************/
 MINT32  getSensorFacingDirection(EDevId const eDevId);
-/*******************************************************************************
-* Sensor layout using mclk
-*   Return: EMclkId
-*******************************************************************************/
 MINT32  getSensorMclkConnection(EDevId const eDevId);
 
-/*******************************************************************************
-* MIPI sensor pad usage
-*   Return: EMipiPort
-*******************************************************************************/
 MINT32  getMipiSensorPort(EDevId const eDevId);
 
-/*******************************************************************************
-* Image Sensor Orientation
-*******************************************************************************/
 typedef struct SensorOrientation_S
 {
     MUINT32 u4Degree_0;     //  main sensor in degree (0, 90, 180, 270)
@@ -78,23 +46,11 @@ typedef struct SensorOrientation_S
 
 SensorOrientation_T const&  getSensorOrientation();
 
-/*******************************************************************************
-* Return fake orientation for front sensor in degree 0/180 or not
-*******************************************************************************/
 MBOOL isRetFakeSubOrientation();
-/*******************************************************************************
-* Return fake orientation for back sensor in degree 0/180 or not
-*******************************************************************************/
 MBOOL isRetFakeMainOrientation();
-/*******************************************************************************
-* Return fake orientation for back2 (3D)sensor in degree 0/180 or not
-*******************************************************************************/
 MBOOL isRetFakeMain2Orientation();
 
 
-/*******************************************************************************
-* Image Sensor Module FOV
-*******************************************************************************/
 typedef struct SensorViewAngle_S
 {
     MUINT32 MainSensorHorFOV;     //  main sensor horizontal view angle, 0: not support

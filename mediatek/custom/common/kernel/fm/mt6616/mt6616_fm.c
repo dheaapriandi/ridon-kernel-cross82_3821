@@ -1,31 +1,6 @@
-/* mt6616_fm.c
- *
- * (C) Copyright 2009 
- * MediaTek <www.MediaTek.com>
- * Chunhui <Chunhui.li@MediaTek.com>
- *
- * MT6516 MT6616 FM Radio Driver
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- */
 
 #include "mt6616_fm.h"
 
-/******************************************************************************
- * CONSTANT DEFINITIONS
- *****************************************************************************/
 //addr = read ? (addr | 0x1) : (addr & ~0x1);
 #define MT6616_SLAVE_ADDR    0xE0  //0x70 7-bit address
 
@@ -75,9 +50,6 @@ struct ctrl_word_operation{
 //USE interrupt for SEEK/SCAN/TUNE done
 #define USE_INTERRUPT  1  //internal flag, but if disable interrupt mode,RDS also can't work.
 
-/******************************************************************************
- * FUNCTION PROTOTYPES
- *****************************************************************************/
 void  Delayms(uint32_t data);
 void  Delayus(uint32_t data);
 int   MT6616_read(struct i2c_client *client, uint8_t addr, uint16_t *val);
@@ -173,9 +145,6 @@ static int fm_i2c_detect(struct i2c_client *client, int kind, struct i2c_board_i
 static int fm_i2c_remove(struct i2c_client *client);
 #endif
 
-/******************************************************************************
- * GLOBAL DATA
- *****************************************************************************/
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31))
 /* Addresses to scan */
 static unsigned short normal_i2c[] = {MT6616_SLAVE_ADDR, I2C_CLIENT_END};
@@ -677,55 +646,20 @@ static DECLARE_MUTEX(fm_ops_mutex);
 static DECLARE_MUTEX(fm_read_mutex);
 static DECLARE_MUTEX(fm_timer_mutex);
 
-/******************************************************************************
- *****************************************************************************/
 
-/*
-static void _open_audio_path(void)
-{
 
-    volatile uint *ANA_VOL = ( volatile uint *)0xF0060200;
-    volatile uint *ANA_REG = ( volatile uint *)0xF0060204;
-    volatile uint *ANA_PWR = ( volatile uint *)0xF0060208;
 
-    FM_DEBUG("<= 0x%X=0x%X,0x%X=0x%X, 0x%X=0x%X\n",
-        (uint)ANA_REG, *ANA_REG,
-        (uint)ANA_VOL, *ANA_VOL,
-        (uint)ANA_PWR, *ANA_PWR);
-
-    *ANA_REG = 0x480; // set audio path to wired headset
-    *ANA_PWR = 0x1F; // power all on
-
-    FM_DEBUG("=> 0x%X=0x%X,0x%X=0x%X, 0x%X=0x%X\n",
-        (uint)ANA_REG, *ANA_REG,
-        (uint)ANA_VOL, *ANA_VOL,
-        (uint)ANA_PWR, *ANA_PWR);
-}
-*/
-
-/******************************************************************************
- *****************************************************************************/
-
-/*
- *  delay ms
- */
 void Delayms(uint32_t data)
 {    
     //msleep(data);
     udelay(data*1000);
 }
 
-/*
- *  delay us
- */
 void Delayus(uint32_t data)
 {
     udelay(data);   
 }
 
-/*
- *  MT6616_read
- */
 int MT6616_read(struct i2c_client *client, uint8_t addr, uint16_t *val)
 {
     int n;
@@ -752,9 +686,6 @@ int MT6616_read(struct i2c_client *client, uint8_t addr, uint16_t *val)
     return 0;
 }
 
-/*
- *  MT6616_write
- */
 int MT6616_write(struct i2c_client *client, uint8_t addr, uint16_t val)
 {
     int n;
@@ -1163,11 +1094,6 @@ static void MT6616_Tune_HiLo(struct i2c_client *client,
 }                           
                             
 
-/*
-* MT6616_Seek
-* pFreq: IN/OUT parm, IN start freq/OUT seek valid freq
-* return true:seek success; false:seek failed
-*/
 static bool MT6616_Seek(struct i2c_client *client, uint16_t min_freq, uint16_t max_freq, uint16_t *pFreq, uint16_t seekdir, uint16_t space)
 {
     uint16_t tmp_reg, cnt = 0;
@@ -2661,9 +2587,6 @@ static int fm_destroy(struct fm *fm)
     return err;
 }
 
-/*
- *  fm_powerup
- */
 static int fm_powerup(struct fm *fm, struct fm_tune_parm *parm)
 {
     int i;
@@ -2798,9 +2721,6 @@ static int fm_powerup(struct fm *fm, struct fm_tune_parm *parm)
     return 0;
 }
 
-/*
- *  fm_powerdown
- */
 static int fm_powerdown(struct fm *fm)
 {
     int i;
@@ -2850,9 +2770,6 @@ static int fm_powerdown(struct fm *fm)
 }
 
 
-/*
- *  fm_seek
- */
 static int fm_seek(struct fm *fm, struct fm_seek_parm *parm)
 {
     int ret = 0;
@@ -2922,9 +2839,6 @@ static int fm_seek(struct fm *fm, struct fm_seek_parm *parm)
     return ret;
 }
 
-/*
- *  fm_scan
- */
 static int  fm_scan(struct fm *fm, struct fm_scan_parm *parm)
 {
     int ret = 0;
@@ -3018,9 +2932,6 @@ static int fm_getrssi(struct fm *fm, uint32_t *rssi)
     return 0;
 }
 
-/*
- *  fm_tune
- */
 static int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 {
     int ret = 0;
@@ -3085,9 +2996,6 @@ static int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 }
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31))  
-/*
- *  fm_i2c_attach_adapter
- */
 static int fm_i2c_attach_adapter(struct i2c_adapter *adapter)
 {
     if (adapter->id == MT6616_I2C_PORT)
@@ -3098,10 +3006,6 @@ static int fm_i2c_attach_adapter(struct i2c_adapter *adapter)
         return 0;
 }
 
-/*
- *  fm_i2c_detect
- *  This function is called by i2c_detect
- */
 static int fm_i2c_detect(struct i2c_adapter *adapter, int addr, int kind)
 {
     int err;
@@ -3250,9 +3154,6 @@ static struct platform_driver mt_fm_dev_drv =
     }
 };
 
-/*
- *  mt_fm_init
- */
 static int __init mt_fm_init(void)
 {
 	int err = 0;
@@ -3282,9 +3183,6 @@ static int __init mt_fm_init(void)
 	return err;
 }
 
-/*
- *  mt_fm_exit
- */
 static void __exit mt_fm_exit(void)
 {
     WCN_DBG(L4|D_ALL,"Enter %s\n", __FUNCTION__);

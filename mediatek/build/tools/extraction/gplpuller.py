@@ -26,15 +26,9 @@ def main(argv):
         check_exist(os.path.join(sourceDir, item))
         split_gpl(os.path.join(sourceDir, item), os.path.join(destDir, item))
         check_exist(os.path.join(destDir, item))
-    print >> sys.stdout, "buildable packages split Successfully!"
-# for remove copyright
-    (outStatus, val) = commands.getstatusoutput("find %s -type f |xargs perl %s/mediatek/build/tools/extraction/rm_legal.pl" %(destDir, destDir))
-    if outStatus:
-        print >> sys.stderr,"error when first round remove copyright!"
-    (outStatus, val) = commands.getstatusoutput("find %s -type f |xargs perl %s/mediatek/build/tools/extraction/rm_legal2.pl" % (destDir, destDir))
-    if outStatus:
-        print >> sys.stderr,"error when second round remove copyright!"
-    print >> sys.stdout, "Remove copyright Successfully!"
+    print >> sys.stdout, "gpl split Successfully!"
+
+
 def check_exist(path):
     """check the path exists"""
     if not os.path.exists(path):
@@ -83,10 +77,6 @@ def calculate_split_list(src, platform_list, xmlpath):
         else:
             print >> sys.stderr, "[Error] no platform kernel source ?"
             sys.exit(3)
-        if os.path.exists(os.path.join(src, "mediatek/platform/%s/trustzone/kernel" % platform)):
-            src_list.append("mediatek/platform/%s/trustzone/kernel" % platform)
-        else:
-            print >> sys.stderr, "[Info] no platform trustzone kernel source, skip."
     return src_list
 
 

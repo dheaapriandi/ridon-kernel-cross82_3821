@@ -567,7 +567,15 @@ void disp_invoke_irq_callbacks(DISP_MODULE_ENUM module, unsigned int param)
         }
     }
 }
-
+#if defined(MTK_HDMI_SUPPORT)
+extern void hdmi_setorientation(int orientation);
+void hdmi_power_on(void);
+void hdmi_power_off(void);
+extern void hdmi_update_buffer_switch(void);
+extern bool is_hdmi_active(void);
+extern void hdmi_update(void);
+extern void hdmi_source_buffer_switch(void);
+#endif
 
 //extern void hdmi_test_switch_buffer(void);
 static /*__tcmfunc*/ irqreturn_t disp_irq_handler(int irq, void *dev_id)
@@ -1146,12 +1154,8 @@ int ConfColorFunc(int i4NotUsed)
             DISP_MSG("ConfColorFunc: Disable BLS\n");
             DISP_REG_SET(DISP_REG_BLS_EN, 0x00010000);
         }
-    } else {
-        // enable BLS
-        DISP_REG_SET(DISP_REG_BLS_EN, 0x00010001);
     }
-
-    if ((1 << DISP_MODULE_COLOR) & u4UpdateFlag)
+    else
     {
         if(ncs_tuning_mode == 0) //normal mode
         {
@@ -1162,22 +1166,19 @@ int ConfColorFunc(int i4NotUsed)
         {
             ncs_tuning_mode = 0;
         }
+        // enable BLS
+        DISP_REG_SET(DISP_REG_BLS_EN, 0x00010001);
         disp_set_needupdate(DISP_MODULE_COLOR , 0);
     }
     DISP_MSG("ConfColorFunc done: BLS_EN=0x%x, bls_gamma_dirty=%d\n", DISP_REG_GET(DISP_REG_BLS_EN), bls_gamma_dirty);
     return 0;
 }
 
-static int COLOR_init = 0;
 int disp_color_set_pq_param(void* arg)
 {
     DISP_PQ_PARAM * pq_param;
     
-    if (COLOR_init == 0)
-    {
-        DISP_RegisterExTriggerSource(CheckColorUpdateFunc, ConfColorFunc);
-        COLOR_init = 1;
-    }
+    DISP_RegisterExTriggerSource(CheckColorUpdateFunc, ConfColorFunc);
 
     GetUpdateMutex();
 
@@ -1302,6 +1303,13 @@ static long disp_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned lo
                 return -EFAULT;
             }
 
+            #if defined(MTK_HDMI_SUPPORT)
+            if (down_interruptible(&hdmi_update_mutex)) {
+                DISP_ERR("can't get semaphore hdmi_update_mutex\n");
+                return -EFAULT;
+                }
+            #endif
+
             for (count=0; count<rTableParams.count; count++)
             {
                 if(rTableParams.reg[count]>DISPSYS_REG_ADDR_MAX || rTableParams.reg[count]<DISPSYS_REG_ADDR_MIN)
@@ -1315,6 +1323,10 @@ static long disp_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned lo
 
                 rTableParams.val[count] = (*(volatile unsigned int*)rTableParams.reg[count]) & rTableParams.mask[count];
             }
+
+            #if defined(MTK_HDMI_SUPPORT)
+                up(&hdmi_update_mutex);
+            #endif
 
             break;
 
@@ -1654,6 +1666,8 @@ static long disp_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned lo
             bls_gamma_dirty = 1;
             aal_debug_flag = 1;
             ReleaseUpdateMutex();
+
+            disp_set_needupdate(DISP_MODULE_COLOR, 1);
 
             count = 0;
             while(DISP_REG_GET(DISP_REG_BLS_EN) & 0x1) {

@@ -1,3 +1,4 @@
+
 #ifndef __MT6582_MD32INT_H__
 #define __MT6582_MD32INT_H__
 

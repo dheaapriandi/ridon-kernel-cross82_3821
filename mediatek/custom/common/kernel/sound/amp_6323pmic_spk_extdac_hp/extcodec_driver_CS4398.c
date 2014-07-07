@@ -549,8 +549,7 @@ void cust_extcodec_gpio_off()
 
     //ExtCodec_PowerOff();
 
-//#ifdef MT6592_I2SOUT_GPIO // 6592 GPIO setting for AFE I2S output
-#if 0
+#ifdef MT6592_I2SOUT_GPIO // 6592 GPIO setting for AFE I2S output
     ECODEC_PRINTK("6592 Set GPIO for AFE I2S output to mode0 ");
     mt_set_gpio_mode(GPIO_I2S0_DAT_PIN, GPIO_MODE_00);
     mt_set_gpio_mode(GPIO_I2S0_WS_PIN, GPIO_MODE_00);

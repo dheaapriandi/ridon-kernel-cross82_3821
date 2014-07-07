@@ -1,3 +1,4 @@
+
 #ifndef _ISP_TUNING_CUSTOM_H_
 #define _ISP_TUNING_CUSTOM_H_
 
@@ -5,9 +6,6 @@ namespace NSIspTuning
 {
 
 
-/*******************************************************************************
-*
-*******************************************************************************/
 class IspTuningCustom
 {
 protected:  ////    Ctor/Dtor.

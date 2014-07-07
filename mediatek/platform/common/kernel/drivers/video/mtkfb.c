@@ -1056,7 +1056,7 @@ static int mtkfb_set_overlay_layer(struct fb_info *info, struct fb_overlay_layer
 
     MMProfileLogEx(MTKFB_MMP_Events.SetOverlayLayer, MMProfileFlagStart, (id<<24)|(enable<<16)|layerInfo->next_buff_idx, (unsigned int)layerInfo->src_phy_addr);
 
-    MTKFB_LOG("L%d set_overlay:%d,%d\n", layerInfo->layer_id, layerInfo->layer_enable, layerInfo->next_buff_idx);
+    MTKFB_LOG_D("L%d set_overlay:%d,%d\n", layerInfo->layer_id, layerInfo->layer_enable, layerInfo->next_buff_idx);
 
     // Update Layer Enable Bits and Layer Config Dirty Bits
     if ((((fbdev->layer_enable >> id) & 1) ^ enable)) {
@@ -1087,7 +1087,7 @@ static int mtkfb_set_overlay_layer(struct fb_info *info, struct fb_overlay_layer
         //so clean up thread will clean them all!
         if(temp[id].buff_idx != max_buf_index_setted[id])
         {
-            MTKFB_LOG("mtkfb update fence from %d to %d",temp[id].buff_idx,max_buf_index_setted[id]);
+            MTKFB_LOG_D("mtkfb update fence from %d to %d",temp[id].buff_idx,max_buf_index_setted[id]);
             temp[id].buff_idx = max_buf_index_setted[id];
         }
         ret = 0;
@@ -1133,13 +1133,11 @@ static int mtkfb_set_overlay_layer(struct fb_info *info, struct fb_overlay_layer
         temp[id].fmt = eARGB8888;
         layerpitch = 4;
         layerbpp = 32;
-	layerInfo->alpha_enable = 0;
         break;
     case MTK_FB_FORMAT_XBGR8888:
         temp[id].fmt = eABGR8888;
         layerpitch = 4;
         layerbpp = 32;
-	layerInfo->alpha_enable = 0;
         break;
 	case MTK_FB_FORMAT_UYVY:
 		temp[id].fmt = eUYVY;
@@ -1689,7 +1687,7 @@ static int mtkfb_ioctl(struct file *file, struct fb_info *info, unsigned int cmd
     case MTKFB_SET_OVERLAY_LAYER:
     {
         struct fb_overlay_layer layerInfo;
-        MTKFB_LOG(" mtkfb_ioctl():MTKFB_SET_OVERLAY_LAYER\n");
+        MTKFB_LOG_D(" mtkfb_ioctl():MTKFB_SET_OVERLAY_LAYER\n");
 
         if (copy_from_user(&layerInfo, (void __user *)arg, sizeof(layerInfo))) {
             MTKFB_LOG("[FB]: copy_from_user failed! line:%d \n", __LINE__);
@@ -1809,11 +1807,9 @@ static int mtkfb_ioctl(struct file *file, struct fb_info *info, unsigned int cmd
 				{
 					MTKFB_ERR("in early suspend layer(0x%x),idx(%d)!\n", layerId<<16|layerInfo[i].layer_enable, layerInfo[i].next_buff_idx);
 					//mtkfb_release_layer_fence(layerInfo[i].layer_id);
-                    disp_sync_release(layerInfo[i].layer_id);
-                }else {
-                    mtkfb_set_overlay_layer(info, &layerInfo[i], true);
-                }
-            }
+				}
+    			mtkfb_set_overlay_layer(info, &layerInfo[i], true);
+    		}
     		mutex_unlock(&OverlaySettingMutex);
     		if (DISP_IsDecoupleMode()) {
             	DISP_StartOverlayTransfer();
@@ -2084,9 +2080,6 @@ unsigned int mtkfb_fm_auto_test()
 	atomic_set(&OverlaySettingDirtyFlag, 1);
 	atomic_set(&OverlaySettingApplied, 0);
 	mutex_unlock(&OverlaySettingMutex);
-    if (DISP_IsDecoupleMode()) {
-    	DISP_StartOverlayTransfer();
-    }
 
 	msleep(100);
 
@@ -2173,10 +2166,7 @@ static int mtkfb_fbinfo_init(struct fb_info *info)
     info->screen_base = (char *) fbdev->fb_va_base;
     info->screen_size = fbdev->fb_size_in_byte;
     info->pseudo_palette = fbdev->pseudo_palette;
-    if(!DISP_IsDecoupleMode())
-    {
-        cached_layer_config[FB_LAYER].alpha = 0xFF;
-    }
+
     r = fb_alloc_cmap(&info->cmap, 16, 0);
     if (r != 0)
         PRNERR("unable to allocate color map memory\n");
@@ -2907,81 +2897,6 @@ void mtkfb_clear_lcm(void)
     atomic_set(&OverlaySettingApplied, 0);
     mutex_unlock(&OverlaySettingMutex);
 }
-int hdmi_disc_disp_path(void)
-{
-    printk("[FB Driver] enter hdmi_disc_disp_path \n");
-
-    if (is_early_suspended) {
-        printk("hdmi_disc_disp_path suspended %d \n", __LINE__);
-        return 0;
-    }
-
-    is_early_suspended = TRUE;
-
-    disphal_prepare_suspend();
-    if (wait_event_interruptible_timeout(disp_done_wq, !disp_running, HZ/10) == 0)
-    {
-        printk("[FB Driver] Wait disp finished timeout in early_suspend\n");
-    }
-
-#ifdef MTK_FB_SYNC_SUPPORT
-    int i = 0;
-    for(i=0; i<HW_OVERLAY_COUNT; i++)
-    {
-        disp_sync_release(i);
-        if (!((i == DISP_DEFAULT_UI_LAYER_ID) && isAEEEnabled)) 
-        {
-            cached_layer_config[i].layer_en = 0;
-            cached_layer_config[i].isDirty = 0;
-        }
-        printk("[FB Driver] layer%d release fences\n",i);		
-    }
-#endif
-    DISP_CHECK_RET(DISP_PanelEnable(FALSE));
-    DISP_CHECK_RET(DISP_PowerEnable(FALSE));
-
-    DISP_CHECK_RET(DISP_PauseVsync(TRUE));
-    disp_hdmi_path_clock_off("mtkfb");
-    printk("[FB Driver] hdmi_disc_disp_path\n");
-	return 0;
-}
-
-int hdmi_conn_disp_path(void)
-{
-    printk("[FB Driver] enter hdmi_conn_disp_path\n");
- 
-    if (is_ipoh_bootup)
-    {
-        atomic_set(&OverlaySettingDirtyFlag, 0);
-        is_video_mode_running = true;
-    }
-    else
-    {
-        disp_hdmi_path_clock_on("mtkfb");
-    }
-    printk("[FB LR] 1\n");
-    DISP_CHECK_RET(DISP_PauseVsync(FALSE));
-    printk("[FB LR] 2\n");
-    DISP_CHECK_RET(DISP_PowerEnable(TRUE));
-    printk("[FB LR] 3\n");
-    DISP_CHECK_RET(DISP_PanelEnable(TRUE));
-    printk("[FB LR] 4\n");
-    
-    is_early_suspended = FALSE;
-    
-    if (is_ipoh_bootup)
-    {
-        DISP_StartConfigUpdate();
-    }
-    else
-    {
-        mtkfb_clear_lcm();
-    }
-
-    printk("[FB Driver] hdmi_conn_disp_path\n");
-
-	return 0;
-}
 
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -3165,27 +3080,17 @@ int mtkfb_pm_restore_noirq(struct device *device)
 #endif
 
     disphal_pm_restore_noirq(device);
+    disp_path_clock_on("ipoh_mtkfb");
     is_ipoh_bootup = true;
     return 0;
 
 }
-
-int mtkfb_pm_restore_early(struct device *device)
-{
-    // sometime disp_path_clock  will control i2c, when IPOH,
-    // there is no irq in mtkfb_pm_restore_noirq , i2c will timeout.
-    // so move this to  resore early.
-    disp_path_clock_on("ipoh_mtkfb");
-    return 0;
-}
-
 /*---------------------------------------------------------------------------*/
 #else /*CONFIG_PM*/
 /*---------------------------------------------------------------------------*/
 #define mtkfb_pm_suspend NULL
 #define mtkfb_pm_resume  NULL
 #define mtkfb_pm_restore_noirq NULL
-#define mtkfb_pm_restore_early NULL
 /*---------------------------------------------------------------------------*/
 #endif /*CONFIG_PM*/
 /*---------------------------------------------------------------------------*/
@@ -3197,7 +3102,6 @@ struct dev_pm_ops mtkfb_pm_ops = {
     .poweroff = mtkfb_pm_suspend,
     .restore = mtkfb_pm_resume,
     .restore_noirq = mtkfb_pm_restore_noirq,
-    .restore_early = mtkfb_pm_restore_early,
 };
 
 static struct platform_driver mtkfb_driver =

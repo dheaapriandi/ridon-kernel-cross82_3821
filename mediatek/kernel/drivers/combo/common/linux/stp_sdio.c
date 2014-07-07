@@ -1,24 +1,8 @@
-/*
-** $Id: $
-*/
-
-/*! \file   "stp_sdio.c"
- * \brief
- *
- * detailed description
-*/
-
-/*
-** $Log: $
-**
-*/
 
 
 
-/*******************************************************************************
-*                         C O M P I L E R   F L A G S
-********************************************************************************
-*/
+
+
 
 #define STP_SDIO_DBG_SUPPORT 1
 #define STP_SDIO_RXDBG 1 /* depends on STP_SDIO_DBG_SUPPORT */
@@ -27,10 +11,6 @@
 #define STP_SDIO_OWNBACKDBG 1 /* depends on STP_SDIO_DBG_SUPPORT */
 #define STP_SDIO_NEW_IRQ_HANDLER 1
 
-/*******************************************************************************
-*                    E X T E R N A L   R E F E R E N C E S
-********************************************************************************
-*/
 #include <linux/mm.h>
 #include <linux/device.h>
 #include <linux/module.h>
@@ -45,10 +25,6 @@
 #include "stp_sdio.h"
 #include "wmt_lib.h"
 
-/*******************************************************************************
-*                              C O N S T A N T S
-********************************************************************************
-*/
 
 #ifdef DFT_TAG
 #undef DFT_TAG
@@ -62,10 +38,6 @@
 #define STPSDIO_LOG_WARN    1
 #define STPSDIO_LOG_ERR     0
 
-/*******************************************************************************
-*                             D A T A   T Y P E S
-********************************************************************************
-*/
 #if STP_SDIO_DBG_SUPPORT && STP_SDIO_RXDBG
 #define STP_SDIO_RXDBG_COUNT (0x10UL)
 #define STP_SDIO_RXDBG_COUNT_MASK (STP_SDIO_RXDBG_COUNT - 1)
@@ -88,10 +60,6 @@ struct stp_sdio_txdbg {
 };
 #endif
 
-/*******************************************************************************
-*                   F U N C T I O N   D E C L A R A T I O N S
-********************************************************************************
-*/
 
 static INT32
 stp_sdio_irq (
@@ -121,10 +89,6 @@ static void stp_sdio_tx_rx_handling(void *pData);
 static INT32 stp_sdio_host_info_deinit(UINT8 **ppTxBuf, UINT8 **ppRxBuf);
 static INT32 stp_sdio_host_info_init(UINT8 **ppTxBuf, UINT8 **ppRxBuf);
 static INT32 stp_sdio_host_info_op(INT32 opId);
-/*******************************************************************************
-*                           P R I V A T E   D A T A
-********************************************************************************
-*/
 
 /* Supported SDIO device table */
 static const MTK_WCN_HIF_SDIO_FUNCINFO mtk_stp_sdio_id_tbl[] = {
@@ -234,20 +198,12 @@ static UINT32 stp_sdio_txperf_pkt_num_lmt_cnt;
 #endif
 #endif
 
-/*******************************************************************************
-*                            P U B L I C   D A T A
-********************************************************************************
-*/
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("MediaTek Inc WCN_SE_CS3");
 MODULE_DESCRIPTION("Read-Copy Update tracing for hierarchical implementation");
 
 UINT32 gStpSdioDbgLvl = STPSDIO_LOG_INFO;
 
-/*******************************************************************************
-*                                 M A C R O S
-********************************************************************************
-*/
 #define STPSDIO_LOUD_FUNC(fmt, arg...)    if (gStpSdioDbgLvl >= STPSDIO_LOG_LOUD) { printk(DFT_TAG "[L]%s:"  fmt, __FUNCTION__ ,##arg);}
 #define STPSDIO_DBG_FUNC(fmt, arg...)    if (gStpSdioDbgLvl >= STPSDIO_LOG_DBG) { printk(DFT_TAG "[D]%s:"  fmt, __FUNCTION__ ,##arg);}
 #define STPSDIO_HINT_FUNC(fmt, arg...)   if (gStpSdioDbgLvl >= STPSDIO_LOG_HINT) { printk(DFT_TAG "[I]%s:"  fmt, __FUNCTION__ ,##arg);}
@@ -256,10 +212,6 @@ UINT32 gStpSdioDbgLvl = STPSDIO_LOG_INFO;
 #define STPSDIO_ERR_FUNC(fmt, arg...)    if (gStpSdioDbgLvl >= STPSDIO_LOG_ERR) { printk(DFT_TAG "[E]%s(%d):"  fmt, __FUNCTION__ , __LINE__, ##arg);}
 #define STPSDIO_TRC_FUNC(f)              if (gStpSdioDbgLvl >= STPSDIO_LOG_DBG) { printk(DFT_TAG "<%s> <%d>\n", __FUNCTION__, __LINE__);}
 
-/*******************************************************************************
-*                              F U N C T I O N S
-********************************************************************************
-*/
 
 
 INT32 stp_sdio_host_info_op(INT32 opId)
@@ -352,14 +304,6 @@ INT32 stp_sdio_host_info_deinit(UINT8 **ppTxBuf, UINT8 **ppRxBuf)
     return 0;
 }
 
-/*!
- * \brief
- *
- * \details
- *
- * \retval 0 success
- * \retval !=0 fail
- */
 static SDIO_PS_OP stp_sdio_get_own_state (void)
 {
     SDIO_PS_OP ret = OWN_SET;
@@ -386,14 +330,6 @@ static SDIO_PS_OP stp_sdio_get_own_state (void)
 }
 
 
-/*!
- * \brief
- *
- * \details
- *
- * \retval 0 success
- * \retval !=0 fail
- */
 static INT32 stp_sdio_do_own_clr (int wait)
 {
     #define CLR_OWN_RETRY 50
@@ -416,8 +352,6 @@ static INT32 stp_sdio_do_own_clr (int wait)
         is_wait_ownback = 1;
     }
 //need to wait for the ownback completion
-/* [COHEC_00006052] SW work-around solution:
-   using CMD52 write instead of CMD53 write for CCIR, CHLPCR, CSDIOCSR */
 #if COHEC_00006052
     ret = mtk_wcn_hif_sdio_writeb(clt_ctx, (UINT32)(CHLPCR+0x1), (UINT8)(C_FW_OWN_REQ_CLR>>8));
 #else
@@ -474,14 +408,6 @@ out:
 }
 
 #if 0
-/*!
- * \brief
- *
- * \details
- *
- * \retval 0 success
- * \retval !=0 fail
- */
 static INT32 stp_sdio_do_own_set (void)
 {
     #define SET_OWN_RETRY 10
@@ -573,16 +499,6 @@ out:
     return ret;
 }
 #endif
-/*!
- * \brief
- *
- * \details
- *
- * \param[IN] op code for SDIO PS and OWN control
- *
- * \retval 0 success
- * \retval !=0 fail
- */
 INT32
 stp_sdio_own_ctrl (
     SDIO_PS_OP op
@@ -799,8 +715,6 @@ static void stp_sdio_tx_rx_handling(void *pData)
         /*Disable Common interrupt output in CHLPCR */
         STPSDIO_DBG_FUNC("enable COM IRQ\n");
 //need to wait for the ownback completion
-/* [COHEC_00006052] SW work-around solution:
-   using CMD52 write instead of CMD53 write for CCIR, CHLPCR, CSDIOCSR */
 #if COHEC_00006052
         iRet = mtk_wcn_hif_sdio_writeb(clt_ctx, CHLPCR, C_FW_INT_EN_SET);
 #else
@@ -858,8 +772,6 @@ static void stp_sdio_tx_rx_handling(void *pData)
         {
             //pInfo->awake_flag = 0;
             //STPSDIO_INFO_FUNC("set firmware own! (sleeping)\n");
-/* [COHEC_00006052] SW work-around solution:
-   using CMD52 write instead of CMD53 write for CCIR, CHLPCR, CSDIOCSR */
    			while_loop_counter = 0;
 #if COHEC_00006052
             iRet = mtk_wcn_hif_sdio_writeb(clt_ctx, (UINT32)(CHLPCR + 0x01), (UINT8)(C_FW_OWN_REQ_SET>>8));
@@ -890,8 +802,6 @@ static void stp_sdio_tx_rx_handling(void *pData)
                         STPSDIO_ERR_FUNC("set firmware own! (sleeping) fail, set CLR BACK\n");
                         // if set firmware own not successful (possibly pending interrupts),
                         // indicate an own clear event
-/* [COHEC_00006052] SW work-around solution:
-   using CMD52 write instead of CMD53 write for CCIR, CHLPCR, CSDIOCSR */
 #if COHEC_00006052
                         iRet = mtk_wcn_hif_sdio_writeb(clt_ctx, (UINT32)(CHLPCR + 0x01), (UINT8)(C_FW_OWN_REQ_CLR>>8));
 #else
@@ -948,24 +858,6 @@ static void stp_sdio_tx_rx_handling(void *pData)
 
 #endif
 
-/*!
- * \brief Tx callback function for STP-CORE module
- *
- * \details A function registered to STP-CORE to provide STP-SDIO tx method.
- *      Multiple STP packet may be aggregated when available.
- *
- * \param[IN] data STP packet buffer to be sent through STP-SDIO
- * \param[IN] size STP packet length to be sent
- * \param[OUT] written_size Accepted buffer length by STP-SDIO. Shall be $size
- *      if success.
- *
- *\note Tx may do aggregation to previous entry with lock protection. If no
- *      aggregation is done, protection is NOT required.
- *
- * \retval 0 success
- * \retval -1 invalid input parameters
- * \todo return !0 when fail case (TBD)
- */
 #if STP_SDIO_NEW_TXRING
 INT32
 stp_sdio_tx (
@@ -1383,18 +1275,6 @@ stp_sdio_tx (
 }
 #endif /* end of !STP_SDIO_NEW_TXRING */
 
-/*!
- * \brief Do STP-SDIO tx status, counters, debug information sanity check
- *
- * \details A function doing sanity checks on STP-SDIO Tx-related status,
- *      counters, debugging information. Used in tx_worker before and after bus
- *      write to check if any abnormal status happened.
- *
- * \param[IN] p_info The STP-SDIO HIF information structure pointer
- * \param[IN] id The sanity check location ID, assigned by caller
- *
- * \retval none.
- */
 static void
 stp_sdio_check_tx_sanity (
     const MTK_WCN_STP_SDIO_HIF_INFO *p_info,
@@ -1442,23 +1322,6 @@ stp_sdio_check_tx_sanity (
 #endif
 }
 
-/*!
- * \brief Handle STP-SDIO TX IRQ BH part and complete count
- *
- * \details Handle STP-SDIO TX IRQ bottom half part and reported tx complete
- *      coount. This function is used in tx_worker ONLY to avoid race condition.
- *
- * \note tx_comp_num in firmware_info structure shall be handled atomically.
- *      It is added in STP-SDIO Tx IRQ top half handler with the number reported
- *      in CHISR. It is deducted in this function.
- *
- * \note tx_fifo_size is deducted in tx_worker when writting data to bus and
- *      added back in this function when tx complete.
- *
- * \param[IN] p_info The STP-SDIO HIF information structure pointer
- *
- * \retval none.
- */
 static void
 stp_sdio_tx_wkr_comp (
     MTK_WCN_STP_SDIO_HIF_INFO * const p_info
@@ -1500,31 +1363,6 @@ stp_sdio_tx_wkr_comp (
     }
 }
 
-/*!
- * \brief Handle STP-SDIO Tx buffer and send to bus
- *
- * \details Handle STP-SDIO Tx buffer and send SDIO packet to bus if everything
- *      is checked ok.
- *
- * \note Tx count to FIFO is counted on a 4-byte aligned base. 1~3 bytes padding
- *      are also sent into HW FIFO and SHALL be trimmed off by firmware.
- *      tx_fifo_size is deducted in this bus when writting data to bus and added
- *      back in handle_tx_comp() function.
- *
- * \note Data length written to bus shall be 4-byte aligned AND block_size
- *      aligned if length > block_size. Padding bytes added for block_size is
- *      removed by HW.
- *
- * \note Max accumulated Tx size to FIFO is limited by STP_SDIO_TX_FIFO_SIZE and
- *      it is (2080) for MT6620. It is NOT limited to 256*5=1280 bytes.
- *
- * \note Max outstanding Tx packet count is limited by STP_SDIO_TX_PKT_MAX_CNT
- *      and it is (7) for MT6620.
- *
- * \param[IN] work Tx work struct work_struct pointer used by STP-SDIO
- *
- * \retval none.
- */
 #if STP_SDIO_NEW_TXRING
 static void
 stp_sdio_tx_wkr (
@@ -1867,22 +1705,6 @@ stp_sdio_tx_wkr (
 }
 #endif /* end of stp_sdio_tx_wkr and STP_SDIO_NEW_TXRING */
 
-/*!
- * \brief Handle STP-SDIO Rx IRQ BH and read data from bus
- *
- * \details Handle STP-SDIO Rx IRQ buttom half and read data from bus according
- *      to the length read in Rx IRQ top half (stp_sdio_irq()) from CHISR
- *
- * \note rx_pkt_len read in stp_sdio_irq() from CHISR. No Rx IRQ would be
- *      triggered by FW before all Rx FIFO data is read by host driver. Do
- *      sanity check for this condition.
- *
- * \note HW Rx FIFO size is (2304 = 256*9) for MT6620
- *
- * \param[IN] work Rx work struct work_struct pointer used by STP-SDIO
- *
- * \retval none.
- */
 static void
 stp_sdio_rx_wkr (
     struct work_struct *work
@@ -1985,8 +1807,6 @@ stp_sdio_irq (
 
     STPSDIO_HINT_FUNC("disable IRQ\n");
     /*Disable Common interrupt output in CHLPCR */
-/* [COHEC_00006052] SW work-around solution:
-using CMD52 write instead of CMD53 write for CCIR, CHLPCR, CSDIOCSR */
 #if COHEC_00006052
     iRet = mtk_wcn_hif_sdio_writeb(clt_ctx, CHLPCR, C_FW_INT_EN_CLR);
 #else
@@ -2024,24 +1844,6 @@ using CMD52 write instead of CMD53 write for CCIR, CHLPCR, CSDIOCSR */
 }
 
 #else
-/*!
- * \brief Handle STP-SDIO interrupt
- *
- * \details Top half interrupt handler of STP-SDIO. Most of Tx/Rx jobs are put
- *      to bottom half workers respectively.
- *
- * \note Rx ok interrupt shall be asserted by hw ONLY after last data are all
- *      read by driver. Do sanity check on rx_pkt_len and should be 0: rx BH
- *      finished.
- *
- * \note Tx complete count shall be handled atomically TH here and BH in
- *      tx_worker.
- *
- * \param[IN] clt_ctx A HIF-SDIO client context
- *
- * \retval 0 success
- * \retval !=0 fail
- */
 static INT32
 stp_sdio_irq (
     const MTK_WCN_HIF_SDIO_CLTCTX clt_ctx
@@ -2189,18 +1991,6 @@ stp_sdio_irq (
 #endif
 
 #if STP_SDIO_POLL_OWNBACK_INTR
-/*****************************************************************************
- * FUNCTION
- *  stp_sdio_ownback_poll
- * DESCRIPTION
- *   Poll ownback interrupt
- * PARAMETERS
- *  1. *func    [IN]    sdio driver function pointer
- *  2. retryp    [IN]    polling retry times
- *  3. delay_us    [IN]    polling delay (unit: us)
- * RETURNS
- *  ret:    Probe result
- *****************************************************************************/
 static INT32
 stp_sdio_ownback_poll (
     const MTK_WCN_HIF_SDIO_CLTCTX clt_ctx,
@@ -2235,17 +2025,6 @@ stp_sdio_ownback_poll (
 }
 #endif
 
-/*****************************************************************************
- * FUNCTION
- *  stp_sdio_probe
- * DESCRIPTION
- *   Probe function of SDIO driver
- * PARAMETERS
- *  1. *func    [IN]    sdio driver function pointer
- *  2. *id      [IN]    sdio function id
- * RETURNS
- *  ret:    Probe result
- *****************************************************************************/
 //typedef INT32 (*MTK_WCN_HIF_SDIO_PROBE)(MTK_WCN_HIF_SDIO_CLTCTX, const MTK_WCN_HIF_SDIO_FUNCINFO *);
 static INT32
 stp_sdio_probe (
@@ -2348,8 +2127,6 @@ stp_sdio_probe (
     ++g_stp_sdio_host_count;
 
     //4 <3> request firmware-own back
-/* [COHEC_00006052] SW work-around solution:
-using CMD52 write instead of CMD53 write for CCIR, CHLPCR, CSDIOCSR */
 #if COHEC_00006052
     ret = mtk_wcn_hif_sdio_writeb(clt_ctx, (UINT32)(CHLPCR+0x1), (UINT8)(C_FW_OWN_REQ_CLR>>8));
 #else
@@ -2379,8 +2156,6 @@ using CMD52 write instead of CMD53 write for CCIR, CHLPCR, CSDIOCSR */
         goto out;
     }
     STPSDIO_DBG_FUNC("set interrupt output done\n");
-/* [COHEC_00006052] SW work-around solution:
-using CMD52 write instead of CMD53 write for CCIR, CHLPCR, CSDIOCSR */
 #if COHEC_00006052
     ret = mtk_wcn_hif_sdio_writeb(clt_ctx, CHLPCR, C_FW_INT_EN_SET); /* enable interrupt */
 #else
@@ -2425,16 +2200,6 @@ out:
     return ret;
 }
 
-/*****************************************************************************
- * FUNCTION
- *  stp_sdio_probe
- * DESCRIPTION
- *   SDIO hardware remove function.
- * PARAMETERS
- *  *func    [IN]    SDIO driver handler pointer.
- * RETURNS
- *  none.
- *****************************************************************************/
 static INT32
 stp_sdio_remove (
     const MTK_WCN_HIF_SDIO_CLTCTX clt_ctx
@@ -2528,13 +2293,6 @@ ssize_t stp_sdio_rxdbg_write(struct file *filp, const char __user *buf, size_t c
 
 #else
 
-/*!
- * \brief /proc debug read interface and dump rx dbg information
- *
- * \details Dump all rx debug information to console.
- *
- * \retval 0 success
- */
 static int
 stp_sdio_rxdbg_read (
     char *page,
@@ -2576,13 +2334,6 @@ stp_sdio_rxdbg_read (
     return 0;
 }
 
-/*!
- * \brief /proc debug write interface. do nothing.
- *
- * \details
- *
- * \retval 0 success
- */
 static int
 stp_sdio_rxdbg_write (
     struct file *file,
@@ -2597,13 +2348,6 @@ stp_sdio_rxdbg_write (
 }
 #endif
 
-/*!
- * \brief /proc initial procedures. Initialize global debugging information.
- *
- * \details Setup entry for /proc debugging for rx
- *
- * \retval 0 success
- */
 INT32
 stp_sdio_rxdbg_setup(VOID)
 {
@@ -2631,13 +2375,6 @@ stp_sdio_rxdbg_setup(VOID)
     return 0;
 }
 
-/*!
- * \brief /proc de-init procedures.
- *
- * \details remove entry for /proc debugging for rx
- *
- * \retval 0 success
- */
 INT32
 stp_sdio_rxdbg_remove(VOID)
 {
@@ -2801,13 +2538,6 @@ ssize_t stp_sdio_txdbg_write(struct file *filp, const char __user *buf, size_t c
 
 #else
 
-/*!
- * \brief /proc debug read interface and dump tx dbg information
- *
- * \details Dump all tx debug information to console.
- *
- * \retval 0 success
- */
 static int
 stp_sdio_txdbg_read (
     char *page,
@@ -2827,13 +2557,6 @@ stp_sdio_txdbg_read (
     return 0;
 }
 
-/*!
- * \brief /proc debug write interface. do nothing.
- *
- * \details
- *
- * \retval 0 success
- */
 static int
 stp_sdio_txdbg_write (
     struct file *file,
@@ -2865,13 +2588,6 @@ ssize_t stp_sdio_own_read(struct file *filp, char __user *buf, size_t count, lof
 
 #else
 
-/*!
- * \brief /proc debug read interface and dump tx dbg information
- *
- * \details Dump all tx debug information to console.
- *
- * \retval 0 success
- */
 static int
 stp_sdio_owndbg_read (
     char *page,
@@ -2890,13 +2606,6 @@ stp_sdio_owndbg_read (
 }
 #endif
 
-/*!
- * \brief /proc debug write interface. do nothing.
- *
- * \details
- *
- * \retval 0 success
- */
 #if USE_NEW_PROC_FS_FLAG
 ssize_t stp_sdio_own_write(struct file *filp, const char __user *buffer, size_t count, loff_t *f_pos)
 #else
@@ -2969,13 +2678,6 @@ stp_sdio_owndbg_write (
 }
 
 
-/*!
- * \brief /proc initial procedures. Initialize global debugging information.
- *
- * \details Setup entry for /proc debugging for tx
- *
- * \retval 0 success
- */
 INT32
 stp_sdio_txdbg_setup(VOID)
 {
@@ -3016,13 +2718,6 @@ stp_sdio_txdbg_setup(VOID)
     return 0;
 }
 
-/*!
- * \brief /proc de-init procedures.
- *
- * \details remove entry for /proc debugging for tx
- *
- * \retval 0 success
- */
 INT32
 stp_sdio_txdbg_remove(VOID)
 {
@@ -3045,13 +2740,6 @@ stp_sdio_txdbg_remove(VOID)
 
 #if STP_SDIO_DBG_SUPPORT && STP_SDIO_OWNBACKDBG
 
-/*!
- * \brief /proc initial procedures. Initialize global debugging information.
- *
- * \details Setup entry for /proc debugging for tx
- *
- * \retval 0 success
- */
 INT32
 stp_sdio_owndbg_setup(VOID)
 {
@@ -3078,13 +2766,6 @@ stp_sdio_owndbg_setup(VOID)
 
 
 
-/*!
- * \brief /proc de-init procedures.
- *
- * \details remove entry for /proc debugging for tx
- *
- * \retval 0 success
- */
 INT32
 stp_sdio_owndbg_remove(VOID)
 {
@@ -3102,13 +2783,6 @@ stp_sdio_owndbg_remove(VOID)
 }
 #endif
 
-/*!
- * \brief hif_sdio init function
- *
- * detailed descriptions
- *
- * \retval
- */
 static int stp_sdio_init (void)
 {
     int ret;
@@ -3168,13 +2842,6 @@ static int stp_sdio_init (void)
     return ret;
 }
 
-/*!
- * \brief hif_sdio init function
- *
- * detailed descriptions
- *
- * \retval
- */
 static void stp_sdio_exit (void)
 {
     STPSDIO_LOUD_FUNC("start \n");

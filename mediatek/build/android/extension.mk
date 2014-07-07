@@ -1,8 +1,3 @@
-##############################################################################
-# FOR RELEASE POLICY                                                         #
-##############################################################################
-# GENERATE ARTIFACTS                                                         #
-##############################################################################
 define expand-depend-installed-modules
 $(eval _erm_new_modules := $(sort $(filter-out $($(1)),\
   $(call module-installed-files,$(foreach m,$(2),$(ARTIFACT.$(m).LIBRARIES))))))\

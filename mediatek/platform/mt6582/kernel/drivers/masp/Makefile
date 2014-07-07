@@ -13,12 +13,10 @@ ifeq ($(MTK_SECURITY_SW_SUPPORT), yes)
 include $(MASP_CORE_DRIVER_DIR)/asf/Makefile.core
 
 ifeq ($(strip $(TRUSTONIC_TEE_SUPPORT)),yes)
-ccflags-y += -I$(MTK_PATH_SOURCE)/../platform/${ARCH_MTK_PLATFORM}/kernel/core/include/trustzone/sec/Tlsec/inc
-endif
-
-ifeq ($(strip $(TRUSTONIC_TEE_SUPPORT)),yes)
 ccflags-y += -I$(MTK_PATH_PLATFORM)/drivers/gud/MobiCoreKernelApi/include \
-             -I$(MTK_PATH_PLATFORM)/drivers/gud/MobiCoreKernelApi/public 
+             -I$(MTK_PATH_PLATFORM)/drivers/gud/MobiCoreKernelApi/public \
+             -I$(MTK_PATH_SOURCE)/../protect-bsp/platform/$(call lc,$(MTK_PLATFORM))/external/trustzone/trustlets/sec/Drsec/Locals/Code/public \
+             -I$(MTK_PATH_SOURCE)/../protect-bsp/platform/$(call lc,$(MTK_PLATFORM))/external/trustzone/trustlets/sec/Tlsec/Locals/Code/public
 
 mach_obj += mach/hacc_tee_req.o
 mach_obj += mach/hacc_tee.o

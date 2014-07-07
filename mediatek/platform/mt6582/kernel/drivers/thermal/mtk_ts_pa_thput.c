@@ -60,6 +60,10 @@ do {                                    \
 #define MTK_THERMAL_GET_RF_TEMP_2G 	1
 #define MTK_THERMAL_GET_RF_TEMP_3G 	2
 
+#if defined(MTK_THERMAL_PA_VIA_ATCMD)
+#define MAX_MDINFOEX_OPCODE (16)
+#endif
+
 static bool mdm_sw = false;
 #if MTK_TS_PA_THPUT_VIA_CCCI == 1
 static struct timer_list txpwr_timer;
@@ -69,6 +73,11 @@ static int mtk_mdm_disable(void);
 extern bool is_meta_mode(void);
 extern bool is_advanced_meta_mode(void);
 static int signal_period = 60; // 1s
+
+#if defined(MTK_THERMAL_PA_VIA_ATCMD)
+static int mdinfoex[MAX_MDINFOEX_OPCODE] = {0};
+static int mdinfoex_threshold[MAX_MDINFOEX_OPCODE] = {0};
+#endif
 
 struct md_info g_pinfo_list[] = 
 {{"TXPWR_MD1", -127, "db", -127, 0}, 
@@ -115,6 +124,46 @@ int mtk_mdm_get_md_info(struct md_info** p_inf, int *size)
     return 0;
 }
 EXPORT_SYMBOL(mtk_mdm_get_md_info);
+
+int mtk_mdm_get_mdinfoex(int opcode, int *value)
+{
+    mtk_mdm_dprintk("%s\n", __func__);
+
+#if defined(MTK_THERMAL_PA_VIA_ATCMD)
+    if (opcode >= 0 && opcode < MAX_MDINFOEX_OPCODE && value != NULL)
+    {
+        *value = mdinfoex[opcode];
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
+#else
+    return -1;
+#endif
+}
+EXPORT_SYMBOL(mtk_mdm_get_mdinfoex);
+
+int mtk_mdm_set_mdinfoex_threshold(int opcode, int threshold)
+{
+    mtk_mdm_dprintk("%s\n", __func__);
+
+#if defined(MTK_THERMAL_PA_VIA_ATCMD)
+    if (opcode >= 0 && opcode < MAX_MDINFOEX_OPCODE)
+    {
+        mdinfoex_threshold[opcode] = threshold;
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
+#else
+    return -1;
+#endif
+}
+EXPORT_SYMBOL(mtk_mdm_set_mdinfoex_threshold);
 
 int mtk_mdm_start_query(void)
 {
@@ -437,7 +486,9 @@ static int mtk_mdm_proc_mdinfo_read(char *buf, char **start, off_t off, int coun
         len -= off;
     else
         len = 0;
-    mtk_mdm_dprintk("[%s] %d", __func__, signal_period);
+
+    mtk_mdm_dprintk("[%s]\n", __func__);
+    
     return len < count ? len  : count;
 }
 
@@ -471,7 +522,7 @@ static ssize_t mtk_mdm_proc_mdinfo_write(struct file *file, const char *buf, uns
             {
                 g_pinfo_list[2].value = rf_temp*1000;
             }
-            else if (2 == rat || 4 == rat)
+            else if (2 == rat || 3 == rat)
             {
                 g_pinfo_list[4].value = rf_temp*1000;
                 g_pinfo_list[0].value = tx_power;
@@ -483,7 +534,7 @@ static ssize_t mtk_mdm_proc_mdinfo_write(struct file *file, const char *buf, uns
             {
                 g_pinfo_list[3].value = rf_temp*1000;
             }
-            else if (2 == rat || 4 == rat)
+            else if (2 == rat || 3 == rat)
             {
                 g_pinfo_list[5].value = rf_temp*1000;
                 g_pinfo_list[1].value = tx_power;
@@ -495,6 +546,92 @@ static ssize_t mtk_mdm_proc_mdinfo_write(struct file *file, const char *buf, uns
     else
     {
         mtk_mdm_dprintk("[%s] insufficient input %d,%d,%d,%d\n", __func__, sim, rat, rf_temp, tx_power);
+    }
+    
+    return -EINVAL;
+}
+
+static int mtk_mdm_proc_mdinfoex_read(char *buf, char **start, off_t off, int count, int *eof, void *data)
+{
+    int len = 0;
+    int i = 0;
+    char *p = buf;
+
+    for (; i < MAX_MDINFOEX_OPCODE; i++)
+    {
+        p += sprintf(p, "%03d %d\n", i, mdinfoex[i]);
+    }
+
+    *start = buf + off;
+
+    len = p - buf;
+    if (len > off)
+        len -= off;
+    else
+        len = 0;
+    
+    mtk_mdm_dprintk("[%s]\n", __func__);
+    return len < count ? len  : count;
+}
+
+static int mtk_mdm_proc_mdinfoex_threshold_read(char *buf, char **start, off_t off, int count, int *eof, void *data)
+{
+    int len = 0;
+    int i = 0;
+    char *p = buf;
+
+    for (; i < MAX_MDINFOEX_OPCODE; i++)
+    {
+        p += sprintf(p, "%d,", mdinfoex_threshold[i]);
+    }
+    p += sprintf(p, "\n");
+
+    *start = buf + off;
+
+    len = p - buf;
+    if (len > off)
+        len -= off;
+    else
+        len = 0;
+    
+    mtk_mdm_dprintk("[%s]\n", __func__);
+    return len < count ? len  : count;
+}
+
+static ssize_t mtk_mdm_proc_mdinfoex_write(struct file *file, const char *buf, unsigned long len, void *data)
+{
+    
+    char desc[MAX_LEN] = {0};
+    int opcode;
+    int value;
+    
+    len = (len < (sizeof(desc) - 1)) ? len : (sizeof(desc) - 1);
+
+    /* write data to the buffer */
+    if (copy_from_user(desc, buf, len)) 
+    {
+        return -EFAULT;
+    }
+
+    if (sscanf(desc, "%d,%d", &opcode, &value) >= 2) 
+    {
+        mtk_mdm_dprintk("[%s] %d,%d\n", __func__, opcode, value);
+
+        // fill mdinfoex
+        if (opcode >= 0 && opcode < MAX_MDINFOEX_OPCODE)
+        {
+            mdinfoex[opcode] = value;
+        }
+        else
+        {
+            mtk_mdm_dprintk("[%s] invalid input %d,%d\n", __func__, opcode, value);
+        }
+        
+        return len;
+    }
+    else
+    {
+        mtk_mdm_dprintk("[%s] invalid input %d,%d\n", __func__, opcode, value);
     }
     
     return -EINVAL;
@@ -532,6 +669,18 @@ static int __init mtk_mdm_txpwr_init(void)
         if (entry) {
             entry->read_proc = mtk_mdm_proc_mdinfo_read;
             entry->write_proc = mtk_mdm_proc_mdinfo_write;
+            entry->gid = 1000;
+        }
+        entry = create_proc_entry("mdinfoex", S_IRUGO | S_IWUSR | S_IWGRP, mdtxpwr_dir);
+        if (entry) {
+            entry->read_proc = mtk_mdm_proc_mdinfoex_read;
+            entry->write_proc = mtk_mdm_proc_mdinfoex_write;
+            entry->gid = 1000;
+        }
+
+        entry = create_proc_entry("mdinfoex_thre", S_IRUGO, mdtxpwr_dir);
+        if (entry) {
+            entry->read_proc = mtk_mdm_proc_mdinfoex_threshold_read;
             entry->gid = 1000;
         }
 #endif

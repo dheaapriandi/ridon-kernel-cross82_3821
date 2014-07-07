@@ -1,141 +1,8 @@
-/******************************************************************************
-*[File]             sdio.c
-*[Version]          v1.0
-*[Revision Date]    2010-03-01
-*[Author]
-*[Description]
-*    The program provides SDIO HIF driver
-*[Copyright]
-*    Copyright (C) 2010 MediaTek Incorporation. All Rights Reserved.
-******************************************************************************/
 
 
 
-/*
-** $Log: sdio.c $
- *
- * 04 12 2012 terry.wu
- * NULL
- * Add AEE message support
- * 1) Show AEE warning(red screen) if SDIO access error occurs
 
- *
- * 02 14 2012 cp.wu
- * [WCXRP00000851] [MT6628 Wi-Fi][Driver] Add HIFSYS related definition to driver source tree
- * include correct header file upon setting.
- *
- * 11 10 2011 cp.wu
- * [WCXRP00001098] [MT6620 Wi-Fi][Driver] Replace printk by DBG LOG macros in linux porting layer
- * 1. eliminaite direct calls to printk in porting layer.
- * 2. replaced by DBGLOG, which would be XLOG on ALPS platforms.
- *
- * 09 20 2011 cp.wu
- * [WCXRP00000994] [MT6620 Wi-Fi][Driver] dump message for bus error and reset bus error flag while re-initialized
- * 1. always show error message for SDIO bus errors.
- * 2. reset bus error flag when re-initialization
- *
- * 08 17 2011 cp.wu
- * [WCXRP00000851] [MT6628 Wi-Fi][Driver] Add HIFSYS related definition to driver source tree
- * add MT6628 related definitions for Linux/Android driver.
- *
- * 05 18 2011 cp.wu
- * [WCXRP00000702] [MT5931][Driver] Modify initialization sequence for E1 ASIC
- * add device ID for MT5931.
- *
- * 04 08 2011 pat.lu
- * [WCXRP00000623] [MT6620 Wi-Fi][Driver] use ARCH define to distinguish PC Linux driver
- * Use CONFIG_X86 instead of PC_LINUX_DRIVER_USE option to have proper compile settting for PC Linux driver
- *
- * 03 22 2011 pat.lu
- * [WCXRP00000592] [MT6620 Wi-Fi][Driver] Support PC Linux Environment Driver Build
- * Add a compiler option "PC_LINUX_DRIVER_USE" for building driver in PC Linux environment.
- *
- * 03 18 2011 cp.wu
- * [WCXRP00000559] [MT6620 Wi-Fi][Driver] Combine TX/RX DMA buffers into a single one to reduce physically continuous memory consumption
- * deprecate CFG_HANDLE_IST_IN_SDIO_CALLBACK.
- *
- * 03 15 2011 cp.wu
- * [WCXRP00000559] [MT6620 Wi-Fi][Driver] Combine TX/RX DMA buffers into a single one to reduce physically continuous memory consumption
- * 1. deprecate CFG_HANDLE_IST_IN_SDIO_CALLBACK
- * 2. Use common coalescing buffer for both TX/RX directions
- *
- *
- * 03 07 2011 terry.wu
- * [WCXRP00000521] [MT6620 Wi-Fi][Driver] Remove non-standard debug message
- * Toggle non-standard debug messages to comments.
- *
- * 11 15 2010 jeffrey.chang
- * [WCXRP00000181] [MT6620 Wi-Fi][Driver] fix the driver message "GLUE_FLAG_HALT skip INT" during unloading
- * Fix GLUE_FALG_HALT message which cause driver to hang
- *
- * 11 08 2010 cp.wu
- * [WCXRP00000166] [MT6620 Wi-Fi][Driver] use SDIO CMD52 for enabling/disabling interrupt to reduce transaction period
- * correct typo
- *
- * 11 08 2010 cp.wu
- * [WCXRP00000166] [MT6620 Wi-Fi][Driver] use SDIO CMD52 for enabling/disabling interrupt to reduce transaction period
- * change to use CMD52 for enabling/disabling interrupt to reduce SDIO transaction time
- *
- * 11 01 2010 yarco.yang
- * [WCXRP00000149] [MT6620 WI-Fi][Driver]Fine tune performance on MT6516 platform
- * Add code to run WlanIST in SDIO callback.
- *
- * 10 19 2010 cp.wu
- * [WCXRP00000122] [MT6620 Wi-Fi][Driver] Preparation for YuSu source tree integration
- * remove HIF_SDIO_ONE flags because the settings could be merged for runtime detection instead of compile-time.
- *
- * 10 19 2010 jeffrey.chang
- * [WCXRP00000120] [MT6620 Wi-Fi][Driver] Refine linux kernel module to the license of MTK propietary and enable MTK HIF by default
- * Refine linux kernel module to the license of MTK and enable MTK HIF
- *
- * 08 21 2010 jeffrey.chang
- * NULL
- * 1) add sdio two setting
- * 2) bug fix of sdio glue
- *
- * 08 18 2010 jeffrey.chang
- * NULL
- * support multi-function sdio
- *
- * 08 18 2010 cp.wu
- * NULL
- * #if defined(__X86__) is not working, change to use #ifdef CONFIG_X86.
- *
- * 08 17 2010 cp.wu
- * NULL
- * add ENE SDIO host workaround for x86 linux platform.
- *
- * 07 08 2010 cp.wu
- *
- * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
- *
- * 06 06 2010 kevin.huang
- * [WPD00003832][MT6620 5931] Create driver base
- * [MT6620 5931] Create driver base
- *
- * 05 07 2010 jeffrey.chang
- * [WPD00003826]Initial import for Linux port
- * Fix hotplug bug
- *
- * 03 28 2010 jeffrey.chang
- * [WPD00003826]Initial import for Linux port
- * clear sdio interrupt
- *
- * 03 24 2010 jeffrey.chang
- * [WPD00003826]Initial import for Linux port
- * initial import for Linux port
-**
-*/
 
-/*******************************************************************************
-*                         C O M P I L E R   F L A G S
-********************************************************************************
-*/
-
-/*******************************************************************************
-*                    E X T E R N A L   R E F E R E N C E S
-********************************************************************************
-*/
 
 #include "gl_os.h"
 
@@ -166,10 +33,6 @@
 #include <mach/mt6516_gpio.h>
 #endif
 
-/*******************************************************************************
-*                              C O N S T A N T S
-********************************************************************************
-*/
 
 #define HIF_SDIO_ERR_TITLE_STR              "["CHIP_NAME"] SDIO Access Error!"
 #define HIF_SDIO_ERR_DESC_STR               "**SDIO Access Error**\n"
@@ -177,10 +40,6 @@
 #if MTK_WCN_HIF_SDIO
 
 
-/*
- * function prototypes
- *
- */
 
 static INT32
 mtk_sdio_probe(MTK_WCN_HIF_SDIO_CLTCTX, const MTK_WCN_HIF_SDIO_FUNCINFO *);
@@ -189,9 +48,6 @@ static INT32
 mtk_sdio_remove(MTK_WCN_HIF_SDIO_CLTCTX);
 static INT32 mtk_sdio_interrupt(MTK_WCN_HIF_SDIO_CLTCTX);
 
-/*
- * sdio function info table
- */
 
 static MTK_WCN_HIF_SDIO_FUNCINFO funcInfo[] = {
 #if defined(MT6620)
@@ -234,21 +90,9 @@ MODULE_DEVICE_TABLE(sdio, mtk_sdio_ids);
 
 #endif
 
-/*******************************************************************************
-*                             D A T A   T Y P E S
-********************************************************************************
-*/
 
 
-/*******************************************************************************
-*                            P U B L I C   D A T A
-********************************************************************************
-*/
 
-/*******************************************************************************
-*                           P R I V A T E   D A T A
-********************************************************************************
-*/
 static probe_card pfWlanProbe = NULL;
 static remove_card pfWlanRemove = NULL;
 
@@ -290,20 +134,8 @@ UINT_32 dbgPinSTP[] = {
 //    , GPIO_6516(123) /* BT_RESET, REMOVED!!! for MT6620-RST */
 };
 #endif
-/*******************************************************************************
-*                                 M A C R O S
-********************************************************************************
-*/
 
-/*******************************************************************************
-*                   F U N C T I O N   D E C L A R A T I O N S
-********************************************************************************
-*/
 
-/*******************************************************************************
-*                              F U N C T I O N S
-********************************************************************************
-*/
 #if CFG_DBG_GPIO_PINS
 void debug_gpio_init(void)
 {
@@ -381,13 +213,6 @@ void mtk_wcn_stp_debug_gpio_assert(UINT_32 dwIndex, UINT_32 dwMethod)
 #endif
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief This function is a SDIO interrupt callback function
-*
-* \param[in] func  pointer to SDIO handle
-*
-* \return void
-*/
 /*----------------------------------------------------------------------------*/
 
 #if MTK_WCN_HIF_SDIO
@@ -468,14 +293,6 @@ static void mtk_sdio_interrupt(struct sdio_func *func)
 #endif
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief This function is a SDIO probe function
-*
-* \param[in] func   pointer to SDIO handle
-* \param[in] id     pointer to SDIO device id table
-*
-* \return void
-*/
 /*----------------------------------------------------------------------------*/
 
 #if MTK_WCN_HIF_SDIO
@@ -623,14 +440,6 @@ int mtk_sdio_resume (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief This function will register sdio bus to the os
-*
-* \param[in] pfProbe    Function pointer to detect card
-* \param[in] pfRemove   Function pointer to remove card
-*
-* \return The result of registering sdio bus
-*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 glRegisterBus (
@@ -667,13 +476,6 @@ glRegisterBus (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief This function will unregister sdio bus to the os
-*
-* \param[in] pfRemove   Function pointer to remove card
-*
-* \return (none)
-*/
 /*----------------------------------------------------------------------------*/
 VOID
 glUnregisterBus(
@@ -695,14 +497,6 @@ glUnregisterBus(
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief This function stores hif related info, which is initialized before.
-*
-* \param[in] prGlueInfo Pointer to glue info structure
-* \param[in] u4Cookie   Pointer to UINT_32 memory base variable for _HIF_HPI
-*
-* \return (none)
-*/
 /*----------------------------------------------------------------------------*/
 VOID
 glSetHifInfo (
@@ -737,13 +531,6 @@ glSetHifInfo (
 } /* end of glSetHifInfo() */
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief This function clears hif related info.
-*
-* \param[in] prGlueInfo Pointer to glue info structure
-*
-* \return (none)
-*/
 /*----------------------------------------------------------------------------*/
 VOID
 glClearHifInfo (
@@ -759,15 +546,6 @@ glClearHifInfo (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Initialize bus operation and hif related information, request resources.
-*
-* \param[out] pvData    A pointer to HIF-specific data type buffer.
-*                       For eHPI, pvData is a pointer to UINT_32 type and stores a
-*                       mapped base address.
-*
-* \return (none)
-*/
 /*----------------------------------------------------------------------------*/
 BOOL
 glBusInit (
@@ -803,13 +581,6 @@ glBusInit (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Stop bus operation and release resources.
-*
-* \param[in] pvData A pointer to struct net_device.
-*
-* \return (none)
-*/
 /*----------------------------------------------------------------------------*/
 VOID
 glBusRelease (
@@ -822,16 +593,6 @@ glBusRelease (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Setup bus interrupt operation and interrupt handler for os.
-*
-* \param[in] pvData     A pointer to struct net_device.
-* \param[in] pfnIsr     A pointer to interrupt handler function.
-* \param[in] pvCookie   Private data for pfnIsr function.
-*
-* \retval WLAN_STATUS_SUCCESS   if success
-*         NEGATIVE_VALUE   if fail
-*/
 /*----------------------------------------------------------------------------*/
 INT_32
 glBusSetIrq (
@@ -888,14 +649,6 @@ glBusSetIrq (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Stop bus interrupt operation and disable interrupt handling for os.
-*
-* \param[in] pvData     A pointer to struct net_device.
-* \param[in] pvCookie   Private data for pfnIsr function.
-*
-* \return (none)
-*/
 /*----------------------------------------------------------------------------*/
 VOID
 glBusFreeIrq (
@@ -934,16 +687,6 @@ glBusFreeIrq (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Read a 32-bit device register
-*
-* \param[in] prGlueInfo Pointer to the GLUE_INFO_T structure.
-* \param[in] u4Register Register offset
-* \param[in] pu4Value   Pointer to variable used to store read value
-*
-* \retval TRUE          operation success
-* \retval FALSE         operation fail
-*/
 /*----------------------------------------------------------------------------*/
 BOOL
 kalDevRegRead (
@@ -981,16 +724,6 @@ kalDevRegRead (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Write a 32-bit device register
-*
-* \param[in] prGlueInfo Pointer to the GLUE_INFO_T structure.
-* \param[in] u4Register Register offset
-* \param[in] u4Value    Value to be written
-*
-* \retval TRUE          operation success
-* \retval FALSE         operation fail
-*/
 /*----------------------------------------------------------------------------*/
 BOOL
 kalDevRegWrite (
@@ -1027,18 +760,6 @@ kalDevRegWrite (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Read device I/O port
-*
-* \param[in] prGlueInfo         Pointer to the GLUE_INFO_T structure.
-* \param[in] u2Port             I/O port offset
-* \param[in] u2Len              Length to be read
-* \param[out] pucBuf            Pointer to read buffer
-* \param[in] u2ValidOutBufSize  Length of the buffer valid to be accessed
-*
-* \retval TRUE          operation success
-* \retval FALSE         operation fail
-*/
 /*----------------------------------------------------------------------------*/
 BOOL
 kalDevPortRead (
@@ -1138,18 +859,6 @@ kalDevPortRead (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Write device I/O port
-*
-* \param[in] prGlueInfo         Pointer to the GLUE_INFO_T structure.
-* \param[in] u2Port             I/O port offset
-* \param[in] u2Len              Length to be write
-* \param[in] pucBuf             Pointer to write buffer
-* \param[in] u2ValidInBufSize   Length of the buffer valid to be accessed
-*
-* \retval TRUE          operation success
-* \retval FALSE         operation fail
-*/
 /*----------------------------------------------------------------------------*/
 BOOL
 kalDevPortWrite (
@@ -1248,16 +957,6 @@ kalDevPortWrite (
 
 
 /*----------------------------------------------------------------------------*/
-/*!
-* \brief Write device I/O port in byte with CMD52
-*
-* \param[in] prGlueInfo         Pointer to the GLUE_INFO_T structure.
-* \param[in] u4Addr             I/O port offset
-* \param[in] ucData             Single byte of data to be written
-*
-* \retval TRUE          operation success
-* \retval FALSE         operation fail
-*/
 /*----------------------------------------------------------------------------*/
 BOOL
 kalDevWriteWithSdioCmd52 (

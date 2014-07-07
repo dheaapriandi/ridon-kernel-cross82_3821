@@ -1,13 +1,3 @@
-/*
- * drivers/leds/leds-mt65xx.c
- *
- * This file is subject to the terms and conditions of the GNU General Public
- * License.  See the file COPYING in the main directory of this archive for
- * more details.
- *
- * mt65xx leds driver
- *
- */
 
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -39,9 +29,6 @@
 
 
 
-/****************************************************************************
- * variables
- ***************************************************************************/
 struct cust_mt65xx_led* bl_setting = NULL;
 static unsigned int bl_brightness = 102;
 static unsigned int bl_duty = 21;
@@ -51,9 +38,6 @@ static unsigned int div_array[PWM_DIV_NUM];
 struct mt65xx_led_data *g_leds_data[MT65XX_LED_TYPE_TOTAL];
 
 
-/****************************************************************************
- * DEBUG MACROS
- ***************************************************************************/
 static int debug_enable_led = 1;
 #define LEDS_DRV_DEBUG(format, args...) do{ \
 	if(debug_enable_led) \
@@ -62,9 +46,6 @@ static int debug_enable_led = 1;
 	}\
 }while(0)
 
-/****************************************************************************
- * function prototypes
- ***************************************************************************/
 #ifndef CONTROL_BL_TEMPERATURE
 #define CONTROL_BL_TEMPERATURE
 #endif
@@ -75,9 +56,6 @@ int setMaxbrightness(int max_level, int enable);
 
 #endif
 
-/******************************************************************************
-   for DISP backlight High resolution 
-******************************************************************************/
 #ifdef LED_INCREASE_LED_LEVEL_MTKPATCH
 #define LED_INTERNAL_LEVEL_BIT_CNT 10
 #endif
@@ -85,9 +63,6 @@ int setMaxbrightness(int max_level, int enable);
 
 static int mt65xx_led_set_cust(struct cust_mt65xx_led *cust, int level);
 
-/****************************************************************************
- * add API for temperature control
- ***************************************************************************/
 
 #ifdef CONTROL_BL_TEMPERATURE
 
@@ -152,9 +127,6 @@ int setMaxbrightness(int max_level, int enable)
 	
 }
 #endif
-/****************************************************************************
- * internal functions
- ***************************************************************************/
 static void get_div_array(void)
 {
 	int i = 0;
@@ -245,9 +217,6 @@ static int  mt65xx_blink_set(struct led_classdev *led_cdev,
 	}
 }
 
-/****************************************************************************
- * external functions
- ***************************************************************************/
 int mt65xx_leds_brightness_set(enum mt65xx_led_type type, enum led_brightness level)
 {
 	struct cust_mt65xx_led *cust_led_list = mt_get_cust_led_list();
@@ -433,10 +402,99 @@ static ssize_t show_pwm_register(struct device *dev,struct device_attribute *att
 
 static DEVICE_ATTR(pwm_register, 0664, show_pwm_register, store_pwm_register);
 
+static unsigned int notify_led_enable;
 
-/****************************************************************************
- * driver functions
- ***************************************************************************/
+static unsigned long delayon = 512;
+static unsigned long delayoff = 512;
+
+static ssize_t store_notify_led(struct device *dev, struct device_attribute *attr ,const char *buf,size_t size)
+{
+	char *pvalue = NULL;
+	unsigned int notify_led;
+	struct cust_mt65xx_led *cust_led_list =get_cust_led_list();
+	struct nled_setting led_tmp_seting;
+	led_tmp_seting.nled_mode = NLED_BLINK;
+	led_tmp_seting.blink_off_time = delayoff;
+	led_tmp_seting.blink_on_time = delayon;
+	struct led_classdev *led_cdev = dev_get_drvdata(dev);
+	if(buf != NULL && size != 0)
+		{
+			notify_led = simple_strtoul(buf,&pvalue,10);
+			if(notify_led == 1)
+				{
+					mt_set_gpio_out(GPIO41,GPIO_OUT_ONE);
+					notify_led_enable = 1;
+					mt_led_blink_pmic(MT65XX_LED_PMIC_NLED_ISINK0, &led_tmp_seting);
+					//led_set_pwm(PWM1, &led_tmp_seting);
+					
+				}
+			if(notify_led == 0)
+				{
+					//mt_set_gpio_out(GPIO41,GPIO_OUT_ZERO);
+					notify_led_enable = 0;
+					mt_brightness_set_pmic(MT65XX_LED_PMIC_NLED_ISINK0,0, 0);
+				}
+		}
+	return size;
+	
+}
+
+static ssize_t show_notify_led(struct device *dev,struct device_attribute *attr, char *buf)
+{
+	return sprintf( buf,"%u\n",notify_led_enable);
+	return 0;
+
+}
+
+static DEVICE_ATTR (notify_led, 0664, show_notify_led, store_notify_led);
+
+static ssize_t store_delay_on(struct device *dev,struct device_attribute *attr,const char *buf,size_t size)
+{
+	char *pvalue = NULL;
+	unsigned int delay_on = 0;
+	if(buf != NULL && size != 0)
+		{
+			//LEDS_DEBUG("store_pwm_register: size:%d,sddress :0x&s\n", size, buf);
+			delay_on = simple_strtoul(buf,&pvalue,10);
+			delayon = delay_on;
+		}
+	return size;
+}
+
+static ssize_t show_delay_on(struct device *dev,struct device_attribute *attr,char *buf)
+{
+	unsigned int delay_on = delayon;
+	return sprintf(buf,"%u\n" ,delay_on);
+	return 0;
+
+}
+
+static DEVICE_ATTR(delay_on,0664, show_delay_on,store_delay_on);
+
+
+
+static ssize_t store_delay_off(struct device *dev,struct device_attribute *attr,const char *buf,size_t size)
+{
+	char *pvalue = NULL;
+	unsigned int delay_off = 0;
+	if(buf != NULL && size != 0)
+		{
+			//LEDS_DEBUG("store_pwm_register: size:%d,sddress :0x&s\n", size, buf);
+			delay_off = simple_strtoul(buf,&pvalue,10);
+			delayoff = delay_off;
+		}
+	return size;
+}
+
+static ssize_t show_delay_off(struct device *dev,struct device_attribute *attr,char *buf)
+{
+	unsigned int delay_off = delayoff;
+	return sprintf(buf,"%u\n" ,delay_off);
+	return 0;
+
+}
+
+static DEVICE_ATTR(delay_off,0664, show_delay_off,store_delay_off);
 static int __init mt65xx_leds_probe(struct platform_device *pdev)
 {
 	int i;
@@ -497,7 +555,27 @@ static int __init mt65xx_leds_probe(struct platform_device *pdev)
             }
 			bl_setting = &g_leds_data[i]->cust;
 		}
-
+		if(strcmp(g_leds_data[i]->cdev.name,"red")==0)
+	     {
+			rc = device_create_file(g_leds_data[i]->cdev.dev, &dev_attr_notify_led);
+			if(rc)
+			{
+				LEDS_DRV_DEBUG("[notify_led] device create file duty fail!\n");	
+			}
+			rc = device_create_file(g_leds_data[i]->cdev.dev, &dev_attr_delay_on);
+			if(rc)
+			{
+				LEDS_DRV_DEBUG("[delay_on] device create file duty fail!\n");	
+			}
+			rc = device_create_file(g_leds_data[i]->cdev.dev, &dev_attr_delay_off);
+			if(rc)
+			{
+			  	LEDS_DRV_DEBUG("[delay_off] device create file duty fail!\n");	
+			}
+			mt_set_gpio_mode(GPIO41, GPIO_MODE_00);
+			mt_set_gpio_dir(GPIO41, GPIO_DIR_OUT);
+			mt_set_gpio_out(GPIO41, GPIO_OUT_ONE);
+		}
 		if (ret)
 			goto err;
 		
@@ -544,12 +622,6 @@ static int mt65xx_leds_remove(struct platform_device *pdev)
 	return 0;
 }
 
-/*
-static int mt65xx_leds_suspend(struct platform_device *pdev, pm_message_t state)
-{
-	return 0;
-}
-*/
 
 static void mt65xx_leds_shutdown(struct platform_device *pdev)
 {

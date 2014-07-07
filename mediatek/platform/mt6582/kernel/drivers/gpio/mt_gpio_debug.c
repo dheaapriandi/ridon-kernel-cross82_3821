@@ -1,12 +1,3 @@
-/******************************************************************************
- * mt_gpio_debug.c - MTKLinux GPIO Device Driver
- * 
- * Copyright 2008-2009 MediaTek Co.,Ltd.
- * 
- * DESCRIPTION:
- *     This file provid the other drivers GPIO debug functions
- *
- ******************************************************************************/
 
 #include <linux/slab.h>
 
@@ -180,32 +171,6 @@ void mt_gpio_self_test(void)
     }
     GPIOLOG("GPIO test done\n");
 }
-/*----------------------------------------------------------------------------
-void mt_gpio_load_ext(GPIOEXT_REGS *regs) 
-{
-    GPIOEXT_REGS *pReg = (GPIOEXT_REGS*)(GPIOEXT_BASE);
-    int idx;
-    
-    if (!regs)
-        GPIOERR("%s: null pointer\n", __func__);
-    memset(regs, 0x00, sizeof(*regs));
-    for (idx = 0; idx < sizeof(pReg->dir)/sizeof(pReg->dir[0]); idx++)
-        regs->dir[idx].val = GPIOEXT_RD(&pReg->dir[idx]);
-    for (idx = 0; idx < sizeof(pReg->pullen)/sizeof(pReg->pullen[0]); idx++)
-        regs->pullen[idx].val = GPIOEXT_RD(&pReg->pullen[idx]);
-    for (idx = 0; idx < sizeof(pReg->pullsel)/sizeof(pReg->pullsel[0]); idx++)
-        regs->pullsel[idx].val =GPIOEXT_RD(&pReg->pullsel[idx]);
-    for (idx = 0; idx < sizeof(pReg->dinv)/sizeof(pReg->dinv[0]); idx++)
-        regs->dinv[idx].val =GPIOEXT_RD(&pReg->dinv[idx]);
-    for (idx = 0; idx < sizeof(pReg->dout)/sizeof(pReg->dout[0]); idx++)
-        regs->dout[idx].val = GPIOEXT_RD(&pReg->dout[idx]);
-    for (idx = 0; idx < sizeof(pReg->mode)/sizeof(pReg->mode[0]); idx++)
-        regs->mode[idx].val = GPIOEXT_RD(&pReg->mode[idx]);
-    for (idx = 0; idx < sizeof(pReg->din)/sizeof(pReg->din[0]); idx++)
-        regs->din[idx].val = GPIOEXT_RD(&pReg->din[idx]);
-}
-EXPORT_SYMBOL(mt_gpio_load_ext);
-----------------------------------------------------------------------------*/
 void mt_gpio_load_base(GPIO_REGS *regs) 
 {
     GPIO_REGS *pReg = (GPIO_REGS*)(GPIO_BASE);
@@ -222,8 +187,6 @@ void mt_gpio_load_base(GPIO_REGS *regs)
         regs->pullen[idx].val = __raw_readl(&pReg->pullen[idx]);
     for (idx = 0; idx < sizeof(pReg->pullsel)/sizeof(pReg->pullsel[0]); idx++)
         regs->pullsel[idx].val =__raw_readl(&pReg->pullsel[idx]);
-/*    for (idx = 0; idx < sizeof(pReg->dinv)/sizeof(pReg->dinv[0]); idx++)
-        regs->dinv[idx].val =__raw_readl(&pReg->dinv[idx]);*/
     for (idx = 0; idx < sizeof(pReg->dout)/sizeof(pReg->dout[0]); idx++)
         regs->dout[idx].val = __raw_readl(&pReg->dout[idx]);
     for (idx = 0; idx < sizeof(pReg->mode)/sizeof(pReg->mode[0]); idx++)
@@ -232,82 +195,6 @@ void mt_gpio_load_base(GPIO_REGS *regs)
         regs->din[idx].val = __raw_readl(&pReg->din[idx]);
 }
 //EXPORT_SYMBOL(mt_gpio_load_base);
-/*----------------------------------------------------------------------------
-void mt_gpio_dump_ext( GPIOEXT_REGS *regs) 
-{
-    GPIOEXT_REGS *cur = NULL ;    
-    int idx;
-    GPIOMSG("%s\n", __func__);
-	//if arg is null, load & dump; otherwise, dump only
-	if (regs == NULL) { 
-		cur = kzalloc(sizeof(*cur), GFP_KERNEL);    
-		if (cur == NULL) {
-			GPIOERR("GPIO extend null pointer\n");
-			return;
-		}
-        regs = cur;
-		mt_gpio_load_ext(cur);
-        GPIOMSG("dump current: %p\n", regs);
-    } else {
-        GPIOMSG("dump %p ...\n", regs);    
-    }
-    GPIOMSG("\nGPIO extend-------------------------------------------------------------------\n");    
-    GPIOMSG("---# dir #-----------------------------------------------------------------\n");
-    GPIOMSG("Offset 0x%04X\n",(void *)(&regs->dir[0])-(void *)regs);
-    for (idx = 0; idx < sizeof(regs->dir)/sizeof(regs->dir[0]); idx++) {
-        GPIOMSG("0x%04X ", regs->dir[idx].val);
-        if (7 == (idx % 8)) GPIOMSG("\n");
-    }
-    //GPIOMSG("\n---# ies #-----------------------------------------------------------------\n");
-    //GPIOMSG("Offset 0x%04X\n",(void *)(&regs->ies[0]);
-    //for (idx = 0; idx < sizeof(regs->ies)/sizeof(regs->ies[0]); idx++) {
-    //    GPIOMSG("0x%04X ", regs->ies[idx].val);
-    //    if (7 == (idx % 8)) GPIOMSG("\n");
-    //}
-    GPIOMSG("\n---# pullen #--------------------------------------------------------------\n");        
-    GPIOMSG("Offset 0x%04X\n",(void *)(&regs->pullen[0])-(void *)regs);
-    for (idx = 0; idx < sizeof(regs->pullen)/sizeof(regs->pullen[0]); idx++) {
-        GPIOMSG("0x%04X ", regs->pullen[idx].val);    
-        if (7 == (idx % 8)) GPIOMSG("\n");
-    }
-    GPIOMSG("\n---# pullsel #-------------------------------------------------------------\n");   
-    GPIOMSG("Offset 0x%04X\n",(void *)(&regs->pullsel[0])-(void *)regs);
-    for (idx = 0; idx < sizeof(regs->pullsel)/sizeof(regs->pullsel[0]); idx++) {
-        GPIOMSG("0x%04X ", regs->pullsel[idx].val);     
-        if (7 == (idx % 8)) GPIOMSG("\n");
-    }
-    GPIOMSG("\n---# dinv #----------------------------------------------------------------\n");   
-    GPIOMSG("Offset 0x%04X\n",(void *)(&regs->dinv[0])-(void *)regs);
-    for (idx = 0; idx < sizeof(regs->dinv)/sizeof(regs->dinv[0]); idx++) {
-        GPIOMSG("0x%04X ", regs->dinv[idx].val);     
-        if (7 == (idx % 8)) GPIOMSG("\n");
-    }
-    GPIOMSG("\n---# dout #----------------------------------------------------------------\n");   
-    GPIOMSG("Offset 0x%04X\n",(void *)(&regs->dout[0])-(void *)regs);
-    for (idx = 0; idx < sizeof(regs->dout)/sizeof(regs->dout[0]); idx++) {
-        GPIOMSG("0x%04X ", regs->dout[idx].val);     
-        if (7 == (idx % 8)) GPIOMSG("\n");
-    }
-    GPIOMSG("\n---# din  #----------------------------------------------------------------\n");   
-    GPIOMSG("Offset 0x%04X\n",(void *)(&regs->din[0])-(void *)regs);
-    for (idx = 0; idx < sizeof(regs->din)/sizeof(regs->din[0]); idx++) {
-        GPIOMSG("0x%04X ", regs->din[idx].val);     
-        if (7 == (idx % 8)) GPIOMSG("\n");
-    }
-    GPIOMSG("\n---# mode #----------------------------------------------------------------\n");   
-    GPIOMSG("Offset 0x%04X\n",(void *)(&regs->mode[0])-(void *)regs);
-    for (idx = 0; idx < sizeof(regs->mode)/sizeof(regs->mode[0]); idx++) {
-        GPIOMSG("0x%04X ", regs->mode[idx].val);     
-        if (7 == (idx % 8)) GPIOMSG("\n");
-    }    
-    GPIOMSG("\n---------------------------------------------------------------------------\n");    
-
-
-	if (cur != NULL) {
-		kfree(cur);
-	}
-}
-----------------------------------------------------------------------------*/
 void mt_gpio_dump_base(GPIO_REGS *regs) 
 {
     GPIO_REGS *cur = NULL ;    
@@ -350,12 +237,6 @@ void mt_gpio_dump_base(GPIO_REGS *regs)
         GPIOMSG("0x%04X ", regs->pullsel[idx].val);     
         if (7 == (idx % 8)) GPIOMSG("\n");
     }
-/*    GPIOMSG("\n---# dinv #----------------------------------------------------------------\n");   
-    GPIOMSG("Offset 0x%04X\n",(void *)(&regs->dinv[0])-(void *)regs);
-    for (idx = 0; idx < sizeof(regs->dinv)/sizeof(regs->dinv[0]); idx++) {
-        GPIOMSG("0x%04X ", regs->dinv[idx].val);     
-        if (7 == (idx % 8)) GPIOMSG("\n");
-    }*/
     GPIOMSG("\n---# dout #----------------------------------------------------------------\n");   
     GPIOMSG("Offset 0x%04X\n",(void *)(&regs->dout[0])-(void *)regs);
     for (idx = 0; idx < sizeof(regs->dout)/sizeof(regs->dout[0]); idx++) {
@@ -413,20 +294,6 @@ void gpio_dump_regs(void)
 }
 //EXPORT_SYMBOL(gpio_dump_regs);
 /*----------------------------------------------------------------------------*/
-/*
-static ssize_t mt_gpio_dump_regs(char *buf, ssize_t bufLen)
-{
-    int idx = 0, len = 0;
-	char tmp[]="PIN: [MODE] [PULL_SEL] [DIN] [DOUT] [PULL EN] [DIR] [INV] [IES]\n";
-	len += snprintf(buf+len, bufLen-len, "%s",tmp);
-    for (idx = 0; idx < MT_GPIO_MAX_PIN; idx++) {
-		len += snprintf(buf+len, bufLen-len, "%3d:%d%d%d%d%d%d%d%d\n",
-		   idx,mt_get_gpio_mode(idx), mt_get_gpio_pull_select(idx), mt_get_gpio_in(idx),mt_get_gpio_out(idx),
-		   mt_get_gpio_pull_enable(idx),mt_get_gpio_dir(idx),mt_get_gpio_inversion(idx),mt_get_gpio_ies(idx)); 
-    }
-    return len;
-}
-*/
 /*---------------------------------------------------------------------------*/
 static void mt_gpio_read_pin_base(GPIO_CFG* cfg, int method)
 {
@@ -458,67 +325,6 @@ static void mt_gpio_read_pin_base(GPIO_CFG* cfg, int method)
         cfg->mode   = mt_get_gpio_mode(cfg->no);
     }
 }
-/*
-static void mt_gpio_read_pin_ext(GPIO_CFG* cfg, int method)
-{
-    if (method == 0) {
-        GPIOEXT_REGS *cur = (GPIOEXT_REGS*)GPIOEXT_BASE;    
-        u32 mask = (1L << GPIO_MODE_BITS) - 1;        
-        int num, bit; 
-		num = cfg->no / MAX_GPIO_REG_BITS;
-		bit = cfg->no % MAX_GPIO_REG_BITS;
-		if(cfg->no >= MT_GPIO_EXT_START){
-			//
-			cfg->pullsel= (cur->pullsel[num].val & (1L << bit)) ? (1) : (0);
-			cfg->din    = (cur->din[num].val & (1L << bit)) ? (1) : (0);
-			cfg->dout   = (cur->dout[num].val & (1L << bit)) ? (1) : (0);
-			cfg->pullen = (cur->pullen[num].val & (1L << bit)) ? (1) : (0);
-			cfg->dir    = (cur->dir[num].val & (1L << bit)) ? (1) : (0);
-			cfg->dinv   = (cur->dinv[num].val & (1L << bit)) ? (1) : (0);
-			num = cfg->no / MAX_GPIO_MODE_PER_REG;        
-			bit = cfg->no % MAX_GPIO_MODE_PER_REG;
-			cfg->mode   = (cur->mode[num].val >> (GPIO_MODE_BITS*bit)) & mask;
-			
-		}
-    } else if (method == 1) {
-        cfg->pullsel= mt_get_gpio_pull_select(cfg->no);
-        cfg->din    = mt_get_gpio_in(cfg->no);
-        cfg->dout   = mt_get_gpio_out(cfg->no);
-        cfg->pullen = mt_get_gpio_pull_enable(cfg->no);
-        cfg->dir    = mt_get_gpio_dir(cfg->no);
-        cfg->dinv   = mt_get_gpio_inversion(cfg->no);
-        cfg->mode   = mt_get_gpio_mode(cfg->no);
-    }
-}*/
-/*---------------------------------------------------------------------------
-static void mt_gpio_dump_addr_ext(void)
-{
-    int idx;
-    GPIOEXT_REGS *reg = (GPIOEXT_REGS*)GPIOEXT_BASE;
-
-    GPIOMSG("# GPIOEXT dump\n");
-    GPIOMSG("# direction\n");
-    for (idx = 0; idx < sizeof(reg->dir)/sizeof(reg->dir[0]); idx++)
-        GPIOMSG("val[%2d] %p\nset[%2d] %p\nrst[%2d] %p\n", idx, &reg->dir[idx].val, idx, &reg->dir[idx].set, idx, &reg->dir[idx].rst);
-    GPIOMSG("# pull enable\n");
-    for (idx = 0; idx < sizeof(reg->pullen)/sizeof(reg->pullen[0]); idx++)
-        GPIOMSG("val[%2d] %p\nset[%2d] %p\nrst[%2d] %p\n", idx, &reg->pullen[idx].val, idx, &reg->pullen[idx].set, idx, &reg->pullen[idx].rst);
-    GPIOMSG("# pull select\n");
-    for (idx = 0; idx < sizeof(reg->pullsel)/sizeof(reg->pullsel[0]); idx++)
-        GPIOMSG("val[%2d] %p\nset[%2d] %p\nrst[%2d] %p\n", idx, &reg->pullsel[idx].val, idx, &reg->pullsel[idx].set, idx, &reg->pullsel[idx].rst);
-    GPIOMSG("# data inversion\n");
-    for (idx = 0; idx < sizeof(reg->dinv)/sizeof(reg->dinv[0]); idx++)
-        GPIOMSG("val[%2d] %p\nset[%2d] %p\nrst[%2d] %p\n", idx, &reg->dinv[idx].val, idx, &reg->dinv[idx].set, idx, &reg->dinv[idx].rst);
-    GPIOMSG("# data output\n");
-    for (idx = 0; idx < sizeof(reg->dout)/sizeof(reg->dout[0]); idx++)
-        GPIOMSG("val[%2d] %p\nset[%2d] %p\nrst[%2d] %p\n", idx, &reg->dout[idx].val, idx, &reg->dout[idx].set, idx, &reg->dout[idx].rst);
-    GPIOMSG("# data input\n");
-    for (idx = 0; idx < sizeof(reg->din)/sizeof(reg->din[0]); idx++)
-        GPIOMSG("val[%2d] %p\n", idx, &reg->din[idx].val);
-    GPIOMSG("# mode\n");
-    for (idx = 0; idx < sizeof(reg->mode)/sizeof(reg->mode[0]); idx++)
-        GPIOMSG("val[%2d] %p\nset[%2d] %p\nrst[%2d] %p\n", idx, &reg->mode[idx].val, idx, &reg->mode[idx].set, idx, &reg->mode[idx].rst);    
-}*/
 static ssize_t mt_gpio_dump_addr_base(void)
 {
     int idx;
@@ -536,9 +342,6 @@ static ssize_t mt_gpio_dump_addr_base(void)
     GPIOMSG("# pull select\n");
     for (idx = 0; idx < sizeof(reg->pullsel)/sizeof(reg->pullsel[0]); idx++)
         GPIOMSG("val[%2d] %p\nset[%2d] %p\nrst[%2d] %p\n", idx, &reg->pullsel[idx].val, idx, &reg->pullsel[idx].set, idx, &reg->pullsel[idx].rst);
-/*    GPIOMSG("# data inversion\n");
-    for (idx = 0; idx < sizeof(reg->dinv)/sizeof(reg->dinv[0]); idx++)
-        GPIOMSG("val[%2d] %p\nset[%2d] %p\nrst[%2d] %p\n", idx, &reg->dinv[idx].val, idx, &reg->dinv[idx].set, idx, &reg->dinv[idx].rst);*/
     GPIOMSG("# data output\n");
     for (idx = 0; idx < sizeof(reg->dout)/sizeof(reg->dout[0]); idx++)
         GPIOMSG("val[%2d] %p\nset[%2d] %p\nrst[%2d] %p\n", idx, &reg->dout[idx].val, idx, &reg->dout[idx].set, idx, &reg->dout[idx].rst);
@@ -550,42 +353,6 @@ static ssize_t mt_gpio_dump_addr_base(void)
         GPIOMSG("val[%2d] %p\nset[%2d] %p\nrst[%2d] %p\n", idx, &reg->mode[idx].val, idx, &reg->mode[idx].set, idx, &reg->mode[idx].rst);
     return 0;    
 }
-/*---------------------------------------------------------------------------
-static void mt_gpio_compare_ext(void)
-{
-    int idx;
-    GPIOEXT_REGS *reg = (GPIOEXT_REGS*)GPIOEXT_BASE;
-    GPIOEXT_REGS *cur = kzalloc(sizeof(*cur), GFP_KERNEL);    
-
-    if (!cur)
-        return;
-    
-    mt_gpio_load_ext(cur);
-    for (idx = 0; idx < sizeof(reg->dir)/sizeof(reg->dir[0]); idx++)
-        if (reg->dir[idx].val != cur->dir[idx].val)
-            GPIOERR("GPIOEXT mismatch dir[%2d]: %x <> %x\n", idx, reg->dir[idx].val, cur->dir[idx].val);
-    for (idx = 0; idx < sizeof(reg->pullen)/sizeof(reg->pullen[0]); idx++)
-        if (reg->pullen[idx].val != cur->pullen[idx].val)
-            GPIOERR("GPIOEXT mismatch pullen[%2d]: %x <> %x\n", idx, reg->pullen[idx].val, cur->pullen[idx].val);
-    for (idx = 0; idx < sizeof(reg->pullsel)/sizeof(reg->pullsel[0]); idx++)
-        if (reg->pullsel[idx].val != cur->pullsel[idx].val)
-            GPIOERR("GPIOEXT mismatch pullsel[%2d]: %x <> %x\n", idx, reg->pullsel[idx].val, cur->pullsel[idx].val);
-    for (idx = 0; idx < sizeof(reg->dinv)/sizeof(reg->dinv[0]); idx++)
-        if (reg->dinv[idx].val != cur->dinv[idx].val)
-            GPIOERR("GPIOEXT mismatch dinv[%2d]: %x <> %x\n", idx, reg->dinv[idx].val, cur->dinv[idx].val);
-    for (idx = 0; idx < sizeof(reg->dout)/sizeof(reg->dout[0]); idx++)
-        if (reg->dout[idx].val != cur->dout[idx].val)
-            GPIOERR("GPIOEXT mismatch dout[%2d]: %x <> %x\n", idx, reg->dout[idx].val, cur->dout[idx].val);
-    for (idx = 0; idx < sizeof(reg->din)/sizeof(reg->din[0]); idx++)
-        if (reg->din[idx].val != cur->din[idx].val)
-            GPIOERR("GPIOEXT mismatch din[%2d]: %x <> %x\n", idx, reg->din[idx].val, cur->din[idx].val);
-    for (idx = 0; idx < sizeof(reg->mode)/sizeof(reg->mode[0]); idx++)
-        if (reg->mode[idx].val != cur->mode[idx].val)
-            GPIOERR("GPIOEXT mismatch mode[%2d]: %x <> %x\n", idx, reg->mode[idx].val, cur->mode[idx].val); 
-
-    kfree(cur);
-    return;
-}*/
 static ssize_t mt_gpio_compare_base(void)
 {
     int idx;
@@ -605,9 +372,6 @@ static ssize_t mt_gpio_compare_base(void)
     for (idx = 0; idx < sizeof(reg->pullsel)/sizeof(reg->pullsel[0]); idx++)
         if (reg->pullsel[idx].val != cur->pullsel[idx].val)
             GPIOERR("mismatch pullsel[%2d]: %x <> %x\n", idx, reg->pullsel[idx].val, cur->pullsel[idx].val);
-/*    for (idx = 0; idx < sizeof(reg->dinv)/sizeof(reg->dinv[0]); idx++)
-        if (reg->dinv[idx].val != cur->dinv[idx].val)
-            GPIOERR("mismatch dinv[%2d]: %x <> %x\n", idx, reg->dinv[idx].val, cur->dinv[idx].val);*/
     for (idx = 0; idx < sizeof(reg->dout)/sizeof(reg->dout[0]); idx++)
         if (reg->dout[idx].val != cur->dout[idx].val)
             GPIOERR("mismatch dout[%2d]: %x <> %x\n", idx, reg->dout[idx].val, cur->dout[idx].val);
@@ -636,12 +400,6 @@ static ssize_t mt_gpio_dump_regs(char *buf, ssize_t bufLen)
 		//   mt_get_gpio_pull_enable_base(idx),mt_get_gpio_dir_base(idx),mt_get_gpio_inversion_base(idx),mt_get_gpio_ies_base(idx)); 
 
     }
-/*	len += snprintf(buf+len, bufLen-len, "%s","EXT GPIO\n");
-    for (idx = MT_GPIO_EXT_START; idx < MT_GPIO_EXT_MAX; idx++) {
-		len += snprintf(buf+len, bufLen-len, "%3d:%d%d%d%d%d%d%d%d\n",
-		   idx,mt_get_gpio_mode_ext(idx), mt_get_gpio_pull_select_ext(idx), mt_get_gpio_in_ext(idx),mt_get_gpio_out_ext(idx),
-		   mt_get_gpio_pull_enable_ext(idx),mt_get_gpio_dir_ext(idx),mt_get_gpio_inversion_ext(idx),mt_get_gpio_ies_ext(idx)); 
-    }*/
     return len;
 }
 /*---------------------------------------------------------------------------*/
@@ -737,9 +495,6 @@ ssize_t mt_gpio_store_pin(struct device* dev, struct device_attribute *attr,
     }
     return count;    
 }
-/******************************************************************************
-*clock out module
-*******************************************************************************/
 int mt_set_clock_output(unsigned long num, unsigned long src, unsigned long div)
 {
 	GPIOERR("GPIO clock out module not implement yet!\n");
@@ -751,9 +506,6 @@ int mt_get_clock_output(unsigned long num, unsigned long * src, unsigned long *d
 	return RSUCCESS;
 }
 
-/******************************************************************************
-*MD convert gpio-name to gpio-number
-*******************************************************************************/
 struct mt_gpio_modem_info {
 	char name[40];
 	int num;

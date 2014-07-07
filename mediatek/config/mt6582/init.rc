@@ -7,9 +7,7 @@
 #import /init.${ro.hardware}.rc
 import /init.usb.rc
 import /init.trace.rc
-
 import /FWUpgradeInit.rc
-
 import init.xlog.rc
 
 on early-init
@@ -29,19 +27,19 @@ on early-init
 
 on early_property:ro.build.type=user
     write /proc/bootprof "INIT: user build setting"
-    export BOOTCLASSPATH /system/framework/core.jar:/system/framework/conscrypt.jar:/system/framework/okhttp.jar:/system/framework/core-junit.jar:/system/framework/bouncycastle.jar:/system/framework/ext.jar:/system/framework/framework.jar:/system/framework/framework2.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/mms-common.jar:/system/framework/android.policy.jar:/system/framework/services.jar:/system/framework/apache-xml.jar:/system/framework/webviewchromium.jar:/system/framework/mediatek-common.jar:/system/framework/mediatek-framework.jar:/system/framework/CustomProperties.jar:/system/framework/mediatek-telephony-common.jar:/system/framework/mediatek-tablet.jar
+    export BOOTCLASSPATH /system/framework/core.jar:/system/framework/conscrypt.jar:/system/framework/okhttp.jar:/system/framework/core-junit.jar:/system/framework/bouncycastle.jar:/system/framework/ext.jar:/system/framework/framework.jar:/system/framework/framework2.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/mms-common.jar:/system/framework/android.policy.jar:/system/framework/services.jar:/system/framework/apache-xml.jar:/system/framework/webviewchromium.jar:/system/framework/mediatek-common.jar:/system/framework/mediatek-framework.jar:/system/framework/CustomProperties.jar:/system/framework/mediatek-telephony-common.jar:/system/framework/mediatek-tablet.jar:/system/framework/jrdcom.framework.jar
 #    export CLASSPATH /system/framework/mediatek-op.jar
     export BOOTCLASSPATH_EX /system/framework/mediatek-op.jar
 
 on early_property:ro.build.type=userdebug
     write /proc/bootprof "INIT: userdebug build setting"
-    export BOOTCLASSPATH /system/framework/core.jar:/system/framework/conscrypt.jar:/system/framework/okhttp.jar:/system/framework/core-junit.jar:/system/framework/bouncycastle.jar:/system/framework/ext.jar:/system/framework/framework.jar:/system/framework/framework2.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/mms-common.jar:/system/framework/android.policy.jar:/system/framework/services.jar:/system/framework/apache-xml.jar:/system/framework/webviewchromium.jar:/system/framework/mediatek-common.jar:/system/framework/mediatek-framework.jar:/system/framework/CustomProperties.jar:/system/framework/mediatek-telephony-common.jar:/system/framework/mediatek-tablet.jar
+    export BOOTCLASSPATH /system/framework/core.jar:/system/framework/conscrypt.jar:/system/framework/okhttp.jar:/system/framework/core-junit.jar:/system/framework/bouncycastle.jar:/system/framework/ext.jar:/system/framework/framework.jar:/system/framework/framework2.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/mms-common.jar:/system/framework/android.policy.jar:/system/framework/services.jar:/system/framework/apache-xml.jar:/system/framework/webviewchromium.jar:/system/framework/mediatek-common.jar:/system/framework/mediatek-framework.jar:/system/framework/CustomProperties.jar:/system/framework/mediatek-telephony-common.jar:/system/framework/mediatek-tablet.jar:/system/framework/jrdcom.framework.jar
 #    export CLASSPATH /system/framework/mediatek-op.jar
     export BOOTCLASSPATH_EX /system/framework/mediatek-op.jar
     
 on early_property:ro.build.type=eng
     write /proc/bootprof "INIT: eng build setting"
-    export BOOTCLASSPATH /system/framework/core.jar:/system/framework/conscrypt.jar:/system/framework/okhttp.jar:/system/framework/core-junit.jar:/system/framework/bouncycastle.jar:/system/framework/ext.jar:/system/framework/framework.jar:/system/framework/framework2.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/mms-common.jar:/system/framework/android.policy.jar:/system/framework/services.jar:/system/framework/apache-xml.jar:/system/framework/webviewchromium.jar:/system/framework/mediatek-common.jar:/system/framework/mediatek-framework.jar:/system/framework/CustomProperties.jar:/system/framework/mediatek-telephony-common.jar:/system/framework/mediatek-tablet.jar:/system/framework/emma.jar
+    export BOOTCLASSPATH /system/framework/core.jar:/system/framework/conscrypt.jar:/system/framework/okhttp.jar:/system/framework/core-junit.jar:/system/framework/bouncycastle.jar:/system/framework/ext.jar:/system/framework/framework.jar:/system/framework/framework2.jar:/system/framework/telephony-common.jar:/system/framework/voip-common.jar:/system/framework/mms-common.jar:/system/framework/android.policy.jar:/system/framework/services.jar:/system/framework/apache-xml.jar:/system/framework/webviewchromium.jar:/system/framework/mediatek-common.jar:/system/framework/mediatek-framework.jar:/system/framework/CustomProperties.jar:/system/framework/mediatek-telephony-common.jar:/system/framework/mediatek-tablet.jar:/system/framework/emma.jar:/system/framework/jrdcom.framework.jar
 #    export CLASSPATH /system/framework/mediatek-op.jar
     export BOOTCLASSPATH_EX /system/framework/mediatek-op.jar
 
@@ -208,6 +206,9 @@ on fs_property:ro.mount.fs=EXT4
     # Mount /system rw first to give the filesystem a chance to save a checkpoint
     #mount ext4 emmc@android /system wait commit=1,data=journal,noauto_da_alloc
     mount ext4 /emmc@android /system wait commit=1,noauto_da_alloc
+    #Mount custpack
+    mkdir /custpack
+    mount ext4 emmc@custpack /custpack wait commit=1,noauto_da_alloc
 
     # RIL need to do this before the folder /system changed to read only
     chown radio system /system/etc/ril
@@ -460,9 +461,6 @@ on post-fs-data
     #chmod 0444 /dev/M4U_device
     #chown system media /dev/M4U_device
 
-    #set mlock limit to infinate (for m4u operation)
-    setrlimit 8 -1 -1
-
     # Sensor
     chmod 0660 /dev/hwmsensor
     chmod 0660 /dev/msensor
@@ -515,6 +513,7 @@ on post-fs-data
     mkdir /data/misc/akmd 0770 system system
     mkdir /data/misc/s62x 0771 compass compass
     mkdir /data/misc/acdapi/ 0770 system system
+    mkdir /data/misc/sensors 0770 system system
     chmod 0666 /data/misc/acdapi/calib.dat
     chmod 0666 /data/misc/acdapi/param.dat
     chmod 0666 /data/misc/acdapi/sensors.dat
@@ -612,8 +611,7 @@ on post-fs-data
     chmod 0664 /dev/TV-out
 
     #HDMI
-    chown meida system /dev/hdmitx
-    chmod 0660 /dev/hdmitx
+    chmod 0664 /dev/hdmitx
 
     # JPEG
     chmod 0440 /dev/mtk_jpeg
@@ -646,6 +644,9 @@ on post-fs-data
     chown system camera /dev/FM50AF
     chown system camera /dev/CAM_CAL_DRV
 
+	#battery
+	chmod 0660 /dev/MT_pmic_adc_cali
+	chown system system /dev/MT_pmic_adc_cali
 
     #/dev/RT_Monitor
     chmod 0600 /dev/RT_Monitor
@@ -725,15 +726,18 @@ on post-fs-data
     chown root system /sys/autok/debug
     chown root system /sys/autok/param_count
     chown root system /sys/autok/ready
+    chown root system /sys/autok/ss_corner
+    chown root system /sys/autok/suggest_vol
     chown root system /sys/autok/stage1/2/DONE
     chown root system /sys/autok/stage1/2/PARAMS
     chown root system /sys/autok/stage1/2/VOLTAGE
+    chown root system /sys/autok/stage1/2/LOG
     chown root system /sys/autok/stage2/2
-
+  
     #sn
     chmod 0664 /sys/class/android_usb/android0/iSerial
     chown root system /sys/class/android_usb/android0/iSerial
-    
+      
 # End of adding by MTK drivers
 # -----------------------
 
@@ -826,6 +830,9 @@ on boot
     chown system system /sys/class/leds/button-backlight/brightness
     chown system system /sys/class/leds/jogball-backlight/brightness
     chown system system /sys/class/leds/red/brightness
+chown system system /sys/class/leds/red/delay_on
+chown system system /sys/class/leds/red/delay_off
+chown system system /sys/class/leds/red/notify_led
     chown system system /sys/class/leds/green/brightness
     chown system system /sys/class/leds/blue/brightness
     chown system system /sys/class/leds/red/device/grpfreq
@@ -867,6 +874,10 @@ on boot
 
 # NFC
     mkdir /data/nfc_socket 0771 nfc radio
+    mkdir /data/nfc 770 nfc nfc
+    mkdir /data/nfc/param 770 nfc nfc
+    chown nfc nfc /dev/bcm2079x
+    chmod 0770 dev/bcm2079x
 
 ## Thermal
   #change permissions on thermal devices
@@ -1375,7 +1386,7 @@ service mtkbt /system/bin/mtkbt
 	socket bt.int.adp dgram 660 bluetooth net_bt
 	socket bt.a2dp.stream dgram 660 bluetooth net_bt
 	user bluetooth
-	group system net_bt bluetooth net_bt_admin sdcard_rw inet net_admin nvram net_raw vpn net_bt_stack media_rw sdcard_r
+	group system net_bt bluetooth net_bt_admin sdcard_rw inet net_admin nvram net_raw vpn media_rw sdcard_r net_bt_stack
 	oneshot
 
 
@@ -1527,18 +1538,18 @@ service ami304d /system/bin/ami304d
     disabled
     class main
 
-service memsicd /system/bin/memsicd
-     disabled
+#service memsicd /system/bin/memsicd
+#     disabled
+#    user system
+#    group system
+#    class main
+
+service memsicd3416x /system/bin/memsicd3416x
+    disabled
     user system
     group system
     class main
-
-service memsicd3416x /system/bin/memsicd3416x
-     disabled
-	 user system
-    group system
-    class main
-    oneshot
+#    oneshot
 
 service akmd8975 /system/bin/akmd8975
     disabled

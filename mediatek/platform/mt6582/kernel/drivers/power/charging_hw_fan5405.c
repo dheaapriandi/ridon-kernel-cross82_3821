@@ -508,7 +508,7 @@ static void hw_bc11_dump_register(void)
 	fan5405_reg_config_interface(0x01,0xb8);	//TE=1, CE=0, HZ_MODE=0, OPA_MODE=0
 	fan5405_reg_config_interface(0x05,0x03);
 	if ( !charging_init_flag ) {   
-		fan5405_reg_config_interface(0x04,0x1A); //146mA
+		fan5405_reg_config_interface(0x04,0x1B); //194mA
 		charging_init_flag = KAL_TRUE;
 	}        
  	return status;
