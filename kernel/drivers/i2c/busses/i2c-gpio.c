@@ -14,9 +14,33 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
-#include <linux/gpio.h>
-#include <linux/of_gpio.h>
+//#include <linux/gpio.h>				 //add mtk gpio_i2c
+//#include <linux/of_gpio.h>
 #include <linux/of_i2c.h>
+
+#include <mach/mt_gpio.h>
+
+
+static void  gpio_direction_output(unsigned gpio, int value){       
+	mt_set_gpio_dir(gpio,GPIO_DIR_OUT);       
+	mt_set_gpio_out(gpio,value);		//output high
+}
+
+static void  gpio_direction_input(unsigned gpio){       
+	mt_set_gpio_dir(gpio,GPIO_DIR_IN);
+}
+
+static int  gpio_get_value(unsigned gpio){     
+	mt_set_gpio_dir(gpio,GPIO_DIR_IN);
+	return mt_get_gpio_in(gpio);
+}
+
+static int  gpio_set_value(unsigned gpio, int value){        
+	 mt_set_gpio_dir(gpio,GPIO_DIR_OUT);       
+	 return mt_set_gpio_out(gpio,value);		//output high
+	//return mt_set_gpio_out(gpio,value);
+}
+
 
 struct i2c_gpio_private_data {
 	struct i2c_adapter adap;
@@ -90,17 +114,17 @@ static int __devinit of_i2c_gpio_probe(struct device_node *np,
 {
 	u32 reg;
 
-	if (of_gpio_count(np) < 2)
-		return -ENODEV;
+//	if (of_gpio_count(np) < 2)			 //add mtk gpio_i2c
+//		return -ENODEV;
 
-	pdata->sda_pin = of_get_gpio(np, 0);
-	pdata->scl_pin = of_get_gpio(np, 1);
+//	pdata->sda_pin = of_get_gpio(np, 0);
+//	pdata->scl_pin = of_get_gpio(np, 1);
 
-	if (!gpio_is_valid(pdata->sda_pin) || !gpio_is_valid(pdata->scl_pin)) {
-		pr_err("%s: invalid GPIO pins, sda=%d/scl=%d\n",
-		       np->full_name, pdata->sda_pin, pdata->scl_pin);
-		return -ENODEV;
-	}
+//	if (!gpio_is_valid(pdata->sda_pin) || !gpio_is_valid(pdata->scl_pin)) {
+//		pr_err("%s: invalid GPIO pins, sda=%d/scl=%d\n",
+//		       np->full_name, pdata->sda_pin, pdata->scl_pin);
+//		return -ENODEV;
+//	}
 
 	of_property_read_u32(np, "i2c-gpio,delay-us", &pdata->udelay);
 
@@ -142,13 +166,16 @@ static int __devinit i2c_gpio_probe(struct platform_device *pdev)
 		memcpy(pdata, pdev->dev.platform_data, sizeof(*pdata));
 	}
 
-	ret = gpio_request(pdata->sda_pin, "sda");
-	if (ret)
-		goto err_request_sda;
-	ret = gpio_request(pdata->scl_pin, "scl");
-	if (ret)
-		goto err_request_scl;
-
+	//ret = gpio_request(pdata->sda_pin, "sda");
+	//if (ret)
+	//	goto err_request_sda;
+	//ret = gpio_request(pdata->scl_pin, "scl");
+	//if (ret)
+	//	goto err_request_scl;
+//#if defined(CONFIG_ARCH_MSM)
+	/*config gpio used by i2c*/
+	pdata->gpio_i2c_config_gpio(pdata,1);
+//#endif	
 	if (pdata->sda_is_open_drain) {
 		gpio_direction_output(pdata->sda_pin, 1);
 		bit_data->setsda = i2c_gpio_setsda_val;
@@ -212,9 +239,9 @@ static int __devinit i2c_gpio_probe(struct platform_device *pdev)
 	return 0;
 
 err_add_bus:
-	gpio_free(pdata->scl_pin);
+	//gpio_free(pdata->scl_pin);
 err_request_scl:
-	gpio_free(pdata->sda_pin);
+	//gpio_free(pdata->sda_pin);
 err_request_sda:
 	return ret;
 }
@@ -230,10 +257,28 @@ static int __devexit i2c_gpio_remove(struct platform_device *pdev)
 	pdata = &priv->pdata;
 
 	i2c_del_adapter(adap);
-	gpio_free(pdata->scl_pin);
-	gpio_free(pdata->sda_pin);
+	//gpio_free(pdata->scl_pin);
+	//gpio_free(pdata->sda_pin);
 
 	return 0;
+}
+
+static int i2c_gpio_suspend(struct platform_device *pdev, pm_message_t state)
+{	
+	struct i2c_gpio_platform_data *pdata;	
+	int ret = 0;	
+	pdata = pdev->dev.platform_data;	
+	pdata->gpio_i2c_config_gpio(pdata,0);	
+	return ret;
+}
+
+static int i2c_gpio_resume(struct platform_device *pdev)
+{	
+	struct i2c_gpio_platform_data *pdata;	
+	int ret = 0;	
+	pdata = pdev->dev.platform_data;	
+	pdata->gpio_i2c_config_gpio(pdata,1);	
+	return ret;
 }
 
 #if defined(CONFIG_OF)
@@ -253,6 +298,8 @@ static struct platform_driver i2c_gpio_driver = {
 	},
 	.probe		= i2c_gpio_probe,
 	.remove		= __devexit_p(i2c_gpio_remove),
+	.suspend		= i2c_gpio_suspend,	
+	.resume		= i2c_gpio_resume,
 };
 
 static int __init i2c_gpio_init(void)

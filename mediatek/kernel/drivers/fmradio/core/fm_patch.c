@@ -1,3 +1,25 @@
+/* fm_patch.c
+ *
+ * (C) Copyright 2011
+ * MediaTek <www.MediaTek.com>
+ * Hongcheng <hongcheng.xia@MediaTek.com>
+ *
+ * FM Radio Driver -- patch functions
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #include <linux/fs.h>
 #include <asm/uaccess.h>
 
@@ -5,6 +27,11 @@
 #include "fm_dbg.h"
 #include "fm_err.h"
 
+/*
+ * fm_file_exist - test file
+ * @filename - source file name
+ * If exsit, return 0, else error code
+ */
 fm_s32 fm_file_exist(const fm_s8 *filename)
 {
     fm_s32 ret = 0;
@@ -33,6 +60,14 @@ fm_s32 fm_file_exist(const fm_s8 *filename)
 }
 
 
+/*
+ * fm_file_read - read FM DSP patch/coeff/hwcoeff/rom binary file
+ * @filename - source file name
+ * @dst - target buffer
+ * @len - desired read length
+ * @position - the read position
+ * If success, return read length in bytes, else error code
+ */
 fm_s32 fm_file_read(const fm_s8 *filename, fm_u8* dst, fm_s32 len, fm_s32 position)
 {
     fm_s32 ret = 0;

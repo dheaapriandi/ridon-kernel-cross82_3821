@@ -113,13 +113,7 @@ void cdevut_turn_on_dlq_by_port(KAL_UINT32 port_idx);
 #define ccci_cdev_turn_off_dl_q(port_idx)            eemcs_ccci_turn_off_dlq_by_port(port_idx)
 #define ccci_cdev_turn_on_dl_q(port_idx)             eemcs_ccci_turn_on_dlq_by_port(port_idx)
 #endif
-
-#ifdef CCCI_SDIO_HEAD
 #define CCCI_CDEV_HEADER_ROOM                   (sizeof(SDIO_H)+sizeof(CCCI_BUFF_T))
-#else
-#define CCCI_CDEV_HEADER_ROOM                   (sizeof(CCCI_BUFF_T))
-#endif
-
 #define ccci_cdev_mem_alloc(sz)                 dev_alloc_skb(sz)
 KAL_INT32 eemcs_char_mod_init(void);
 void eemcs_char_exit(void);

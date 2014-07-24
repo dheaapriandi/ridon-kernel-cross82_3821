@@ -1,3 +1,24 @@
+/* mpu6050c.h
+ *
+ * (C) Copyright 2008 
+ * MediaTek <www.mediatek.com>
+ *
+ * mpu300 head file for MT65xx
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #ifndef MPU6050C_H
 #define MPU6050C_H
 	 
@@ -103,6 +124,36 @@
 #define MPU6050C_ERR_IDENTIFICATION	  -6
 	 
 
+/*
+typedef enum  {
+    MPU6050C_SYNC_NONE = 0x0,
+    MPU6050C_SYNC_TEMP,
+    MPU6050C_SYNC_GYROX,
+    MPU6050C_SYNC_GYROY,
+    MPU6050C_SYNC_GYROZ,
+    MPU6050C_SYNC_AUXX,
+    MPU6050C_SYNC_AUXY,
+    MPU6050C_SYNC_AUXZ,
+} MPU6050C_EXT_SYNC_SEL;
+
+typedef enum  {
+    MPU6050C_FS_250 = 0x0,
+    MPU6050C_FS_500,
+    MPU6050C_FS_1000,
+    MPU6050C_FS_2000,
+    MPU6050C_FS_MAX = 0x3,
+} MPU6050C_FS_SEL;
+
+typedef enum  {
+    MPU6050C_RATE_8K_LPFB_256HZ = 0x0,
+    MPU6050C_RATE_1K_LPFB_188HZ,
+    MPU6050C_RATE_1K_LPFB_98HZ,
+    MPU6050C_RATE_1K_LPFB_42HZ,
+    MPU6050C_RATE_1K_LPFB_20HZ,
+    MPU6050C_RATE_1K_LPFB_10HZ,
+    MPU6050C_RATE_1K_LPFB_5HZ,
+} MPU6050C_SAMRATE_SEL;
+*/
 
 #define MPU6050C_BUFSIZE 60
 

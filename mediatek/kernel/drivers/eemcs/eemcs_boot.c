@@ -688,7 +688,7 @@ KAL_INT32 eemcs_boot_load_image(unsigned int md_id)
     img->mem_size = get_ext_md_mem_size(eemcs_boot_inst.md_id);    
     //clear_md_region_protection(eemcs_boot_inst.md_id);
     get_ext_md_post_fix(eemcs_boot_inst.md_id, eemcs_boot_inst.ext_modem_post_fix, NULL);
-    if (set_md_info(eemcs_boot_inst.ext_modem_post_fix) < 0) {
+    if (set_md_info(eemcs_boot_inst.ext_modem_post_fix) < 0)
         ret = -CCCI_ERR_LOAD_IMG_FILE_OPEN;
         goto out;
     }
@@ -838,12 +838,14 @@ static KAL_INT32 eemcs_boot_mbx_read_noack(KAL_UINT32 *val, KAL_UINT32 size)
         return -EMCS_ERR_INVALID_PARA;
     }
 
-    value = wait_event_interruptible(eemcs_boot_inst.mailbox.d2h_wait_q, eemcs_boot_inst.mailbox.d2h_wakeup_cond == 1);
+    value = wait_event_interruptible_timeout(eemcs_boot_inst.mailbox.d2h_wait_q, eemcs_boot_inst.mailbox.d2h_wakeup_cond == 1, EEMCS_MBXRD_TO);
     if (value == -ERESTARTSYS) {
-        DBGLOG(BOOT, ERR, "[RX]PORT0 Interrupted by syscall.signal=0x%llx",\
-			*(long long *)current->pending.signal.sig);
+        DBGLOG(BOOT, WAR, "Interrupted syscall.signal_pend=0x%llx",*(long long *)current->pending.signal.sig);
         return -EINTR;
-    } else {
+    } else if(value == 0){
+	    DBGLOG(BOOT, ERR, "read boot mailbox timeout(%d s)", EEMCS_MBXRD_TO);
+	    return KAL_FAIL; 	
+	} else {
         eemcs_boot_inst.mailbox.d2h_wakeup_cond = 0;
     }
 
@@ -1044,7 +1046,6 @@ KAL_INT32 eemcs_boot_file_packet_ack(KAL_UINT32 file_offset, KAL_UINT32 size)
             //DBGLOG(BOOT, INF, "ccci_boot_write_space_check: no space!");
         };
         if (tx_pkt_room > 0) {
-            #ifdef CCCI_SDIO_HEAD
             if (size > (g_eemcs_file_pkt_len - CCCI_BOOT_HEADER_ROOM)) {
                 skb_size = g_eemcs_file_pkt_len;
                 bin_size = g_eemcs_file_pkt_len - CCCI_BOOT_HEADER_ROOM;
@@ -1052,15 +1053,6 @@ KAL_INT32 eemcs_boot_file_packet_ack(KAL_UINT32 file_offset, KAL_UINT32 size)
                 skb_size = size + CCCI_BOOT_HEADER_ROOM;
                 bin_size = size;
             }
-            #else
-            if (size > g_eemcs_file_pkt_len) {
-                skb_size = g_eemcs_file_pkt_len;
-                bin_size = g_eemcs_file_pkt_len;
-            } else {
-                skb_size = size;
-                bin_size = size;
-            }
-            #endif
             new_skb = ccci_boot_mem_alloc(skb_size);
         } else {
             DBGLOG(BOOT, WAR, "SWQ space is not available");
@@ -1070,9 +1062,7 @@ KAL_INT32 eemcs_boot_file_packet_ack(KAL_UINT32 file_offset, KAL_UINT32 size)
             goto _skb_fail;
         }
         // Reserve a header room for feature usage
-        #ifdef CCCI_SDIO_HEAD
         skb_reserve(new_skb, CCCI_BOOT_HEADER_ROOM);
-        #endif
         bin_head = skb_put(new_skb, bin_size);
         
         // Read data from modem.img
@@ -1086,8 +1076,7 @@ KAL_INT32 eemcs_boot_file_packet_ack(KAL_UINT32 file_offset, KAL_UINT32 size)
         filp->f_pos = bin_offset;
         result = filp->f_op->read(filp, bin_head, bin_size, &filp->f_pos);
         if (result <= 0) {
-            DBGLOG(BOOT, ERR, "read %s %dB(%d, off=%d) fail: %d", full_path, bin_size, \
-				size, bin_offset, result);
+            DBGLOG(BOOT, ERR, "read %dByte from %s fail: %d", size, full_path, result);
             goto _read_write_fail;
         }
         #endif
@@ -1151,7 +1140,7 @@ static KAL_INT32 eemcs_boot_mbx_process(void)
     DBGLOG(BOOT, INF, "wait for boot mailbox ....");
     result = eemcs_boot_mbx_read_noack(mbx_data, sizeof(KAL_UINT32)*2);
     if (result != KAL_SUCCESS) {
-        //DBGLOG(BOOT, ERR, "read mailbox fail: %d",result);
+        DBGLOG(BOOT, ERR, "read mailbox fail: %d",result);
         return KAL_FAIL;
     }
 
@@ -1208,11 +1197,9 @@ static KAL_INT32 eemcs_boot_cmd_process(void)
 
     KAL_ASSERT(boot_node != NULL);
     DBGLOG(BOOT, INF, "Wait for boot cmd ...");
-    wake_lock_timeout(&eemcs_boot_inst.eemcs_boot_wake_lock, HZ/2); 
     result = wait_event_interruptible(boot_node->rx_waitq, atomic_read(&boot_node->rx_pkt_cnt) > 0);
     if (result == -ERESTARTSYS) {
-        DBGLOG(BOOT, ERR, "[RX]PORT0 Interrupted by syscall.signal=0x%llx",\
-		*(long long *)current->pending.signal.sig);
+        DBGLOG(BOOT, ERR, "Interrupted by syscall.signal(0x%llx)\n",*(long long *)current->pending.signal.sig);
         goto _exit;
     }
     DBGLOG(BOOT, DBG, "Wait boot cmd done");    
@@ -1274,16 +1261,16 @@ static KAL_INT32 eemcs_boot_cmd_process(void)
             len = p_cmd->len;
 			
             DBGLOG(BOOT, INF, "XBOOT_CMD: GET_BIN(%x, %x) @%s", offset, len, \
-				g_md_sta_str[eemcs_boot_inst.boot_state]);
+		g_md_sta_str[eemcs_boot_inst.boot_state]);
             if (eemcs_boot_get_state() == MD_BROM_DL_GET)
                 eemcs_boot_change_state(MD_BROM_DL_END);
             else if (eemcs_boot_get_state() == MD_BL_DL_GET)
                 eemcs_boot_change_state(MD_BL_DL_END);
             else {
                 if ((eemcs_boot_get_state() != MD_BL_DL_END) && (eemcs_boot_get_state() != MD_BROM_DL_END)) {        
-            		DBGLOG(BOOT, ERR, "unexpected XBOOT_CMD: GET_BIN @%s", g_md_sta_str[eemcs_boot_inst.boot_state]);
-                   	result = -EMCS_ERR_BT_STATUS;
-                   	goto _free_exit;
+                  DBGLOG(BOOT, ERR, "unexpected XBOOT_CMD: GET_BIN @%s", g_md_sta_str[eemcs_boot_inst.boot_state]);
+                   result = -EMCS_ERR_BT_STATUS;
+                   goto _free_exit;
                 }
             }
             ack_id = CMDID_ACK_GET_BIN;
@@ -1299,7 +1286,7 @@ static KAL_INT32 eemcs_boot_cmd_process(void)
             else if (eemcs_boot_get_state() == MD_BL_DL_END)
                 eemcs_boot_change_state(MD_BL_SDIO_INIT);
             else {
-               	DBGLOG(BOOT, ERR, "unexpected XBOOT_CMD: BIN_LOAD_END @%s", g_md_sta_str[eemcs_boot_inst.boot_state]);
+               DBGLOG(BOOT, ERR, "unexpected XBOOT_CMD: BIN_LOAD_END @%s", g_md_sta_str[eemcs_boot_inst.boot_state]);
                 result = -EMCS_ERR_BT_STATUS;
                 goto _free_exit;
             }
@@ -1483,13 +1470,14 @@ static ssize_t eemcs_boot_read(struct file *fp, char *buf, size_t count, loff_t 
         ret = wait_event_interruptible(curr_node->rx_waitq, atomic_read(&curr_node->rx_pkt_cnt) > 0);
         if (ret) {
             ret = -EINTR;
-            DBGLOG(BOOT, ERR, "[RX]PORT%d Interrupted by syscall.signal=%lld", port_id, \
-				*(long long *)current->pending.signal.sig);	
+            DBGLOG(BOOT, ERR, "[RX]PORT%d read interrupt by syscall.signal(%d)", port_id, ret);			
             goto _exit;
         }
     }
 
-    /*Cached memory from last read fail */
+    /*
+     * Cached memory from last read fail
+     */
     DBGLOG(BOOT, DBG, "[RX]PORT%d read rx_skb_list(pkt_len=%d)", port_id, rx_pkt_cnt);
     rx_skb = skb_dequeue(&curr_node->rx_skb_list);
     /* There should be rx_skb in the list */
@@ -1507,7 +1495,7 @@ static ssize_t eemcs_boot_read(struct file *fp, char *buf, size_t count, loff_t 
     //KAL_ASSERT(ccci_header->channel == curr_node->ccci_ch.rx);
     if (ccci_header->channel != curr_node->ccci_ch.rx){
         dev_kfree_skb(rx_skb);
-        DBGLOG(BOOT, ERR, "[RX]PORT%d drop pkt when Ch(%d) error: 0x%08x, 0x%08x, %02d, 0x%08x", \
+        DBGLOG(BOOT, ERR, "[RX]PORT%d drop pkt when Ch(%d) error: 0x%08x, 0x%08x, %02d, 0x%08x", 
                 port_id, curr_node->ccci_ch.rx, ccci_header->data[0],ccci_header->data[1], ccci_header->channel, ccci_header->reserved);
         atomic_inc(&curr_node->rx_pkt_drop_cnt);
         goto _exit;
@@ -1537,8 +1525,7 @@ static ssize_t eemcs_boot_read(struct file *fp, char *buf, size_t count, loff_t 
 
     ret = copy_to_user(buf, payload, read_len);
     if (ret) {
-        DBGLOG(BOOT, ERR, "[RX]PORT%d copy_to_user(len=%d, %p->%p) fail: %d", \
-			port_id, read_len, payload, buf, ret);
+        DBGLOG(BOOT, ERR, "[RX]PORT%d copy_to_user(len=%d) fail: %d", port_id, read_len, ret);
     }       
 
     dev_kfree_skb(rx_skb);
@@ -1562,59 +1549,54 @@ static ssize_t eemcs_boot_write(struct file *fp, const char __user *buf, size_t 
     struct sk_buff *new_skb;
     CCCI_BUFF_T *ccci_header;
     size_t count = in_sz;
-    size_t skb_alloc_size;
     
     DEBUG_LOG_FUNCTION_ENTRY;
-    DBGLOG(BOOT, TRA, "[TX]write deivce iminor(%d) (%s),length(%d)",port_id,curr_node->cdev_name,count);
+    DBGLOG(BOOT, TRA, "write deivce iminor(%d) (%s),length(%d)",port_id,curr_node->cdev_name,count);
 
     p_type = ccci_get_port_type(port_id);
     if (p_type != EX_T_USER) {
-        DBGLOG(BOOT, ERR, "[TX]PORT%d refuse port(%d) access user port", port_id, p_type);
+        DBGLOG(BOOT, ERR, "PORT%d refuse port(%d) access user port", port_id, p_type);
         goto _exit;                    
     }
     if (port_id != CCCI_PORT_CTRL) {
-        DBGLOG(BOOT, ERR, "[TX]PORT%d is not CCCI_PORT_CTRL", port_id);
+        DBGLOG(BOOT, ERR, "PORT%d is not CCCI_PORT_CTRL", port_id);
         goto _exit;                    
     }
     control_flag = ccci_get_port_cflag(port_id);
 
     if((control_flag & EXPORT_CCCI_H) && (count < sizeof(CCCI_BUFF_T)))
     {
-        DBGLOG(BOOT,ERR,"[TX]PORT%d invalid wirte len(%d)", port_id, count);
+        DBGLOG(BOOT,WAR,"PORT%d wirte len not support(%d) by emcs!", port_id, count);
         goto _exit;            
     }
 
     if(control_flag & EXPORT_CCCI_H){
         if(count > (MAX_TX_BYTE+sizeof(CCCI_BUFF_T))){
-            DBGLOG(BOOT,WAR,"[TX]PORT%d wirte len (%d) > MTU (%d)!", port_id, count, MAX_TX_BYTE);
+            DBGLOG(BOOT,WAR,"PORT%d wirte len (%d) > MTU (%d)!", port_id, count, MAX_TX_BYTE);
             count = MAX_TX_BYTE+sizeof(CCCI_BUFF_T);
         }
-        skb_alloc_size = count - sizeof(CCCI_BUFF_T);
     }else{
         if(count > MAX_TX_BYTE){
-            DBGLOG(BOOT,WAR,"[TX]PORT%d wirte len (%d) > MTU (%d)!", port_id, count, MAX_TX_BYTE);
+            DBGLOG(BOOT,WAR,"PORT%d wirte len (%d) > MTU (%d)!", port_id, count, MAX_TX_BYTE);
             count = MAX_TX_BYTE;
         }
-        skb_alloc_size = count;
     }
 
     if (ccci_boot_write_space_check() == 0) {
         ret = -EMCS_ERROR_BUSY;
-        DBGLOG(BOOT, ERR, "[TX]PORT%d ccci_boot_write_space_check return 0", port_id);
+        DBGLOG(BOOT, ERR, "PORT%d ccci_boot_write_space_check return 0)", port_id);
         goto _exit;
     }	
 
-    new_skb = ccci_boot_mem_alloc(skb_alloc_size + CCCI_CDEV_HEADER_ROOM);
+    new_skb = ccci_boot_mem_alloc(count + CCCI_CDEV_HEADER_ROOM);
     if (NULL == new_skb) {
         ret = -EMCS_ERROR_BUSY;
-        DBGLOG(BOOT, ERR, "[TX]PORT%d alloct tx memory fail(%d)", port_id, ret);
+        DBGLOG(BOOT, ERR, "PORT%d alloct tx memory fail(%d)", port_id, ret);
         goto _exit;            
     }
 
     /* reserve SDIO_H header room */
-    #ifdef CCCI_SDIO_HEAD
     skb_reserve(new_skb, CCCI_BOOT_HEADER_ROOM);
-    #endif
 
     if (control_flag & EXPORT_CCCI_H) {
         ccci_header = (CCCI_BUFF_T *)new_skb->data;
@@ -1623,8 +1605,7 @@ static ssize_t eemcs_boot_write(struct file *fp, const char __user *buf, size_t 
     }
 
     if (copy_from_user(skb_put(new_skb, count), buf, count)) {
-        DBGLOG(BOOT, ERR, "[TX]PORT%d copy_from_user(len=%d, %p->%p) fail", \
-			port_id, count, buf, new_skb->data);
+        DBGLOG(BOOT, ERR, "PORT%d fail copy data from user space(0x%x)", port_id, count);
         dev_kfree_skb(new_skb);
         goto _exit;
     }
@@ -1638,8 +1619,7 @@ static ssize_t eemcs_boot_write(struct file *fp, const char __user *buf, size_t 
         }
 
         if(ccci_header->channel != curr_node->ccci_ch.tx){
-            DBGLOG(BOOT, WAR, "[TX]PORT%d ch mis-match (%d) vs (%d)!! will correct by char_dev ", \
-				port_id, ccci_header->channel, curr_node->ccci_ch.tx);
+            DBGLOG(BOOT, WAR, "PORT%d Tx CCCI channel not match (%d) vs (%d)!! will correct by char_dev ", port_id, ccci_header->channel, curr_node->ccci_ch.tx);
         }
     } else {
         /* user bring down the payload only */
@@ -1648,7 +1628,7 @@ static ssize_t eemcs_boot_write(struct file *fp, const char __user *buf, size_t 
     }
     ccci_header->channel = curr_node->ccci_ch.tx;
 
-    DBGLOG(BOOT, TRA, "[TX]PORT%d CCCI_MSG(0x%x, 0x%x, %d, 0x%x)", 
+    DBGLOG(BOOT, TRA, "USER_PORT_Write(%d) CCCI_MSG(0x%x, 0x%x, 0x%x, 0x%x)", 
                     port_id, 
                     ccci_header->data[0], ccci_header->data[1],
                     ccci_header->channel, ccci_header->reserved);
@@ -1656,7 +1636,7 @@ static ssize_t eemcs_boot_write(struct file *fp, const char __user *buf, size_t 
     ret = ccci_boot_write_desc_to_q(new_skb);
 
 	if (KAL_SUCCESS != ret) {
-		DBGLOG(BOOT, ERR, "[TX]PORT%d PKT DROP of ch%d!", port_id, curr_node->ccci_ch.tx);
+		DBGLOG(BOOT, ERR, "PKT of ch%d DROP!", curr_node->ccci_ch.tx);
 		dev_kfree_skb(new_skb);
         ret = -EMCS_ERROR_BUSY;
 	} else {
@@ -1752,7 +1732,7 @@ void eemcs_boot_exception_log_pkts(void)
  */
 void eemcs_boot_exception_callback(KAL_UINT32 msg_id)
 {
-    DBGLOG(BOOT, INF, "Boot exception Callback 0x%X", msg_id);
+    DBGLOG(BOOT, ERR, "Boot exception Callback 0x%X", msg_id);
     switch (msg_id) {
         /* 1st stage, MD exception occurs */
         case EEMCS_EX_INIT:
@@ -1787,7 +1767,7 @@ KAL_INT32 eemcs_boot_mod_init(void)
     KAL_ALLOCATE_PHYSICAL_MEM(eemcs_boot_inst.debug_buff, BOOT_DEBUG_BUF_LEN);
     eemcs_boot_inst.boot_state = MD_INVALID;
     eemcs_boot_inst.ccci_hs_bypass = 0;
- 
+
     // register characer device region 
     ret = register_chrdev_region(MKDEV(EEMCS_DEV_MAJOR, START_OF_BOOT_PORT), EEMCS_BOOT_CDEV_MAX_NUM, EEMCS_DEV_NAME);
     if (ret) {
@@ -1856,8 +1836,6 @@ KAL_INT32 eemcs_boot_mod_init(void)
     if (eemcs_boot_inst.expt_cb_id == KAL_FAIL){
         DBGLOG(BOOT, ERR, "register exception callback fail");
     }
-	
-	atomic_set(&eemcs_boot_inst.md_reset_cnt, 0);
 	
 #ifdef _EEMCS_BOOT_UT
     bootut_init();
@@ -1972,7 +1950,6 @@ static KAL_INT32 eemcs_boot_modem(void)
     return KAL_SUCCESS;
 #endif
 
-	atomic_set(&eemcs_boot_inst.md_reset_cnt, 0);
 
     state = change_device_state(EEMCS_XBOOT);
     if (unlikely(state == false)) {
@@ -2027,7 +2004,7 @@ static KAL_INT32 eemcs_boot_modem(void)
                 DBGLOG(BOOT, INF, "wait for sdio driver probe done");
 
 #ifdef MT_LTE_AUTO_CALIBRATION
-                mtlte_sys_sdio_wait_probe_done();
+    mtlte_sys_sdio_wait_probe_done();
 #endif
 
 #ifdef _EEMCS_BOOT_UT
@@ -2126,39 +2103,6 @@ _boot_err:
 }
 
 
-static void eemcs_md_boot_up_timeout_func(unsigned int stage, unsigned int timeout)
-{
-	KAL_UINT32 mbx_data[2] = {0};
-	KAL_INT32 ret;
-
-	switch (stage) {
-		case MD_BOOT_XBOOT_FAIL:
-			ret = ccci_boot_mbx_read(mbx_data, 2*sizeof(KAL_UINT32));
-			if (ret != KAL_SUCCESS) {
-				DBGLOG(BOOT, ERR, "[MD_BOOT_XBOOT_FAIL]read mbx fail: %d", ret);
-			} else {
-				DBGLOG(BOOT, INF, "[MD_BOOT_XBOOT_FAIL]XBOOT_MBX: 0x%08X, 0x%08X", mbx_data[0], mbx_data[1]);
-			}
-			break;
-			
-		case MD_BOOT_HS1_FAIL:
-			ret = ccci_boot_mbx_read(mbx_data, 2*sizeof(KAL_UINT32));
-			if (ret != KAL_SUCCESS) {
-				DBGLOG(BOOT, ERR, "[MD_BOOT_HS1_FAIL]read mbx fail: %d", ret);
-			} else {
-				DBGLOG(BOOT, INF, "[MD_BOOT_HS1_FAIL]XBOOT_MBX: 0x%08X, 0x%08X", mbx_data[0], mbx_data[1]);
-			}
-			break;
-			
-		case MD_BOOT_HS2_FAIL:
-			break;
-
-		default:
-			break;
-	}
-	return;
-}
-
 /* for executable "cli_eemcs" */
 #if TEST_DRV
 #if EMCS_SDIO_DRVTST 
@@ -2197,15 +2141,9 @@ KAL_INT32 eemcs_power_on_md(KAL_INT32 md_id, KAL_UINT32 timeout)
 KAL_INT32 eemcs_md_reset(void)
 {
     DEBUG_LOG_FUNCTION_ENTRY;
-	
-	/* prevent another reset modem action from wdt timeout IRQ during modem reset */
-	if(atomic_inc_and_test(&eemcs_boot_inst.md_reset_cnt) > 1) {
-		DBGLOG(BOOT, ERR, "One reset flow is on-going");
-		return KAL_SUCCESS;
-	}
 
-    change_device_state(EEMCS_GATE);
     wake_lock_timeout(&eemcs_boot_inst.eemcs_boot_wake_lock, 10*HZ); //wake lock 10s
+    change_device_state(EEMCS_GATE);
     eemcs_cdev_msg(CCCI_PORT_CTRL, CCCI_MD_MSG_RESET, 0);
     
     DEBUG_LOG_FUNCTION_LEAVE;
@@ -2335,13 +2273,12 @@ long eemcs_ctrl_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
         }
         break;
 
-        case CCCI_IOC_GET_MD_INFO:
+		case CCCI_IOC_GET_MD_INFO:
         {
-            int mode = is_modem_debug_ver();
-            ret = put_user((unsigned int)mode, (unsigned int __user *)arg);
-            break;
-        }
-
+			int mode = is_modem_debug_ver();
+			ret = put_user((unsigned int)mode, (unsigned int __user *)arg);
+			break;
+		}
         case CCCI_IOC_GET_RUNTIME_DATA:
         {
             void __user *argp = NULL;
@@ -2398,7 +2335,7 @@ long eemcs_ctrl_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
         }
         break;
 
-        case CCCI_IOC_DO_STOP_MD:
+		case CCCI_IOC_DO_STOP_MD:
         {
             DBGLOG(BOOT, INF, "CCCI_IOC_DO_STOP_MD by PORT%d", port_id);
             ret = eemcs_power_off_md(0, 0);
@@ -2437,7 +2374,7 @@ long eemcs_ctrl_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
         break;
 
         case CCCI_IOC_CLR_HEADER:
-        {
+		{
             KAL_UINT32 ori_port_flag = 0;
             KAL_UINT32 new_port_flag = 0;
 
@@ -2445,8 +2382,8 @@ long eemcs_ctrl_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
             ccci_set_port_type(port_id, (ori_port_flag&(~EXPORT_CCCI_H)));
             new_port_flag = ccci_get_port_cflag(port_id);
             DBGLOG(BOOT, INF, "CCCI_IOC_CLR_HEADER(%d, %d) by PORT%d", ori_port_flag, new_port_flag, port_id);
-        }
-        break;
+		}
+		break;
 
         case CCCI_IOC_DO_START_MD:
         {
@@ -2462,56 +2399,42 @@ long eemcs_ctrl_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
         case CCCI_IOC_RELOAD_MD_TYPE:
         {
             int md_type = 0;
-            if(copy_from_user(&md_type, (void __user *)arg, sizeof(unsigned int))) {
-                DBGLOG(BOOT, ERR, "IOC_RELOAD_MD_TYPE: copy_from_user fail!");
-                ret = -EFAULT;
+    		if(copy_from_user(&md_type, (void __user *)arg, sizeof(unsigned int))) {
+				DBGLOG(BOOT, ERR, "IOC_RELOAD_MD_TYPE: copy_from_user fail!");
+				ret = -EFAULT;
                 break;
-            } 
+			} 
             
             if (md_type >= modem_lwg && md_type <= modem_ltg){
                 //DBGLOG(BOOT, DBG, "IOC_RELOAD_MD_TYPE: storing md type(%d)", md_type);
-                ret = set_ext_modem_support(eemcs_get_md_id(), md_type);
+			    ret = set_ext_modem_support(eemcs_get_md_id(), md_type);
             }
             else{
                 DBGLOG(BOOT, ERR, "IOC_RELOAD_MD_TYPE: invalid md type(%d)", md_type);
                 ret = -EFAULT;
             }
             eemcs_set_reload_image(true);
-        }
+	    }
         break;
 
         case CCCI_IOC_FLOW_CTRL_SETTING:
-        {
-            unsigned int limit[2] = {0, 0};
-            if(copy_from_user(&limit, (void __user *)arg, 2*sizeof(unsigned int))) {
-                DBGLOG(BOOT, ERR, "IOC_FLOW_CTRL_SETTING: copy_from_user fail!");
-                ret = -EFAULT;
+		{
+			unsigned int limit[2] = {0, 0};
+    		if(copy_from_user(&limit, (void __user *)arg, 2*sizeof(unsigned int))) {
+				DBGLOG(BOOT, ERR, "IOC_FLOW_CTRL_SETTING: copy_from_user fail!");
+				ret = -EFAULT;
                 break;
-            } else {
-                DBGLOG(BOOT, INF, "IOC_FLOW_CTRL_SETTING: limit=%d, thresh=%d", limit[0], limit[1]);
-                mtlte_df_Init_DL_flow_ctrl(RXQ_Q2, false, limit[0], limit[1]);
-            }
-        }
-        break;
-
-        case CCCI_IOC_BOOT_UP_TIMEOUT:
-        {
-            unsigned int para[2] = {0, 0};
-            if(copy_from_user(&para, (void __user *)arg, 2*sizeof(unsigned int))) {
-                DBGLOG(BOOT, ERR, "IOC_BOOT_UP_TIMEOUT: copy_from_user fail!");
-                ret = -EFAULT;
-                break;
-            } else {
-                DBGLOG(BOOT, INF, "IOC_BOOT_UP_TIMEOUT: boot_sta=%d, timeout=%d", para[0], para[1]);
-                eemcs_md_boot_up_timeout_func(para[0], para[1]);
-            }
-        }
-        break;
+			} else {
+				DBGLOG(BOOT, ERR, "IOC_FLOW_CTRL_SETTING: limit=%d, thresh=%d", limit[0], limit[1]);
+				mtlte_df_Init_DL_flow_ctrl(RXQ_Q2, false, limit[0], limit[1]);
+			}
+		}
+		break;
 
         default:
             DBGLOG(BOOT, ERR, "invalid ioctl cmd(%d)", cmd);
             ret = -EFAULT;
-        break;
+            break;
     }
 
     DEBUG_LOG_FUNCTION_LEAVE;

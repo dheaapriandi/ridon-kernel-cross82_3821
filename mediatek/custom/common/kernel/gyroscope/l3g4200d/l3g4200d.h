@@ -1,3 +1,24 @@
+/* l3g4200d.h
+ *
+ * (C) Copyright 2008 
+ * MediaTek <www.mediatek.com>
+ *
+ * mpu300 head file for MT65xx
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #ifndef L3G4200D_H
 #define L3G4200D_H
 	 
@@ -10,12 +31,44 @@
 /* L3G4200D Register Map  (Please refer to L3G4200D Specifications) */
 #define L3G4200D_REG_DEVID			         0x0F
 
+/*
+#define L3G4200D_REG_DEVID			         0x00
+#define L3G4200D_REG_OFS_XH			0x0C
+#define L3G4200D_REG_OFS_XL		         0x0D
+#define L3G4200D_REG_OFS_YH			0x0E
+#define L3G4200D_REG_OFS_YL			0x0F
+#define L3G4200D_REG_OFS_ZH			0x10
+#define L3G4200D_REG_OFS_ZL			0x11
+#define L3G4200D_REG_FIFO_EN			0x12
+#define L3G4200D_REG_AUX_VDD			0x13
+#define L3G4200D_REG_AUX_ID		         0x14
+#define L3G4200D_REG_SAMRT_DIV		0x15
+#define L3G4200D_REG_DATA_FMT			0x16   //set external sync, full-scale range and sample rate, low pass filter bandwidth
+#define L3G4200D_REG_INT_EN			0x17
+#define L3G4200D_REG_AUX_ADDR   		0x18
+#define L3G4200D_REG_INT_STA			0x1A
+
+#define L3G4200D_REG_TEMP_OUTH		0x1B
+#define L3G4200D_REG_TEMP_OUTL	         0x1C
+*/
 #define L3G4200D_REG_GYRO_XH			0x29
 #define L3G4200D_REG_GYRO_XL			0x28
 //#define L3G4200D_REG_GYRO_YH			0x1F
 //#define L3G4200D_REG_GYRO_YL			0x20
 //#define L3G4200D_REG_GYRO_ZH			0x21
 //#define L3G4200D_REG_GYRO_ZL			0x22
+/*
+#define L3G4200D_REG_AUX_XH			0x23
+#define L3G4200D_REG_AUX_XL			0x24
+#define L3G4200D_REG_AUX_YH			0x25
+#define L3G4200D_REG_AUX_YL			0x26
+#define L3G4200D_REG_AUX_ZH			0x27
+#define L3G4200D_REG_AUX_ZL			0x28
+#define L3G4200D_REG_FIFO_CNTH		0x3A
+#define L3G4200D_REG_FIFO_CNTL		0x3B
+#define L3G4200D_REG_FIFO_DATA		0x3C
+#define L3G4200D_REG_FIFO_CTL			0x3D
+*/
 #define L3G4200D_CTL_REG1			0x20 
 #define L3G4200D_FIFO_CTL			0x2E 
 

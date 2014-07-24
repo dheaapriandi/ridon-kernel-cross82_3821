@@ -519,13 +519,13 @@ int ccci_message_send(int md_id, ccci_msg_t *msg, int retry_en)
 		if (ctl_b->m_logic_ch_table[msg->channel].m_attrs & L_CH_ATTR_PRVLG0){
 			ret = ccif->ccif_write_phy_ch_data(ccif, (unsigned int*)msg, retry_en);
 		} else {
-			ret = -CCCI_ERR_MD_NOT_READY;
+			ret = -ENODEV;
 		}
 	} else if (unlikely(md_stage == MD_BOOT_STAGE_1)){ // PRIVILEGE 1 <--
 		if (ctl_b->m_logic_ch_table[msg->channel].m_attrs & L_CH_ATTR_PRVLG1){
 			ret = ccif->ccif_write_phy_ch_data(ccif, (unsigned int*)msg, retry_en);
 		} else {
-			ret = -CCCI_ERR_MD_NOT_READY;
+			ret = -ENODEV;
 		}
 	} else if (unlikely(md_stage == MD_BOOT_STAGE_EXCEPTION)) { // PRIVILEGE 2 <--
 		if (ctl_b->m_logic_ch_table[msg->channel].m_attrs & L_CH_ATTR_PRVLG2){
@@ -533,7 +533,7 @@ int ccci_message_send(int md_id, ccci_msg_t *msg, int retry_en)
 		} else if (ctl_b->m_logic_ch_table[msg->channel].m_attrs & L_CH_ATTR_DUMMY_WRITE){
 			ret = sizeof(ccci_msg_t); // Dummy write here, MD using polling
 		} else {
-			ret = -CCCI_ERR_MD_NOT_READY;
+			ret = -ETXTBSY;
 		}
 	} else {
 		ret = ccif->ccif_write_phy_ch_data(ccif, (unsigned int*)msg, retry_en);

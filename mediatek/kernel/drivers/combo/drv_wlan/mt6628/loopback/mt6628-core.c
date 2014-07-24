@@ -1,3 +1,13 @@
+/*
+ * linux/drivers/mmc/card/mt6620.c - MT6620 SDIO WIFI/BT/GPS/FM driver
+ *
+ * @file mt6620.c
+ * @author Chih-pin Wu
+ * @description
+ * @date October 20, 2009
+ * Copyright:	MediaTek Inc.
+ *
+ */
 #if defined(MT6628)
 #include "mt6628.h"
 #include "mt6628_reg.h"

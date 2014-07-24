@@ -307,7 +307,13 @@ allow netd wifi_data_file:file { write create open getattr };
 allow netd wifi_data_file:dir { create getattr setattr rmdir search read write remove_name };
 
 # 20131213 KKMR1_CQ_CTS_02
-allow netd tun_device:chr_file { read write };
+allow netd tun_device:chr_file { read write ioctl open };
+
 
 #============= netd ==============
-allow netd aee_aed:process sigchld;
+allow netd wifi_data_file:sock_file { write read };
+
+
+#============= netd ==============
+allow netd system_data_file:file setattr;
+

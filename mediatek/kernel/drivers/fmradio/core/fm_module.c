@@ -1,3 +1,25 @@
+/* fm_module.c
+ *
+ * (C) Copyright 2011
+ * MediaTek <www.MediaTek.com>
+ * Hongcheng <hongcheng.xia@MediaTek.com>
+ *
+ * FM Radio Driver -- main functions
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -1244,6 +1266,42 @@ static ssize_t fm_proc_read(struct file * file, char __user * buf, size_t count,
 	
 	return (length-1);
 }
+/*
+static fm_s32 fm_proc_read(char *page, char **start, off_t off, fm_s32 count, fm_s32 *eof, void *data)
+{
+    fm_s32 cnt = 0;
+    struct fm *fm  = g_fm;
+
+    WCN_DBG(FM_NTC | MAIN, "Enter fm_proc_read.\n");
+
+    if (off != 0)
+        return 0;
+
+    if (!fm) {
+        WCN_DBG(FM_ALT | MAIN, "para err\n");
+        return 0;
+    }
+
+    if (fm->chipon && (fm_pwr_state_get(fm) == FM_PWR_RX_ON)) 
+	{
+        cnt = sprintf(page, "1\n");
+		WCN_DBG(FM_NTC | MAIN, " FM_PWR_RX_ON\n");
+    } 
+	else if (fm->chipon && (fm_pwr_state_get(fm) == FM_PWR_TX_ON)) 
+	{
+		WCN_DBG(FM_NTC | MAIN, " FM_PWR_TX_ON\n");
+        cnt = sprintf(page, "2\n");
+    } 
+	else 
+	{
+        cnt = sprintf(page, "0\n");
+    }
+
+    *eof = 1;
+    WCN_DBG(FM_NTC | MAIN, "Leave fm_proc_read. cnt = %d\n", cnt);
+    return cnt;
+}
+*/
 static fm_s32 fm_proc_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {
     fm_s8 tmp_buf[50] = {0};

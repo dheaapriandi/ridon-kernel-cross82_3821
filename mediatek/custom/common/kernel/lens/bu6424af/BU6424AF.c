@@ -46,9 +46,6 @@ static unsigned long g_u4CurrPosition   = 0;
 
 static int g_sr = 3;
 
-//extern int mt_set_gpio_mode(unsigned long  u4Pin, unsigned long  u4Mode);
-//extern int mt_set_gpio_out(unsigned long  u4Pin, unsigned long  u4PinOut);
-//extern int mt_set_gpio_dir(unsigned long  u4Pin, unsigned long  u4Dir);
 
 
 static int s4BU6424AF_ReadReg(unsigned short * a_pu2Result)
@@ -56,6 +53,7 @@ static int s4BU6424AF_ReadReg(unsigned short * a_pu2Result)
     int  i4RetValue = 0;
     char pBuff[2];
     
+
     i4RetValue = i2c_master_recv(g_pstBU6424AF_I2Cclient, pBuff , 2);
 
     if (i4RetValue < 0) 
@@ -73,6 +71,7 @@ static int s4BU6424AF_WriteReg(u16 a_u2Data)
     int  i4RetValue = 0;
 		char puSendCmd[2] = {(char)(((a_u2Data >> 8) & 0x03) | 0xc0), (char)(a_u2Data & 0xff)};
 		
+
     g_pstBU6424AF_I2Cclient->ext_flag |= I2C_A_FILTER_MSG;
     i4RetValue = i2c_master_send(g_pstBU6424AF_I2Cclient, puSendCmd, 2);
     if (i4RetValue < 0) 
@@ -278,7 +277,7 @@ static int BU6424AF_Release(struct inode * a_pstInode, struct file * a_pstFile)
         spin_unlock(&g_BU6424AF_SpinLock);
 
     }
-
+    mt_set_gpio_out(GPIO133,0);
     BU6424AFDB("[BU6424AF] BU6424AF_Release - End\n");
 
     return 0;

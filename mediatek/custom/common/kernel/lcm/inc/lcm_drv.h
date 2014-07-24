@@ -604,8 +604,34 @@ typedef struct
     unsigned int (*ata_check)(unsigned char *buffer);
 	void (*read_fb)(unsigned char *buffer);
     /////////////////////////////////////////////////
+//#ifdef TINNO_ANDROID_S9096
+//Append by Jieve Liu
+//Begin{
+    int (*get_initialization_settings)(unsigned char table[]);
+    int (*set_initialization_settings)(const unsigned char table[], const int count);
+    
+    void (*earlysuspendsharp)(void);
+//}Append by Jieve Liu
+//End
+//#endif
 } LCM_DRIVER;
 
+//#ifdef TINNO_ANDROID_S9096
+//Append by Jieve Liu
+//Begin{
+#define LCM_INIT_TABLE_SIZE_MAX     2048
+#define REGFLAG_DELAY             		0XFE
+#define REGFLAG_END_OF_TABLE      	0xFD   // END OF REGISTERS MARKER
+
+typedef struct _LCM_SETTING_ITEM {
+	unsigned char cmd;
+	unsigned char count;
+	unsigned char params[0];
+}LCM_SETTING_ITEM;
+
+//}Append by Jieve Liu
+//End
+//#endif
 
 // ---------------------------------------------------------------------------
 //  LCM Driver Functions

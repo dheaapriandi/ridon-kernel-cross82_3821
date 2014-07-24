@@ -1,3 +1,25 @@
+/* fm_rds_parser.c
+ *
+ * (C) Copyright 2011
+ * MediaTek <www.MediaTek.com>
+ * hongcheng <hongcheng.xia@MediaTek.com>
+ *
+ * FM Radio Driver
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #include <linux/string.h>
 
 #include "fm_typedef.h"
@@ -43,6 +65,11 @@ static fm_s32 fm_state_set(struct fm_state_machine *thiz, fm_s32 new_state)
 static fm_u16(*rds_get_freq)(void)  = NULL;
 
 //RDS spec related handle flow
+/*
+ * rds_cnt_get
+ * To get rds group count form raw data
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_cnt_get(struct rds_rx_t *rds_raw, fm_s32 raw_size, fm_s32 *cnt)
 {
     fm_s32 gap = sizeof(rds_raw->cos) + sizeof(rds_raw->sin);
@@ -55,6 +82,11 @@ static fm_s32 rds_cnt_get(struct rds_rx_t *rds_raw, fm_s32 raw_size, fm_s32 *cnt
     return 0;
 }
 
+/*
+ * rds_grp_get
+ * To get rds group[n] data form raw data with index
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_grp_get(fm_u16 *dst, struct rds_rx_t *raw, fm_s32 idx)
 {
     FMR_ASSERT(dst);
@@ -76,6 +108,11 @@ static fm_s32 rds_grp_get(fm_u16 *dst, struct rds_rx_t *raw, fm_s32 idx)
     return 0;
 }
 
+/*
+ * rds_checksum_check
+ * To check CRC rerult, if OK, *valid=fm_true, else *valid=fm_false
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_checksum_check(fm_u16 crc, fm_s32 mask, fm_bool *valid)
 {
     FMR_ASSERT(valid);
@@ -89,6 +126,44 @@ static fm_s32 rds_checksum_check(fm_u16 crc, fm_s32 mask, fm_bool *valid)
     return 0;
 }
 
+/*
+ * rds_cbc_get - To get block_n's correct bit count form cbc
+ * @cbc, the group's correct bit count
+ * @blk, target the block
+ *
+ * If success, return block_n's cbc, else error code
+*/
+/*
+static fm_s32 rds_cbc_get(fm_u16 cbc, enum rds_blk_t blk)
+{
+    int ret = 0;
+
+    switch (blk) {
+    case RDS_BLK_A:
+        ret = (cbc & 0xF000) >> 12;
+        break;
+    case RDS_BLK_B:
+        ret = (cbc & 0x0F00) >> 8;
+        break;
+    case RDS_BLK_C:
+        ret = (cbc & 0x00F0) >> 4;
+        break;
+    case RDS_BLK_D:
+        ret = (cbc & 0x000F) >> 0;
+        break;
+    default:
+        break;
+    }
+
+    WCN_DBG(FM_INF | RDSC, "group cbc=0x%04x\n", cbc);
+    return ret;
+}
+*/
+/*
+ * rds_event_set
+ * To set rds event, and user space can use this flag to juge which event happened
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_event_set(fm_u16 *events, fm_s32 event_mask)
 {
     FMR_ASSERT(events);
@@ -98,6 +173,11 @@ static fm_s32 rds_event_set(fm_u16 *events, fm_s32 event_mask)
     return 0;
 }
 
+/*
+ * rds_flag_set
+ * To set rds event flag, and user space can use this flag to juge which event happened
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_flag_set(fm_u32 *flags, fm_s32 flag_mask)
 {
     FMR_ASSERT(flags);
@@ -107,6 +187,11 @@ static fm_s32 rds_flag_set(fm_u32 *flags, fm_s32 flag_mask)
     return 0;
 }
 
+/*
+ * rds_grp_type_get
+ * To get rds group type form blockB
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_grp_type_get(fm_u16 crc, fm_u16 blk, fm_u8 *type, fm_u8 *subtype)
 {
     fm_bool valid = fm_false;
@@ -128,6 +213,15 @@ static fm_s32 rds_grp_type_get(fm_u16 crc, fm_u16 blk, fm_u8 *type, fm_u8 *subty
     return 0;
 }
 
+/*
+ * rds_grp_counter_add
+ * @type -- group type, rang: 0~15
+ * @subtype -- sub group type, rang:0~1
+ *
+ * add group counter, g0a~g15b
+ * we use type value as the index
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_grp_counter_add(fm_u8 type, fm_u8 subtype, struct rds_group_cnt_t *gc)
 {
     FMR_ASSERT(gc);
@@ -153,6 +247,12 @@ static fm_s32 rds_grp_counter_add(fm_u8 type, fm_u8 subtype, struct rds_group_cn
     return 0;
 }
 
+/*
+ * rds_grp_counter_get
+ *
+ * read group counter , g0a~g15b
+ * If success return 0, else return error code
+*/
 extern fm_s32 rds_grp_counter_get(struct rds_group_cnt_t *dst, struct rds_group_cnt_t *src)
 {
     FMR_ASSERT(dst);
@@ -162,6 +262,12 @@ extern fm_s32 rds_grp_counter_get(struct rds_group_cnt_t *dst, struct rds_group_
     return 0;
 }
 
+/*
+ * rds_grp_counter_reset
+ *
+ * clear group counter to 0, g0a~g15b
+ * If success return 0, else return error code
+*/
 extern fm_s32 rds_grp_counter_reset(struct rds_group_cnt_t *gc)
 {
     FMR_ASSERT(gc);
@@ -208,6 +314,11 @@ extern fm_s32 rds_log_out(struct rds_log_t *thiz, struct rds_rx_t *dst, fm_s32 *
     return 0;
 }
 
+/*
+ * rds_grp_pi_get
+ * To get rds group pi code form blockA
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_grp_pi_get(fm_u16 crc, fm_u16 blk, fm_u16 *pi, fm_bool *dirty)
 {
     fm_s32 ret = 0;
@@ -236,6 +347,11 @@ static fm_s32 rds_grp_pi_get(fm_u16 crc, fm_u16 blk, fm_u16 *pi, fm_bool *dirty)
     return ret;
 }
 
+/*
+ * rds_grp_pty_get
+ * To get rds group pty code form blockB
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_grp_pty_get(fm_u16 crc, fm_u16 blk, fm_u8 *pty, fm_bool *dirty)
 {
     fm_s32 ret = 0;
@@ -264,6 +380,11 @@ static fm_s32 rds_grp_pty_get(fm_u16 crc, fm_u16 blk, fm_u8 *pty, fm_bool *dirty
     return ret;
 }
 
+/*
+ * rds_grp_tp_get
+ * To get rds group tp code form blockB
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_grp_tp_get(fm_u16 crc, fm_u16 blk, fm_u8 *tp, fm_bool *dirty)
 {
     fm_s32 ret = 0;
@@ -292,6 +413,11 @@ static fm_s32 rds_grp_tp_get(fm_u16 crc, fm_u16 blk, fm_u8 *tp, fm_bool *dirty)
     return ret;
 }
 
+/*
+ * rds_g0_ta_get
+ * To get rds group ta code form blockB
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_g0_ta_get(fm_u16 blk, fm_u8 *ta, fm_bool *dirty)
 {
     fm_s32 ret = 0;
@@ -311,6 +437,11 @@ static fm_s32 rds_g0_ta_get(fm_u16 blk, fm_u8 *ta, fm_bool *dirty)
     return ret;
 }
 
+/*
+ * rds_g0_music_get
+ * To get music-speech switch code form blockB
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_g0_music_get(fm_u16 blk, fm_u8 *music, fm_bool *dirty)
 {
     fm_s32 ret = 0;
@@ -330,6 +461,11 @@ static fm_s32 rds_g0_music_get(fm_u16 blk, fm_u8 *music, fm_bool *dirty)
     return ret;
 }
 
+/*
+ * rds_g0_ps_addr_get
+ * To get ps addr form blockB, blkB b0~b1
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_g0_ps_addr_get(fm_u16 blkB, fm_u8 *addr)
 {
     FMR_ASSERT(addr);
@@ -339,6 +475,11 @@ static fm_s32 rds_g0_ps_addr_get(fm_u16 blkB, fm_u8 *addr)
     return 0;
 }
 
+/*
+ * rds_g0_di_flag_get
+ * To get DI segment flag form blockB, blkB b2
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_g0_di_flag_get(fm_u16 blkB, fm_u8 *flag)
 {
     FMR_ASSERT(flag);
@@ -381,6 +522,13 @@ static fm_s32 rds_g0_ps_get(fm_u16 crc, fm_u16 blkD, fm_u8 addr, fm_u8 *buf)
     return 0;
 }
 
+/*
+ * rds_g0_ps_cmp
+ * this function is the most importent flow for PS parsing
+ * 1.Compare fresh buf with once buf per byte, if eque copy this byte to twice buf, else copy it to once buf
+ * 2.Check wether we got a full segment
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_g0_ps_cmp(fm_u8 addr, fm_u16 cbc, fm_u8 *fresh,
                             fm_u8 *once, fm_u8 *twice, /*fm_bool *valid,*/fm_u8 *bm)
 {
@@ -586,6 +734,11 @@ static fm_s32 rds_bm_set(struct rds_bitmap *thiz, fm_u8 addr)
 }
 
 
+/*
+ * rds_g2_rt_addr_get
+ * To get rt addr form blockB
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_g2_rt_addr_get(fm_u16 blkB, fm_u8 *addr)
 {
     fm_s32 ret = 0;
@@ -692,6 +845,15 @@ static fm_s32 rds_g2_rt_get_len(fm_u8 subtype, fm_s32 pos, fm_s32 *len)
     return ret;
 }
 
+/*
+ * rds_g2_rt_cmp
+ * this function is the most importent flow for RT parsing
+ * 1.Compare fresh buf with once buf per byte, if eque copy this byte to twice buf, else copy it to once buf
+ * 2.Check wether we got a full segment, for typeA if copyed 4bytes to twice buf, for typeB 2bytes copyed to twice buf
+ * 3.Check wether we got the end of RT, if we got 0x0D
+ * 4.If we got the end, then caculate the RT lenth
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_g2_rt_cmp(fm_u8 addr, fm_u16 cbc, fm_u8 subtype, fm_u8 *fresh,
                             fm_u8 *once, fm_u8 *twice, fm_bool *valid/*, fm_bool *end, fm_s32 *len*/)
 {
@@ -770,6 +932,12 @@ static fm_s32 rds_g2_rt_cmp(fm_u8 addr, fm_u16 cbc, fm_u8 subtype, fm_u8 *fresh,
     return ret;
 }
 
+/*
+ * rds_g2_rt_check_end
+ * check 0x0D end flag
+ * If we got the end, then caculate the RT lenth
+ * If success return 0, else return error code
+*/
 static fm_s32 rds_g2_rt_check_end(fm_u8 addr, fm_u8 subtype, fm_u8 *twice,fm_bool *end)
 {
     fm_s32 i = 0;
@@ -1619,6 +1787,18 @@ static fm_s32 rds_retrieve_g14(fm_u16 *block_data, fm_u8 SubType, rds_t *pstRDSD
     return ret;
 }
 
+/*
+ *  rds_parser
+ *  Block0: 	PI code(16bits)
+ *  Block1: 	Group type(4bits), B0=version code(1bit), TP=traffic program code(1bit),
+ *  PTY=program type code(5bits), other(5bits)
+ *  Block2:	16bits
+ *  Block3:	16bits
+ *  @rds_dst - target buffer that record RDS parsing result
+ *  @rds_raw - rds raw data
+ *  @rds_size - size of rds raw data
+ *  @getfreq - function pointer, AF need get current freq
+ */
 fm_s32 rds_parser(rds_t *rds_dst, struct rds_rx_t *rds_raw, fm_s32 rds_size, fm_u16(*getfreq)(void))
 {
     fm_s32 ret = 0;

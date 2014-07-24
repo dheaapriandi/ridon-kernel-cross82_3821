@@ -1,3 +1,25 @@
+/* mt6630_fm_cmd.c
+ *
+ * (C) Copyright 2009 
+ * MediaTek <www.MediaTek.com>
+ * Hongcheng <hongcheng.xia@MediaTek.com>
+ *
+ * MT6630 FM Radio Driver --  source file
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #include <linux/kernel.h>
 #include <linux/types.h>
 
@@ -108,6 +130,12 @@ static fm_s32 fm_bop_modify(fm_u8 addr, fm_u16 mask_and, fm_u16 mask_or, fm_u8 *
     return (FM_MODIFY_BASIC_OP_SIZE + 2);
 }
 
+/*
+ * mt6630_pwrup_clock_on - Wholechip FM Power Up: step 1, FM Digital Clock enable
+ * @buf - target buf
+ * @buf_size - buffer size
+ * return package size
+ */
 fm_s32 mt6630_pwrup_clock_on(fm_u8 *buf, fm_s32 buf_size)
 {
     fm_s32 pkt_size = 0;
@@ -155,6 +183,16 @@ fm_s32 mt6630_pwrup_clock_on(fm_u8 *buf, fm_s32 buf_size)
 }
 
 
+/*
+ * mt6630_patch_download - Wholechip FM Power Up: step 3, download patch to f/w,
+ * @buf - target buf
+ * @buf_size - buffer size
+ * @seg_num - total segments that this patch divided into
+ * @seg_id - No. of Segments: segment that will now be sent
+ * @src - patch source buffer
+ * @seg_len - segment size: segment that will now be sent
+ * return package size
+ */
 fm_s32 mt6630_patch_download(fm_u8 *buf, fm_s32 buf_size, fm_u8 seg_num, fm_u8 seg_id, const fm_u8 *src, fm_s32 seg_len)
 {
     fm_s32 pkt_size = 0;
@@ -194,6 +232,16 @@ fm_s32 mt6630_patch_download(fm_u8 *buf, fm_s32 buf_size, fm_u8 seg_num, fm_u8 s
 }
 
 
+/*
+ * mt6630_coeff_download - Wholechip FM Power Up: step 3,download coeff to f/w,
+ * @buf - target buf
+ * @buf_size - buffer size
+ * @seg_num - total segments that this patch divided into
+ * @seg_id - No. of Segments: segment that will now be sent
+ * @src - patch source buffer
+ * @seg_len - segment size: segment that will now be sent
+ * return package size
+ */
 fm_s32 mt6630_coeff_download(fm_u8 *buf, fm_s32 buf_size, fm_u8 seg_num, fm_u8 seg_id, const fm_u8 *src, fm_s32 seg_len)
 {
     fm_s32 pkt_size = 0;
@@ -232,6 +280,12 @@ fm_s32 mt6630_coeff_download(fm_u8 *buf, fm_s32 buf_size, fm_u8 seg_num, fm_u8 s
     return pkt_size;
 }
 
+/*
+ * mt6630_pwrup_digital_init - Wholechip FM Power Up: step 4, FM Digital Init: fm_rgf_maincon
+ * @buf - target buf
+ * @buf_size - buffer size
+ * return package size
+ */
 fm_s32 mt6630_pwrup_digital_init(fm_u8 *buf, fm_s32 buf_size)
 {
     fm_s32 pkt_size = 0;
@@ -263,6 +317,12 @@ fm_s32 mt6630_pwrup_digital_init(fm_u8 *buf, fm_s32 buf_size)
     return pkt_size;
 }
 
+/*
+ * mt6630_pwrdown - Wholechip FM Power down: Digital Modem Power Down
+ * @buf - target buf
+ * @buf_size - buffer size
+ * return package size
+ */
 fm_s32 mt6630_pwrdown(fm_u8 *buf, fm_s32 buf_size)
 {
     fm_s32 pkt_size = 0;
@@ -297,6 +357,12 @@ fm_s32 mt6630_pwrdown(fm_u8 *buf, fm_s32 buf_size)
 }
 
 
+/*
+ * mt6630_rampdown - f/w will wait for STC_DONE interrupt
+ * @buf - target buf
+ * @buf_size - buffer size
+ * return package size
+ */
 fm_s32 mt6630_rampdown(fm_u8 *buf, fm_s32 buf_size)
 {
     fm_s32 pkt_size = 0;
@@ -327,6 +393,13 @@ fm_s32 mt6630_rampdown(fm_u8 *buf, fm_s32 buf_size)
 }
 
 
+/*
+ * mt6630_tune - execute tune action,
+ * @buf - target buf
+ * @buf_size - buffer size
+ * @freq - 760 ~ 1080, 100KHz unit
+ * return package size
+ */
 fm_s32 mt6630_tune(fm_u8 *buf, fm_s32 buf_size, fm_u16 freq, fm_u16 chan_para)
 {
     //#define FM_TUNE_USE_POLL
@@ -369,6 +442,16 @@ fm_s32 mt6630_tune(fm_u8 *buf, fm_s32 buf_size, fm_u16 freq, fm_u16 chan_para)
 }
 
 
+/*
+ * mt6630_full_cqi_req - execute request cqi info action,
+ * @buf - target buf
+ * @buf_size - buffer size
+ * @freq - 7600 ~ 10800, freq array
+ * @cnt - channel count
+ * @type - request type, 1: a single channel; 2: multi channel; 3:multi channel with 100Khz step; 4: multi channel with 50Khz step
+ * 
+ * return package size
+ */
 fm_s32 mt6630_full_cqi_req(fm_u8 *buf, fm_s32 buf_size, fm_u16 *freq, fm_s32 cnt, fm_s32 type)
 {
     fm_s32 pkt_size = 0;
@@ -415,6 +498,16 @@ fm_s32 mt6630_full_cqi_req(fm_u8 *buf, fm_s32 buf_size, fm_u16 *freq, fm_s32 cnt
 }
 
 
+/*
+ * mt6630_seek - execute seek action,
+ * @buf - target buf
+ * @buf_size - buffer size
+ * @seekdir - 0=seek up, 1=seek down
+ * @space - step, 50KHz:001, 100KHz:010, 200KHz:100
+ * @max_freq - upper bound
+ * @min_freq - lower bound
+ * return package size
+ */
 fm_s32 mt6630_seek(fm_u8 *buf, fm_s32 buf_size, fm_u16 seekdir, fm_u16 space, fm_u16 max_freq, fm_u16 min_freq)
 {
     fm_s32 pkt_size = 0;
@@ -477,6 +570,16 @@ fm_s32 mt6630_seek(fm_u8 *buf, fm_s32 buf_size, fm_u16 seekdir, fm_u16 space, fm
 }
 
 
+/*
+ * mt6630_scan - execute scan action,
+ * @buf - target buf
+ * @buf_size - buffer size
+ * @scandir - 0=seek up, 1=seek down
+ * @space - step, 50KHz:001, 100KHz:010, 200KHz:100
+ * @max_freq - upper bound
+ * @min_freq - lower bound
+ * return package size
+ */
 fm_s32 mt6630_scan(fm_u8 *buf, fm_s32 buf_size, fm_u16 scandir, fm_u16 space, fm_u16 max_freq, fm_u16 min_freq)
 {
     fm_s32 pkt_size = 0;
@@ -700,6 +803,12 @@ fm_s32 mt6630_host_set_reg(fm_u8 *buf, fm_s32 buf_size, fm_u32 addr, fm_u32 valu
     return 12;
 }
 /********************************Tx function***********************************************/
+/*
+ * mt6630_pwrup_clock_on_tx - FM tx Digital Clock enable
+ * @buf - target buf
+ * @buf_size - buffer size
+ * return package size
+ */
 fm_s32 mt6630_pwrup_clock_on_tx(fm_u8 *buf, fm_s32 buf_size)
 {
     fm_s32 pkt_size = 0;
@@ -734,6 +843,12 @@ fm_s32 mt6630_pwrup_clock_on_tx(fm_u8 *buf, fm_s32 buf_size)
     return pkt_size;
 }
 
+/*
+ * mt6630_pwrup_tx_deviation - default deviation (RDS off)
+ * @buf - target buf
+ * @buf_size - buffer size
+ * return package size
+ */
 fm_s32 mt6630_pwrup_tx_deviation(fm_u8 *buf, fm_s32 buf_size)
 {
     fm_s32 pkt_size = 0;
@@ -773,6 +888,12 @@ fm_s32 mt6630_pwrup_tx_deviation(fm_u8 *buf, fm_s32 buf_size)
     return pkt_size;
 }
 
+/*
+ * mt6630_tx_rdsoff_deviation -  deviation (RDS on)
+ * @buf - target buf
+ * @buf_size - buffer size
+ * return package size
+ */
 fm_s32 mt6630_tx_rdson_deviation(fm_u8 *buf, fm_s32 buf_size)
 {
     fm_s32 pkt_size = 0;
@@ -813,6 +934,13 @@ fm_s32 mt6630_tx_rdson_deviation(fm_u8 *buf, fm_s32 buf_size)
     return pkt_size;
 }
 
+/*
+ * mt6630_tune_tx - execute tx tune action,
+ * @buf - target buf
+ * @buf_size - buffer size
+ * @freq - 760 ~ 1080, 100KHz unit
+ * return package size
+ */
 fm_s32 mt6630_tune_tx(fm_u8 *buf, fm_s32 buf_size, fm_u16 freq, fm_u16 chan_para)
 {
     //#define FM_TUNE_USE_POLL
@@ -853,6 +981,12 @@ fm_s32 mt6630_tune_tx(fm_u8 *buf, fm_s32 buf_size, fm_u16 freq, fm_u16 chan_para
 
     return pkt_size;
 }
+/*
+pi: pi code
+ps: block B,C,D
+other_rds: unused
+other_rds_cnt: unused
+*/
 fm_s32 mt6630_rds_tx(fm_u8 *tx_buf, fm_s32 tx_buf_size, fm_u16 pi, fm_u16 *ps, fm_u16 *other_rds, fm_u8 other_rds_cnt)
 {
     fm_s32 pkt_size = 0;

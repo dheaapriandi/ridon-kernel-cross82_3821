@@ -1,4 +1,3 @@
-
 #include <mach/md32_wdt.h>
 #include <linux/workqueue.h>
 #include <linux/aee.h>

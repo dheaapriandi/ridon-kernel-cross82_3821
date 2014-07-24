@@ -126,7 +126,7 @@ int sch_direct_xmit(struct sk_buff *skb, struct Qdisc *q,
 		ret = dev_hard_start_xmit(skb, dev, txq);
 	
 	HARD_TX_UNLOCK(dev, txq);
-/*	
+	
 #ifdef CONFIG_MTK_NET_LOGGING 		
     if(ret != NETDEV_TX_OK ){
     	if(qdisc_qlen(q) < 16){
@@ -140,7 +140,7 @@ int sch_direct_xmit(struct sk_buff *skb, struct Qdisc *q,
     	}
     }
 #endif
-*/
+
 	spin_lock(root_lock);
 
 	if (dev_xmit_complete(ret)) {
@@ -479,11 +479,11 @@ static int pfifo_fast_enqueue(struct sk_buff *skb, struct Qdisc *qdisc)
 		qdisc->q.qlen++;
 		return __qdisc_enqueue_tail(skb, qdisc, list);
 	}
-
+#ifdef CONFIG_MTK_NET_LOGGING 
 	if((qdisc->qstats.drops%128) == 4)
 		printk(KERN_INFO "[mtk_net][sched] pfifo_fast_enqueue drop, dev:%s, skb_qlen = %d, qdisc_drop = %u!\n", 
 			qdisc_dev(qdisc)->name, skb_queue_len(&qdisc->q), qdisc->qstats.drops);
-
+#endif
 	return qdisc_drop(skb, qdisc);
 }
 

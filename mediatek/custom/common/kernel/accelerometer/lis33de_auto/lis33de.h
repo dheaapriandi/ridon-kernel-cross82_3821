@@ -1,3 +1,24 @@
+/* linux/drivers/hwmon/lis33de.c
+ *
+ * (C) Copyright 2008 
+ * MediaTek <www.mediatek.com>
+ *
+ * LIS33DE driver for MT6516
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #ifndef LIS33DE_H
 #define LIS33DE_H
 	 
@@ -17,6 +38,31 @@ extern struct acc_hw* lis33de_get_cust_acc_hw(void);
 #define LIS33DE_REG_OUT_Y		    0x2B
 #define LIS33DE_REG_OUT_Z		    0x2D
 
+/*
+#define LIS33DE_REG_DEVID			0x00
+#define LIS33DE_REG_THRESH_TAP		0x1D
+#define LIS33DE_REG_OFSX			0x1E
+#define LIS33DE_REG_OFSY			0x1F
+#define LIS33DE_REG_OFSZ			0x20
+#define LIS33DE_REG_DUR				0x21
+#define LIS33DE_REG_THRESH_ACT		0x24
+#define LIS33DE_REG_THRESH_INACT	0x25
+#define LIS33DE_REG_TIME_INACT		0x26
+#define LIS33DE_REG_ACT_INACT_CTL	0x27
+#define LIS33DE_REG_THRESH_FF		0x28
+#define LIS33DE_REG_TIME_FF			0x29
+#define LIS33DE_REG_TAP_AXES		0x2A
+#define LIS33DE_REG_ACT_TAP_STATUS	0x2B
+#define	LIS33DE_REG_BW_RATE			0x2C
+#define LIS33DE_REG_POWER_CTL		0x2D
+#define LIS33DE_REG_INT_ENABLE		0x2E
+#define LIS33DE_REG_INT_MAP			0x2F
+#define LIS33DE_REG_INT_SOURCE		0x30
+#define LIS33DE_REG_DATA_FORMAT		0x31
+#define LIS33DE_REG_DATAX0			0x32
+#define LIS33DE_REG_FIFO_CTL		0x38
+#define LIS33DE_REG_FIFO_STATUS		0x39
+*/
 
 #define LIS33DE_FIXED_DEVID			0xE5
 	 

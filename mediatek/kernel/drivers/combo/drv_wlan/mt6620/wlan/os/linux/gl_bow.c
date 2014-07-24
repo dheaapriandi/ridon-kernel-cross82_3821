@@ -1,9 +1,200 @@
+/*
+** $Id: @(#) gl_bow.c@@
+*/
+
+/*! \file   gl_bow.c
+    \brief  Main routines of Linux driver interface for 802.11 PAL (BT 3.0 + HS)
+
+    This file contains the main routines of Linux driver for MediaTek Inc. 802.11
+    Wireless LAN Adapters.
+*/
 
 
 
+/*
+** $Log: gl_bow.c $
+ *
+ * 02 16 2012 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * [ALPS00235223] [Rose][ICS][Cross Feature][AEE-IPANIC]The device reboot automatically and then the "KE" pops up after you turn on the "Airplane mode".(once)
+ *
+ * [Root Cause]
+ * PAL operates BOW char dev poll after BOW char dev is registered.
+ *
+ * [Solution]
+ * Rejects PAL char device operation after BOW is unregistered or when wlan GLUE_FLAG_HALT is set.
+ *
+ * This is a workaround for BOW driver robustness, happens only in ICS.
+ *
+ * Root cause should be fixed by CR [ALPS00231570]
+ *
+ * 02 03 2012 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * [ALPS00118114] [Rose][ICS][Free Test][Bluetooth]The "KE" pops up after you turn on the airplane mode.(5/5)
+ *
+ * [Root Cause]
+ * PAL operates BOW char dev poll after BOW char dev is registered.
+ *
+ * [Solution]
+ * Rejects PAL char device operation after BOW is unregistered.
+ *
+ * Happens only in ICS.
+ *
+ * Notified PAL owener to reivew MTKBT/PAL closing BOW char dev procedure.
+ *
+ * [Side Effect]
+ * None.
+ *
+ * 01 16 2012 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Support BOW for 5GHz band.
+ *
+ * 11 10 2011 cp.wu
+ * [WCXRP00001098] [MT6620 Wi-Fi][Driver] Replace printk by DBG LOG macros in linux porting layer
+ * 1. eliminaite direct calls to printk in porting layer.
+ * 2. replaced by DBGLOG, which would be XLOG on ALPS platforms.
+ *
+ * 10 25 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Modify ampc0 char device for major number 151 for all MT6575 projects.
+ *
+ * 07 28 2011 cp.wu
+ * [WCXRP00000884] [MT6620 Wi-Fi][Driver] Deprecate ioctl interface by unlocked ioctl
+ * unlocked_ioctl returns as long instead of int.
+ *
+ * 07 28 2011 cp.wu
+ * [WCXRP00000884] [MT6620 Wi-Fi][Driver] Deprecate ioctl interface by unlocked ioctl
+ * migrate to unlocked ioctl interface
+ *
+ * 04 12 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Add WMM IE for BOW initiator data.
+ *
+ * 04 10 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Change Link disconnection event procedure for hotspot and change skb length check to 1514 bytes.
+ *
+ * 04 09 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Change Link connection event procedure and change skb length check to 1512 bytes.
+ *
+ * 03 27 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Support multiple physical link.
+ *
+ * 03 06 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Sync BOW Driver to latest person development branch version..
+ *
+ * 03 03 2011 jeffrey.chang
+ * [WCXRP00000512] [MT6620 Wi-Fi][Driver] modify the net device relative functions to support the H/W multiple queue
+ * support concurrent network
+ *
+ * 03 03 2011 jeffrey.chang
+ * [WCXRP00000512] [MT6620 Wi-Fi][Driver] modify the net device relative functions to support the H/W multiple queue
+ * replace alloc_netdev to alloc_netdev_mq for BoW
+ *
+ * 03 03 2011 jeffrey.chang
+ * [WCXRP00000512] [MT6620 Wi-Fi][Driver] modify the net device relative functions to support the H/W multiple queue
+ * modify net device relative functions to support multiple H/W queues
+ *
+ * 02 15 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Update net register and BOW for concurrent features.
+ *
+ * 02 10 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Fix kernel API change issue.
+ * Before ALPS 2.2 (2.2 included), kfifo_alloc() is
+ * struct kfifo *kfifo_alloc(unsigned int size, gfp_t gfp_mask, spinlock_t *lock);
+ * After ALPS 2.3, kfifo_alloc() is changed to
+ * int kfifo_alloc(struct kfifo *fifo, unsigned int size, gfp_t gfp_mask);
+ *
+ * 02 09 2011 cp.wu
+ * [WCXRP00000430] [MT6620 Wi-Fi][Firmware][Driver] Create V1.2 branch for MT6620E1 and MT6620E3
+ * create V1.2 driver branch based on label MT6620_WIFI_DRIVER_V1_2_110209_1031
+ * with BOW and P2P enabled as default
+ *
+ * 02 08 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Replace kfifo_get and kfifo_put with kfifo_out and kfifo_in.
+ * Update BOW get MAC status, remove returning event for AIS network type.
+ *
+ * 01 12 2011 cp.wu
+ * [WCXRP00000357] [MT6620 Wi-Fi][Driver][Bluetooth over Wi-Fi] add another net device interface for BT AMP
+ * implementation of separate BT_OVER_WIFI data path.
+ *
+ * 01 12 2011 cp.wu
+ * [WCXRP00000356] [MT6620 Wi-Fi][Driver] fill mac header length for security frames 'cause hardware header translation needs such information
+ * fill mac header length information for 802.1x frames.
+ *
+ * 11 11 2010 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Fix BoW timer assert issue.
+ *
+ * 09 14 2010 chinghwa.yu
+ * NULL
+ * Add bowRunEventAAAComplete.
+ *
+ * 09 14 2010 cp.wu
+ * NULL
+ * correct typo: POLLOUT instead of POLL_OUT
+ *
+ * 09 13 2010 cp.wu
+ * NULL
+ * add waitq for poll() and read().
+ *
+ * 08 24 2010 chinghwa.yu
+ * NULL
+ * Update BOW for the 1st time.
+ *
+ * 07 08 2010 cp.wu
+ *
+ * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
+ *
+ * 06 06 2010 kevin.huang
+ * [WPD00003832][MT6620 5931] Create driver base
+ * [MT6620 5931] Create driver base
+ *
+ * 05 05 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support
+ * change variable names for multiple physical link to match with coding convention
+ *
+ * 05 05 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support
+ * multiple BoW interfaces need to compare with peer address
+ *
+ * 04 28 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support
+ * change prefix for data structure used to communicate with 802.11 PAL
+ * to avoid ambiguous naming with firmware interface
+ *
+ * 04 28 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support
+ * fix kalIndicateBOWEvent.
+ *
+ * 04 27 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support
+ * add multiple physical link support
+ *
+ * 04 13 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support
+ * add framework for BT-over-Wi-Fi support.
+ *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  * 1) prPendingCmdInfo is replaced by queue for multiple handler capability
+ *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  * 2) command sequence number is now increased atomically
+ *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  * 3) private data could be hold and taken use for other purpose
+**
+*/
 
+/*******************************************************************************
+*                         C O M P I L E R   F L A G S
+********************************************************************************
+*/
 
-
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 #include "gl_os.h"
 #include "debug.h"
 #include "wlan_lib.h"
@@ -14,10 +205,22 @@
 
 #if CFG_ENABLE_BT_OVER_WIFI
 
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 /* @FIXME if there is command/event with payload length > 28 */
 #define MAX_BUFFER_SIZE         (64)
 
+/*******************************************************************************
+*                             D A T A   T Y P E S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/
 
 #if CFG_BOW_TEST
     UINT_32 g_u4PrevSysTime = 0;
@@ -25,6 +228,10 @@
     UINT_32 g_arBowRevPalPacketTime[11];
 #endif
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 
 // forward declarations
 static ssize_t
@@ -74,11 +281,31 @@ static const struct file_operations mt6620_ampc_fops = {
     .release            = mt6620_ampc_release,
 };
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                              F U N C T I O N S
+********************************************************************************
+*/
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Register for character device to communicate with 802.11 PAL
+*
+* \param[in] prGlueInfo      Pointer to glue info
+*
+* \return   TRUE
+*           FALSE
+*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 glRegisterAmpc (
@@ -121,6 +348,9 @@ glRegisterAmpc (
  //       spin_lock_init(&(prGlueInfo->rBowInfo.rSpinLock));
 
         // 3. initialize kfifo
+/*        prGlueInfo->rBowInfo.prKfifo = kfifo_alloc(GLUE_BOW_KFIFO_DEPTH,
+                GFP_KERNEL,
+                &(prGlueInfo->rBowInfo.rSpinLock));*/
             if ((kfifo_alloc((struct kfifo *) &(prGlueInfo->rBowInfo.rKfifo), GLUE_BOW_KFIFO_DEPTH, GFP_KERNEL)))
                 goto fail_kfifo_alloc;
 
@@ -158,6 +388,14 @@ fail_kfifo_alloc:
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Unregister character device for communicating with 802.11 PAL
+*
+* \param[in] prGlueInfo      Pointer to glue info
+*
+* \return   TRUE
+*           FALSE
+*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 glUnregisterAmpc (
@@ -195,6 +433,14 @@ glUnregisterAmpc (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief read handler for character device to communicate with 802.11 PAL
+*
+* \param[in]
+* \return
+*           Follows Linux Character Device Interface
+*
+*/
 /*----------------------------------------------------------------------------*/
 static ssize_t
 mt6620_ampc_read(
@@ -236,6 +482,14 @@ mt6620_ampc_read(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief write handler for character device to communicate with 802.11 PAL
+*
+* \param[in]
+* \return
+*           Follows Linux Character Device Interface
+*
+*/
 /*----------------------------------------------------------------------------*/
 static ssize_t
 mt6620_ampc_write(
@@ -301,6 +555,14 @@ mt6620_ampc_write(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief ioctl handler for character device to communicate with 802.11 PAL
+*
+* \param[in]
+* \return
+*           Follows Linux Character Device Interface
+*
+*/
 /*----------------------------------------------------------------------------*/
 static long
 mt6620_ampc_ioctl(
@@ -332,6 +594,14 @@ mt6620_ampc_ioctl(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief ioctl handler for character device to communicate with 802.11 PAL
+*
+* \param[in]
+* \return
+*           Follows Linux Character Device Interface
+*
+*/
 /*----------------------------------------------------------------------------*/
 static unsigned int
 mt6620_ampc_poll(
@@ -368,6 +638,14 @@ mt6620_ampc_poll(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief open handler for character device to communicate with 802.11 PAL
+*
+* \param[in]
+* \return
+*           Follows Linux Character Device Interface
+*
+*/
 /*----------------------------------------------------------------------------*/
 static int
 mt6620_ampc_open(
@@ -391,6 +669,14 @@ mt6620_ampc_open(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief close handler for character device to communicate with 802.11 PAL
+*
+* \param[in]
+* \return
+*           Follows Linux Character Device Interface
+*
+*/
 /*----------------------------------------------------------------------------*/
 static int
 mt6620_ampc_release(
@@ -407,6 +693,15 @@ mt6620_ampc_release(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief to indicate event for Bluetooth over Wi-Fi
+*
+* \param[in]
+*           prGlueInfo
+*           prEvent
+* \return
+*           none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 kalIndicateBOWEvent(
@@ -424,6 +719,8 @@ kalIndicateBOWEvent(
         return;
     }
 
+/*    u4AvailSize =
+        GLUE_BOW_KFIFO_DEPTH - kfifo_len(prGlueInfo->rBowInfo.prKfifo);*/
 
     u4AvailSize =
         GLUE_BOW_KFIFO_DEPTH - kfifo_len(&(prGlueInfo->rBowInfo.rKfifo));
@@ -450,6 +747,15 @@ kalIndicateBOWEvent(
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief to retrieve Bluetooth-over-Wi-Fi state from glue layer
+*
+* \param[in]
+*           prGlueInfo
+*           rPeerAddr
+* \return
+*           ENUM_BOW_DEVICE_STATE
+*/
 /*----------------------------------------------------------------------------*/
 ENUM_BOW_DEVICE_STATE
 kalGetBowState (
@@ -492,6 +798,16 @@ kalGetBowState (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief to set Bluetooth-over-Wi-Fi state in glue layer
+*
+* \param[in]
+*           prGlueInfo
+*           eBowState
+*           rPeerAddr
+* \return
+*           none
+*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 kalSetBowState (
@@ -551,6 +867,24 @@ kalSetBowState (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief to retrieve Bluetooth-over-Wi-Fi global state
+*
+* \param[in]
+*           prGlueInfo
+*
+* \return
+*           BOW_DEVICE_STATE_DISCONNECTED
+*               in case there is no BoW connection or
+*               BoW connection under initialization
+*
+*           BOW_DEVICE_STATE_STARTING
+*               in case there is no BoW connection but
+*               some BoW connection under initialization
+*
+*           BOW_DEVICE_STATE_CONNECTED
+*               in case there is any BoW connection available
+*/
 /*----------------------------------------------------------------------------*/
 ENUM_BOW_DEVICE_STATE
 kalGetBowGlobalState (
@@ -580,6 +914,15 @@ kalGetBowGlobalState (
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief to retrieve Bluetooth-over-Wi-Fi operating frequency
+*
+* \param[in]
+*           prGlueInfo
+*
+* \return
+*           in unit of KHz
+*/
 /*----------------------------------------------------------------------------*/
 UINT_32
 kalGetBowFreqInKHz(
@@ -593,6 +936,16 @@ kalGetBowFreqInKHz(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief to retrieve Bluetooth-over-Wi-Fi role
+*
+* \param[in]
+*           prGlueInfo
+*
+* \return
+*           0: Responder
+*           1: Initiator
+*/
 /*----------------------------------------------------------------------------*/
 UINT_8
 kalGetBowRole(
@@ -615,6 +968,17 @@ kalGetBowRole(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief to set Bluetooth-over-Wi-Fi role
+*
+* \param[in]
+*           prGlueInfo
+*           ucRole
+*                   0: Responder
+*                   1: Initiator
+* \return
+*           none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 kalSetBowRole(
@@ -637,6 +1001,15 @@ kalSetBowRole(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief to get available Bluetooth-over-Wi-Fi physical link number
+*
+* \param[in]
+*           prGlueInfo
+* \return
+*           UINT_32
+*               how many physical links are aviailable
+*/
 /*----------------------------------------------------------------------------*/
 UINT_8
 kalGetBowAvailablePhysicalLinkCount(
@@ -665,6 +1038,14 @@ kalGetBowAvailablePhysicalLinkCount(
 
 /* Net Device Hooks */
 /*----------------------------------------------------------------------------*/
+/*!
+ * \brief A function for net_device open (ifup)
+ *
+ * \param[in] prDev      Pointer to struct net_device.
+ *
+ * \retval 0     The execution succeeds.
+ * \retval < 0   The execution failed.
+ */
 /*----------------------------------------------------------------------------*/
 static int
 bowOpen(
@@ -691,6 +1072,14 @@ bowOpen(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * \brief A function for net_device stop (ifdown)
+ *
+ * \param[in] prDev      Pointer to struct net_device.
+ *
+ * \retval 0     The execution succeeds.
+ * \retval < 0   The execution failed.
+ */
 /*----------------------------------------------------------------------------*/
 static int
 bowStop(
@@ -721,6 +1110,15 @@ bowStop(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * \brief This function is TX entry point of NET DEVICE.
+ *
+ * \param[in] prSkb  Pointer of the sk_buff to be sent
+ * \param[in] prDev  Pointer to struct net_device
+ *
+ * \retval NETDEV_TX_OK - on success.
+ * \retval NETDEV_TX_BUSY - on failure, packet will be discarded by upper layer.
+ */
 /*----------------------------------------------------------------------------*/
 static int
 bowHardStartXmit(
@@ -853,6 +1251,17 @@ static const struct net_device_ops bow_netdev_ops = {
 };
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief initialize net device for Bluetooth-over-Wi-Fi
+*
+* \param[in]
+*           prGlueInfo
+*           prDevName
+*
+* \return
+*           TRUE
+*           FALSE
+*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 kalInitBowDevice(
@@ -913,6 +1322,16 @@ kalInitBowDevice(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief uninitialize net device for Bluetooth-over-Wi-Fi
+*
+* \param[in]
+*           prGlueInfo
+*
+* \return
+*           TRUE
+*           FALSE
+*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 kalUninitBowDevice(

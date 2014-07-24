@@ -1,3 +1,25 @@
+/* 
+ *
+ * (C) Copyright 20011
+ * MediaTek <www.MediaTek.com>
+ * Hongcheng Xia<Hongcheng.Xia@MediaTek.com>
+ *
+ * FM Radio Driver
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
 #ifndef __FM_CUST_CFG_H__
 #define __FM_CUST_CFG_H__
@@ -9,6 +31,24 @@ enum{
     FM_SCAN_SORT_DOWN,
     FM_SCAN_SORT_MAX
 };
+/*typedef struct  {
+    fm_s32 short_ana_rssi_th;
+    fm_s32 long_ana_rssi_th;
+    fm_s32 desene_rssi_th;
+    fm_s32 pamd_th;
+    fm_s32 mr_th;
+    fm_s32 atdc_th;
+    fm_u32 prx_th;
+    fm_u32 atdev_th;
+    fm_u16 smg_th;
+    fm_u16 deemphasis;
+    fm_u16 osc_freq;
+}mt6628_fm_rx_cust_cfg;
+
+typedef struct{
+    mt6628_fm_rx_cust_cfg rx_cfg;
+}mt6628_fm_cust_cfg;
+*/
 //*****************************************************************************************
 //***********************************FM config for customer: start******************************
 //*****************************************************************************************

@@ -1,3 +1,32 @@
+/*
+  USB Driver for GSM modems
+
+  Copyright (C) 2005  Matthias Urlichs <smurf@smurf.noris.de>
+
+  This driver is free software; you can redistribute it and/or modify
+  it under the terms of Version 2 of the GNU General Public License as
+  published by the Free Software Foundation.
+
+  Portions copied from the Keyspan driver by Hugh Blemings <hugh@blemings.org>
+
+  History: see the git log.
+
+  Work sponsored by: Sigos GmbH, Germany <info@sigos.de>
+
+  This driver exists because the "normal" serial driver doesn't work too well
+  with GSM modems. Issues:
+  - data loss -- one single Receive URB is not nearly enough
+  - nonstandard flow (Option devices) control
+  - controlling the baud rate doesn't make sense
+
+  This driver is named "option" because the most common device it's
+  used for is a PC-Card (with an internal OHCI-USB interface, behind
+  which the GSM interface sits), made by Option Inc.
+
+  Some of the "one port" devices actually exhibit multiple USB instances
+  on the USB bus. This is not a bug, these ports are used for different
+  device features.
+*/
 
 #define DRIVER_VERSION "v0.7.2"
 #define DRIVER_AUTHOR "Matthias Urlichs <smurf@smurf.noris.de>"
@@ -78,6 +107,14 @@ static void option_instat_callback(struct urb *urb);
 #define YISO_VENDOR_ID				0x0EAB
 #define YISO_PRODUCT_U893			0xC893
 
+/*
+ * NOVATEL WIRELESS PRODUCTS
+ *
+ * Note from Novatel Wireless:
+ * If your Novatel modem does not work on linux, don't
+ * change the option module, but check our website. If
+ * that does not help, contact ddeschepper@nvtl.com
+*/
 /* MERLIN EVDO PRODUCTS */
 #define NOVATELWIRELESS_PRODUCT_V640		0x1100
 #define NOVATELWIRELESS_PRODUCT_V620		0x1110
@@ -102,6 +139,15 @@ static void option_instat_callback(struct urb *urb);
 /* OVATION PRODUCTS */
 #define NOVATELWIRELESS_PRODUCT_MC727		0x4100
 #define NOVATELWIRELESS_PRODUCT_MC950D		0x4400
+/*
+ * Note from Novatel Wireless:
+ * All PID in the 5xxx range are currently reserved for
+ * auto-install CDROMs, and should not be added to this
+ * module.
+ *
+ * #define NOVATELWIRELESS_PRODUCT_U727		0x5010
+ * #define NOVATELWIRELESS_PRODUCT_MC727_NEW	0x5100
+*/
 #define NOVATELWIRELESS_PRODUCT_OVMC760		0x6002
 #define NOVATELWIRELESS_PRODUCT_MC780		0x6010
 #define NOVATELWIRELESS_PRODUCT_EVDO_FULLSPEED	0x6000
@@ -274,9 +320,15 @@ static void option_instat_callback(struct urb *urb);
 #define AIRPLUS_VENDOR_ID			0x1011
 #define AIRPLUS_PRODUCT_MCD650			0x3198
 
+/* Longcheer/Longsung vendor ID; makes whitelabel devices that
+ * many other vendors like 4G Systems, Alcatel, ChinaBird,
+ * Mobidata, etc sell under their own brand names.
+ */
 #define LONGCHEER_VENDOR_ID			0x1c9e
 
 /* 4G Systems products */
+/* This is the 4G XS Stick W14 a.k.a. Mobilcom Debitel Surf-Stick *
+ * It seems to contain a Qualcomm QSC6240/6290 chipset            */
 #define FOUR_G_SYSTEMS_PRODUCT_W14		0x9603
 
 /* Zoom */
@@ -1394,6 +1446,9 @@ static struct usb_driver option_driver = {
 	.id_table   = option_ids,
 };
 
+/* The card has three separate interfaces, which the serial driver
+ * recognizes separately, thus num_port=1.
+ */
 
 static struct usb_serial_driver option_1port_device = {
 	.driver = {
@@ -1564,6 +1619,11 @@ static void option_instat_callback(struct urb *urb)
 	}
 }
 
+/** send RTS/DTR state to the port.
+ *
+ * This is exactly the same as SET_CONTROL_LINE_STATE from the PSTN
+ * CDC.
+*/
 static int option_send_setup(struct usb_serial_port *port)
 {
 	struct usb_serial *serial = port->serial;

@@ -1,3 +1,24 @@
+/* linux/drivers/hwmon/LIS3DH.c
+ *
+ * (C) Copyright 2008 
+ * MediaTek <www.mediatek.com>
+ *
+ * LIS3DH driver for MT6516
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #ifndef LIS3DH_H
 #define LIS3DH_H
 	 
@@ -15,6 +36,31 @@
 #define LIS3DH_REG_OUT_Y		    0x2A
 #define LIS3DH_REG_OUT_Z		    0x2C
 
+/*
+#define LIS3DH_REG_DEVID			0x00
+#define LIS3DH_REG_THRESH_TAP		0x1D
+#define LIS3DH_REG_OFSX			0x1E
+#define LIS3DH_REG_OFSY			0x1F
+#define LIS3DH_REG_OFSZ			0x20
+#define LIS3DH_REG_DUR				0x21
+#define LIS3DH_REG_THRESH_ACT		0x24
+#define LIS3DH_REG_THRESH_INACT	0x25
+#define LIS3DH_REG_TIME_INACT		0x26
+#define LIS3DH_REG_ACT_INACT_CTL	0x27
+#define LIS3DH_REG_THRESH_FF		0x28
+#define LIS3DH_REG_TIME_FF			0x29
+#define LIS3DH_REG_TAP_AXES		0x2A
+#define LIS3DH_REG_ACT_TAP_STATUS	0x2B
+#define	LIS3DH_REG_BW_RATE			0x2C
+#define LIS3DH_REG_POWER_CTL		0x2D
+#define LIS3DH_REG_INT_ENABLE		0x2E
+#define LIS3DH_REG_INT_MAP			0x2F
+#define LIS3DH_REG_INT_SOURCE		0x30
+#define LIS3DH_REG_DATA_FORMAT		0x31
+#define LIS3DH_REG_DATAX0			0x32
+#define LIS3DH_REG_FIFO_CTL		0x38
+#define LIS3DH_REG_FIFO_STATUS		0x39
+*/
 
 #define LIS3DH_FIXED_DEVID			0xE5
 	 

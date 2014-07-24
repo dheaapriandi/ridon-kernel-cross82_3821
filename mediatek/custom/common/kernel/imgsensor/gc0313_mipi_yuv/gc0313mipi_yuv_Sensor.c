@@ -100,8 +100,6 @@ UINT8 GC0313MIPIPixelClockDivider=0;
 
 MSDK_SENSOR_CONFIG_STRUCT GC0313MIPISensorConfigData;
 #define GC0313_TEST_PATTERN_CHECKSUM 0x17c06485
-#define GC0313_TEST_PATTERN_CHECKSUM2 0x652b3b56
-
 
 #define GC0313MIPI_SET_PAGE0 	GC0313MIPI_write_cmos_sensor(0xfe, 0x00)
 #define GC0313MIPI_SET_PAGE1 	GC0313MIPI_write_cmos_sensor(0xfe, 0x01)
@@ -505,7 +503,7 @@ void GC0313MIPINightMode(kal_bool bEnable)
 		else
 			GC0313MIPI_write_cmos_sensor(0x33, 0x20);
            	       GC0313MIPI_write_cmos_sensor(0xfe, 0x00);
-			GC0313MIPIGammaSelect(GC0313MIPI_RGB_Gamma_m5);				   
+			GC0313MIPIGammaSelect(GC0313MIPI_RGB_Gamma_m2);				   
 			GC0313MIPI_NIGHT_MODE = KAL_FALSE;
 	}
 } /* GC0313MIPI_NightMode */
@@ -622,13 +620,13 @@ void GC0313MIPI_Sensor_Init(void)
 	////////////////////////////////////////////////////
 	GC0313MIPI_write_cmos_sensor(0xb0 , 0x13);
 	GC0313MIPI_write_cmos_sensor(0xb1 , 0x27);
-	GC0313MIPI_write_cmos_sensor(0xb2 , 0x06);//07
-	GC0313MIPI_write_cmos_sensor(0xb3 , 0xf0);//f5
+	GC0313MIPI_write_cmos_sensor(0xb2 , 0x07);
+	GC0313MIPI_write_cmos_sensor(0xb3 , 0xf5);
 	GC0313MIPI_write_cmos_sensor(0xb4 , 0xe9);
-	GC0313MIPI_write_cmos_sensor(0xb5 , 0x27);//21
-	GC0313MIPI_write_cmos_sensor(0xb6 , 0x1e);//21
+	GC0313MIPI_write_cmos_sensor(0xb5 , 0x21);
+	GC0313MIPI_write_cmos_sensor(0xb6 , 0x21);
 	GC0313MIPI_write_cmos_sensor(0xb7 , 0xe3);
-	GC0313MIPI_write_cmos_sensor(0xb8 , 0x00);//fb
+	GC0313MIPI_write_cmos_sensor(0xb8 , 0xfb);
 
 	////////////////////////////////////////////////////
 	/////////////////////// DNDD ///////////////////////
@@ -685,10 +683,10 @@ void GC0313MIPI_Sensor_Init(void)
 	/////////////////////// AEC ////////////////////////
 	////////////////////////////////////////////////////
 	GC0313MIPI_write_cmos_sensor(0xfe , 0x01); 
-	GC0313MIPI_write_cmos_sensor(0x10 , 0x00);//hyw 00
+	GC0313MIPI_write_cmos_sensor(0x10 , 0x00);
 	GC0313MIPI_write_cmos_sensor(0x11 , 0x11);
 	GC0313MIPI_write_cmos_sensor(0x12 , 0x10);
-	GC0313MIPI_write_cmos_sensor(0x13 , 0x74);
+	GC0313MIPI_write_cmos_sensor(0x13 , 0x8c);
 	GC0313MIPI_write_cmos_sensor(0x16 , 0x18);
 	GC0313MIPI_write_cmos_sensor(0x17 , 0x88);
 	GC0313MIPI_write_cmos_sensor(0x21 , 0xf0);
@@ -712,9 +710,9 @@ void GC0313MIPI_Sensor_Init(void)
 	////////////////////////////////////////////////////
 	GC0313MIPI_write_cmos_sensor(0xfe , 0x00);
 	GC0313MIPI_write_cmos_sensor(0xd0 , 0x40);
-	GC0313MIPI_write_cmos_sensor(0xd1 , 0x24);
-	GC0313MIPI_write_cmos_sensor(0xd2 , 0x24);
-	GC0313MIPI_write_cmos_sensor(0xd3 , 0x38);//hyw 3c
+	GC0313MIPI_write_cmos_sensor(0xd1 , 0x34);
+	GC0313MIPI_write_cmos_sensor(0xd2 , 0x34);
+	GC0313MIPI_write_cmos_sensor(0xd3 , 0x3c);
 	GC0313MIPI_write_cmos_sensor(0xde , 0x38);
 	GC0313MIPI_write_cmos_sensor(0xd6 , 0xed);
 	GC0313MIPI_write_cmos_sensor(0xd7 , 0x19);
@@ -925,7 +923,7 @@ UINT32 GC0313MIPIGetSensorID(UINT32 *sensorID)
 *************************************************************************/
 void GC0313MIPI_Write_More_Registers(void)
 {
-    	GC0313MIPIGammaSelect(5);//0:use default
+    	GC0313MIPIGammaSelect(2);//0:use default
 }
 
 
@@ -1373,35 +1371,35 @@ BOOL GC0313MIPI_set_param_exposure(UINT16 para)
 		
 		case AE_EV_COMP_00:		
 			GC0313MIPI_write_cmos_sensor(0xfe, 0x01);
-			GC0313MIPI_write_cmos_sensor(0x13, 0x74);//hyw 4c
+			GC0313MIPI_write_cmos_sensor(0x13, 0x4c);
 			GC0313MIPI_write_cmos_sensor(0xfe, 0x00);
-			GC0313MIPI_write_cmos_sensor(0xd5, 0x08);//hyw 00
+			GC0313MIPI_write_cmos_sensor(0xd5, 0x00);
 		break;
 
 		case AE_EV_COMP_03:
 			GC0313MIPI_write_cmos_sensor(0xfe, 0x01);
-			GC0313MIPI_write_cmos_sensor(0x13, 0x6c);
+			GC0313MIPI_write_cmos_sensor(0x13, 0x58);
 			GC0313MIPI_write_cmos_sensor(0xfe, 0x00);
 			GC0313MIPI_write_cmos_sensor(0xd5, 0x10);
 		break;
 		
 		case AE_EV_COMP_07:
 			GC0313MIPI_write_cmos_sensor(0xfe, 0x01);
-			GC0313MIPI_write_cmos_sensor(0x13, 0x70);
+			GC0313MIPI_write_cmos_sensor(0x13, 0x60);
 			GC0313MIPI_write_cmos_sensor(0xfe, 0x00);
 			GC0313MIPI_write_cmos_sensor(0xd5, 0x20);
 		break;
 		
 		case AE_EV_COMP_10:			
 			GC0313MIPI_write_cmos_sensor(0xfe, 0x01);
-			GC0313MIPI_write_cmos_sensor(0x13, 0x78);
+			GC0313MIPI_write_cmos_sensor(0x13, 0x68);
 			GC0313MIPI_write_cmos_sensor(0xfe, 0x00);
 			GC0313MIPI_write_cmos_sensor(0xd5, 0x30);
 		break;
 		
 		case AE_EV_COMP_13:
 			GC0313MIPI_write_cmos_sensor(0xfe, 0x01);
-			GC0313MIPI_write_cmos_sensor(0x13, 0x7c);
+			GC0313MIPI_write_cmos_sensor(0x13, 0x70);
 			GC0313MIPI_write_cmos_sensor(0xfe, 0x00);
 			GC0313MIPI_write_cmos_sensor(0xd5, 0x38);
 		break;
@@ -1471,11 +1469,7 @@ UINT32 GC0313MIPIYUVSensorSetting(FEATURE_ID iCmd, UINT16 iPara)
 UINT32 GC0313SetTestPatternMode(kal_bool bEnable)
 {
 	SENSORDB("test pattern bEnable:=%d\n",bEnable);
-	//GC0313MIPI_write_cmos_sensor(0xfe, 0x00);	
-	//GC0313MIPI_write_cmos_sensor(0x4c, 0x01);
-	//GC0313MIPI_write_cmos_sensor(0xfe, 0x00);
-
-	GC0313MIPI_write_cmos_sensor(0xfe, 0x00); // page 0
+	GC0313MIPI_write_cmos_sensor(0xfe, 0x00);	
 	GC0313MIPI_write_cmos_sensor(0x18, 0x06); //sdark
 	GC0313MIPI_write_cmos_sensor(0x26, 0xf0);
 	GC0313MIPI_write_cmos_sensor(0x2a, 0x00);
@@ -1486,7 +1480,6 @@ UINT32 GC0313SetTestPatternMode(kal_bool bEnable)
 	GC0313MIPI_write_cmos_sensor(0x2f, 0x00);
 	GC0313MIPI_write_cmos_sensor(0x30, 0x00);
 	GC0313MIPI_write_cmos_sensor(0x31, 0x00);
-
 	GC0313MIPI_write_cmos_sensor(0x40, 0x08); 
 	GC0313MIPI_write_cmos_sensor(0x41, 0x00);
 	GC0313MIPI_write_cmos_sensor(0x42, 0x00); // AWB disable
@@ -1501,11 +1494,9 @@ UINT32 GC0313SetTestPatternMode(kal_bool bEnable)
 	GC0313MIPI_write_cmos_sensor(0x79, 0x40); // fixed B 1X gain
 	GC0313MIPI_write_cmos_sensor(0xd0, 0x40); // global saturation
 	GC0313MIPI_write_cmos_sensor(0xdd, 0x00);
-
 	GC0313MIPI_write_cmos_sensor(0xfe, 0x01); //ABS
 	GC0313MIPI_write_cmos_sensor(0x9e, 0xc0);
 	GC0313MIPI_write_cmos_sensor(0x9f, 0x40);
-
 	GC0313MIPI_write_cmos_sensor(0xfe, 0x00);
 	GC0313MIPI_write_cmos_sensor(0x4c, 0x04); //test pattern:input test image
 	if(bEnable)
@@ -1600,14 +1591,7 @@ UINT32 GC0313MIPIFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
 		GC0313SetTestPatternMode((BOOL)*pFeatureData16);			
 		break;
 	case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE:
-        #ifdef CONFIG_MT_ENG_BUILD
-            *pFeatureReturnPara32 = GC0313_TEST_PATTERN_CHECKSUM;
-            SENSORDB("eng");
-        #else
-            *pFeatureReturnPara32 = GC0313_TEST_PATTERN_CHECKSUM2;
-            SENSORDB("user");
-        #endif
-
+		*pFeatureReturnPara32 = GC0313_TEST_PATTERN_CHECKSUM;
 		*pFeatureParaLen=4;
 		break;    
     default:

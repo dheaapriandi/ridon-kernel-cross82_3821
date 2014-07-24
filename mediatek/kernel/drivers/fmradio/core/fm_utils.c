@@ -1,3 +1,25 @@
+/* fm_event.c
+ *
+ * (C) Copyright 2011
+ * MediaTek <www.MediaTek.com>
+ * Hongcheng <hongcheng.xia@MediaTek.com>
+ *
+ * FM Radio Driver -- a common event
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/version.h>
@@ -28,6 +50,18 @@ static fm_s32 fm_event_wait(struct fm_flag_event* thiz, fm_u32 mask)
     return wait_event_interruptible(*(wait_queue_head_t*)(thiz->priv), ((thiz->flag & mask) == mask));
 }
 
+/**
+ * fm_event_check - sleep until a condition gets true or a timeout elapses
+ * @thiz: the pointer of current object
+ * @mask: bitmap in fm_u32
+ * @timeout: timeout, in jiffies
+ *
+ * fm_event_set() has to be called after changing any variable that could
+ * change the result of the wait condition.
+ *
+ * The function returns 0 if the @timeout elapsed, and the remaining
+ * jiffies if the condition evaluated to true before the timeout elapsed.
+ */
 long fm_event_wait_timeout(struct fm_flag_event* thiz, fm_u32 mask, long timeout)
 {
     return wait_event_timeout(*((wait_queue_head_t*)(thiz->priv)), ((thiz->flag & mask) == mask), timeout*HZ);
@@ -293,6 +327,10 @@ fm_s32 fm_spin_lock_put(struct fm_lock *thiz)
     }
 }
 
+/*
+ * fm timer
+ *
+ */
 static fm_s32 fm_timer_init(struct fm_timer *thiz, void (*timeout)(unsigned long data), unsigned long data, signed long time, fm_s32 flag)
 {
     struct timer_list *timerlist = (struct timer_list*)thiz->priv;
@@ -402,6 +440,9 @@ fm_s32 fm_timer_put(struct fm_timer *thiz)
 }
 
 
+/*
+ * FM work thread mechanism
+ */
 static fm_s32 fm_work_init(struct fm_work *thiz, void (*work_func)(unsigned long data), unsigned long data)
 {
     struct work_struct *sys_work = (struct work_struct*)thiz->priv;

@@ -1133,11 +1133,13 @@ static int mtkfb_set_overlay_layer(struct fb_info *info, struct fb_overlay_layer
         temp[id].fmt = eARGB8888;
         layerpitch = 4;
         layerbpp = 32;
+	layerInfo->alpha_enable = 0;
         break;
     case MTK_FB_FORMAT_XBGR8888:
         temp[id].fmt = eABGR8888;
         layerpitch = 4;
         layerbpp = 32;
+	layerInfo->alpha_enable = 0;
         break;
 	case MTK_FB_FORMAT_UYVY:
 		temp[id].fmt = eUYVY;
@@ -2080,6 +2082,9 @@ unsigned int mtkfb_fm_auto_test()
 	atomic_set(&OverlaySettingDirtyFlag, 1);
 	atomic_set(&OverlaySettingApplied, 0);
 	mutex_unlock(&OverlaySettingMutex);
+    if (DISP_IsDecoupleMode()) {
+    	DISP_StartOverlayTransfer();
+    }
 
 	msleep(100);
 
@@ -2460,7 +2465,28 @@ static void mtkfb_fb_565_to_888(void* fb_va)
         s += (ALIGN_TO(xres, disphal_get_fb_alignment()) - xres);
     }
 }
+#ifdef SUPPORT_TINNO_LCD_TEST
+//Added by changgui.chen - TINNO
+static ssize_t lcd_power_control_func(struct device *dev, struct device_attribute *attr, const char *buf, ssize_t count)
+{
+    int on_off;
 
+    sscanf(buf, "%d", &on_off);
+
+    if(on_off) {
+        mtkfb_late_resume(0);
+       mt65xx_leds_brightness_set(MT65XX_LED_TYPE_LCD,127);
+        printk("Bring up LCD.\n");
+    } else {
+        mtkfb_early_suspend(0);
+        printk("Shutdown LCD.\n");
+    }
+
+    return count;
+}
+static DEVICE_ATTR(lcd_on_off, 0777, NULL, lcd_power_control_func);
+//Added end
+#endif
 #if defined(DFO_USE_NEW_API)
 #if 1
 extern int dfo_query(const char *s, unsigned long *v);
@@ -2782,6 +2808,12 @@ static int mtkfb_probe(struct device *dev)
 		}
     }
 #endif
+
+#ifdef SUPPORT_TINNO_LCD_TEST
+   //Added by changgui.chen - TINNO
+   	device_create_file(dev, &dev_attr_lcd_on_off);
+   //Added end
+#endif   
     MSG_FUNC_LEAVE();
     return 0;
 
@@ -2823,7 +2855,7 @@ bool mtkfb_is_suspend(void)
 }
 EXPORT_SYMBOL(mtkfb_is_suspend);
 
-static void mtkfb_shutdown(struct device *pdev)
+ void mtkfb_shutdown(struct device *pdev)
 {
     MTKFB_LOG("[FB Driver] mtkfb_shutdown()\n");
 #if defined(CONFIG_MTK_LEDS)
@@ -2862,6 +2894,8 @@ static void mtkfb_shutdown(struct device *pdev)
 
     MTKFB_LOG("[FB Driver] leave mtkfb_shutdown\n");
 }
+
+EXPORT_SYMBOL(mtkfb_shutdown);		//lcd test 9121
 
 void mtkfb_clear_lcm(void)
 {
@@ -3080,17 +3114,27 @@ int mtkfb_pm_restore_noirq(struct device *device)
 #endif
 
     disphal_pm_restore_noirq(device);
-    disp_path_clock_on("ipoh_mtkfb");
     is_ipoh_bootup = true;
     return 0;
 
 }
+
+int mtkfb_pm_restore_early(struct device *device)
+{
+    // sometime disp_path_clock  will control i2c, when IPOH,
+    // there is no irq in mtkfb_pm_restore_noirq , i2c will timeout.
+    // so move this to  resore early.
+    disp_path_clock_on("ipoh_mtkfb");
+    return 0;
+}
+
 /*---------------------------------------------------------------------------*/
 #else /*CONFIG_PM*/
 /*---------------------------------------------------------------------------*/
 #define mtkfb_pm_suspend NULL
 #define mtkfb_pm_resume  NULL
 #define mtkfb_pm_restore_noirq NULL
+#define mtkfb_pm_restore_early NULL
 /*---------------------------------------------------------------------------*/
 #endif /*CONFIG_PM*/
 /*---------------------------------------------------------------------------*/
@@ -3102,6 +3146,7 @@ struct dev_pm_ops mtkfb_pm_ops = {
     .poweroff = mtkfb_pm_suspend,
     .restore = mtkfb_pm_resume,
     .restore_noirq = mtkfb_pm_restore_noirq,
+    .restore_early = mtkfb_pm_restore_early,
 };
 
 static struct platform_driver mtkfb_driver =

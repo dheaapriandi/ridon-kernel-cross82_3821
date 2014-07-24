@@ -144,6 +144,15 @@ static inline int stp_uart_tx_wakeup(struct tty_struct *tty)
 }
 
 /* ------ LDISC part ------ */
+/* stp_uart_tty_open
+ *
+ *     Called when line discipline changed to HCI_UART.
+ *
+ * Arguments:
+ *     tty    pointer to tty info structure
+ * Return Value:
+ *     0 if success, otherwise error code
+ */
 static int stp_uart_tty_open(struct tty_struct *tty)
 {
     UART_DBG_FUNC("stp_uart_tty_opentty: %p\n", tty);
@@ -179,6 +188,11 @@ static int stp_uart_tty_open(struct tty_struct *tty)
     return 0;
 }
 
+/* stp_uart_tty_close()
+ *
+ *    Called when the line discipline is changed to something
+ *    else, the tty is closed, or the tty detects a hangup.
+ */
 static void stp_uart_tty_close(struct tty_struct *tty)
 {
     UART_DBG_FUNC("stp_uart_tty_close(): tty %p\n", tty);
@@ -187,6 +201,14 @@ static void stp_uart_tty_close(struct tty_struct *tty)
     return;
 }
 
+/* stp_uart_tty_wakeup()
+ *
+ *    Callback for transmit wakeup. Called when low level
+ *    device driver can accept more send data.
+ *
+ * Arguments:        tty    pointer to associated tty instance data
+ * Return Value:    None
+ */
 static void stp_uart_tty_wakeup(struct tty_struct *tty)
 {
     //printk("%s: start !!\n", __FUNCTION__);
@@ -198,6 +220,18 @@ static void stp_uart_tty_wakeup(struct tty_struct *tty)
     return;
 }
 
+/* stp_uart_tty_receive()
+ *
+ *     Called by tty low level driver when receive data is
+ *     available.
+ *
+ * Arguments:  tty          pointer to tty isntance data
+ *             data         pointer to received data
+ *             flags        pointer to flags for data
+ *             count        count of received data in bytes
+ *
+ * Return Value:    None
+ */
 #ifdef LDISC_RX_TASKLET
 
 static int stp_uart_fifo_init(void)
@@ -382,6 +416,19 @@ static void stp_uart_tty_receive(struct tty_struct *tty, const u8 *data, char *f
 }
 #endif
 
+/* stp_uart_tty_ioctl()
+ *
+ *    Process IOCTL system call for the tty device.
+ *
+ * Arguments:
+ *
+ *    tty        pointer to tty instance data
+ *    file       pointer to open file object for device
+ *    cmd        IOCTL command code
+ *    arg        argument for IOCTL call (cmd dependent)
+ *
+ * Return Value:    Command dependent
+ */
 static int stp_uart_tty_ioctl(struct tty_struct *tty, struct file *file,
                               unsigned int cmd, unsigned long arg)
 {
@@ -404,6 +451,9 @@ static int stp_uart_tty_ioctl(struct tty_struct *tty, struct file *file,
     return err;
 }
 
+/*
+ * We don't provide read/write/poll interface for user space.
+ */
 static ssize_t stp_uart_tty_read(struct tty_struct *tty, struct file *file,
                                  unsigned char __user *buf, size_t nr)
 {

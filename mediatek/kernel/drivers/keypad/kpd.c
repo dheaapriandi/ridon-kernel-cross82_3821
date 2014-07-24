@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2010 MediaTek, Inc.
+ *
+ * Author: Terry Chang <terry.chang@mediatek.com>
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 
 /*kpd.h file path: ALPS/mediatek/kernel/include/linux */
@@ -190,6 +205,12 @@ static inline void kpd_update_aee_state(void) {
 		kpd_print("aee_timer started\n");
 	} else {
 		if(aee_timer_started) {
+/*
+  * hrtimer_cancel - cancel a timer and wait for the handler to finish.
+  * Returns:
+  *	0 when the timer was not active. 
+  *	1 when the timer was active.
+ */
 			if(hrtimer_cancel(&aee_timer))
 			{
 				kpd_print("try to cancel hrtimer \n");
@@ -211,6 +232,12 @@ static inline void kpd_update_aee_state(void) {
 
 #if AEE_ENABLE_5_15
 		if(aee_timer_5s_started) {
+/*
+  * hrtimer_cancel - cancel a timer and wait for the handler to finish.
+  * Returns:
+  *	0 when the timer was not active. 
+  *	1 when the timer was active.
+ */
 			if(hrtimer_cancel(&aee_timer_5s))
 			{
 				kpd_print("try to cancel hrtimer (5s) \n");

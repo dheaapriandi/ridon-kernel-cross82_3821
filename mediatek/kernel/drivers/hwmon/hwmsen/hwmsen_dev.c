@@ -1,3 +1,24 @@
+/* alps/ALPS_SW/TRUNK/MAIN/alps/kernel/drivers/hwmon/mt6516/hwmsen_dev.c
+ *
+ * (C) Copyright 2009 
+ * MediaTek <www.MediaTek.com>
+ *
+ * Sensor devices
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #include <linux/interrupt.h>
 #include <linux/miscdevice.h>
 #include <linux/platform_device.h>
@@ -29,6 +50,9 @@ static void update_workqueue_polling_rate(int newDelay);
 
 static struct workqueue_struct * sensor_workqueue = NULL;
 
+/******************************************************************************
+ * structure / enumeration / macro / definition
+ *****************************************************************************/
 
 struct sensor_delay 
 {
@@ -98,6 +122,9 @@ struct hwmdev_object {
 
 static bool enable_again = false;
 static struct hwmdev_object *hwm_obj = NULL;
+/******************************************************************************
+ * static variables
+ *****************************************************************************/
 
 static struct hwmsen_data obj_data ={
 	.lock =__MUTEX_INITIALIZER(obj_data.lock), 
@@ -109,6 +136,9 @@ static struct dev_context dev_cxt = {
 
 
 
+/******************************************************************************
+ * Local functions
+ *****************************************************************************/
 static void hwmsen_work_func(struct work_struct *work)
 {
 
@@ -297,6 +327,9 @@ static void hwmsen_work_func(struct work_struct *work)
 	}
 }
 
+/******************************************************************************
+ * export functions
+ *****************************************************************************/
 int hwmsen_get_interrupt_data(int sensor, hwm_sensor_data *data) 
 {
 	//HWM_LOG("++++++++++++++++++++++++++++hwmsen_get_interrupt_data function sensor = %d\n",sensor);
@@ -678,18 +711,61 @@ static ssize_t hwmsen_show_hwmdev(struct device* dev,
     //struct hwmdev_object *devobj = (struct hwmdev_object*)dev_get_drvdata(dev);
     int len = 0;
 	printk("sensor test: hwmsen_show_hwmdev function!\n");
+/*
+    if (!devobj || !devobj->dc) {
+        HWM_ERR("null pointer: %p, %p", devobj, (!devobj) ? (NULL) : (devobj->dc));
+        return 0;
+    }
+    for (idx = 0; idx < C_MAX_HWMSEN_NUM; idx++) 
+        len += snprintf(buf+len, PAGE_SIZE-len, "    %d", idx);
+    len += snprintf(buf+len, PAGE_SIZE-len, "\n");
+    for (idx = 0; idx < C_MAX_HWMSEN_NUM; idx++)
+        len += snprintf(buf+len, PAGE_SIZE-len, "    %d", atomic_read(&devobj->dc->cxt[idx].enable));
+    len += snprintf(buf+len, PAGE_SIZE-len, "\n");
+    */
     return len;
 }
 /*----------------------------------------------------------------------------*/
 static ssize_t hwmsen_store_active(struct device* dev, struct device_attribute *attr,
                                   const char *buf, size_t count)
 {
+/*
+	printk("sensor test: hwmsen_store_active function!\n");
+    struct hwmdev_object *devobj = (struct hwmdev_object*)dev_get_drvdata(dev);
+    int sensor, enable, err, idx;
+
+    if (!devobj || !devobj->dc) {
+        HWM_ERR("null pointer!!\n");
+        return count;
+    }
+
+    if (!strncmp(buf, "all-start", 9)) {
+        for (idx = 0; idx < C_MAX_HWMSEN_NUM; idx++)
+            hwmsen_enable(devobj, idx, 1);
+    } else if (!strncmp(buf, "all-stop", 8)) {
+        for (idx = 0; idx < C_MAX_HWMSEN_NUM; idx++)
+            hwmsen_enable(devobj, idx, 0);    
+    } else if (2 == sscanf(buf, "%d %d", &sensor, &enable)) {
+        if ((err = hwmsen_enable(devobj, sensor, enable)))
+            HWM_ERR("sensor enable failed: %d\n", err);
+    } 
+*/
     return count;
 }
 /*----------------------------------------------------------------------------*/
 static ssize_t hwmsen_show_delay(struct device* dev, 
                                  struct device_attribute *attr, char *buf) 
 {
+/*
+    struct hwmdev_object *devobj = (struct hwmdev_object*)dev_get_drvdata(dev);
+printk("sensor test: hwmsen_show_delay function!\n");
+    if (!devobj || !devobj->dc) {
+        HWM_ERR("null pointer!!\n");
+        return 0;
+    }
+    
+    return snprintf(buf, PAGE_SIZE, "%d\n", atomic_read(&devobj->delay));    
+*/
 
 	return 0;
 
@@ -698,18 +774,63 @@ static ssize_t hwmsen_show_delay(struct device* dev,
 static ssize_t hwmsen_store_delay(struct device* dev, struct device_attribute *attr,
                                   const char *buf, size_t count)
 {
+/*
+    struct hwmdev_object *devobj = (struct hwmdev_object*)dev_get_drvdata(dev);
+    int delay;
+printk("sensor test: hwmsen_show_delay function!\n");
+    if (!devobj || !devobj->dc) {
+        HWM_ERR("null pointer!!\n");
+        return count;
+    }
+
+    if (1 != sscanf(buf, "%d", &delay)) {
+        HWM_ERR("invalid format!!\n");
+        return count;
+    }
+
+    atomic_set(&devobj->delay, delay);
+   */
     return count;
 }                                 
 /*----------------------------------------------------------------------------*/
 static ssize_t hwmsen_show_wake(struct device* dev, 
                                  struct device_attribute *attr, char *buf) 
 {
+/*
+	printk("sensor test: hwmsen_show_wake function!\n");
+    struct hwmdev_object *devobj = (struct hwmdev_object*)dev_get_drvdata(dev);
+
+    if (!devobj || !devobj->dc) {
+        HWM_ERR("null pointer!!\n");
+        return 0;
+    }
+    return snprintf(buf, PAGE_SIZE, "%d\n", atomic_read(&devobj->wake));    
+    */
     return 0;
 }
 /*----------------------------------------------------------------------------*/
 static ssize_t hwmsen_store_wake(struct device* dev, struct device_attribute *attr,
                                   const char *buf, size_t count)
 {
+/*
+    struct hwmdev_object *devobj = (struct hwmdev_object*)dev_get_drvdata(dev);
+    int wake, err;
+printk("sensor test: hwmsen_store_wake function!\n");
+    if (!devobj || !devobj->dc) {
+        HWM_ERR("null pointer!!\n");
+        return count;
+    }
+
+    if (1 != sscanf(buf, "%d", &wake)) {
+        HWM_ERR("invalid format!!\n");
+        return count;
+    }
+
+    if ((err = hwmsen_wakeup(devobj))) {
+        HWM_ERR("wakeup sensor fail, %d\n", err);
+        return count;
+    }
+   */ 
     return count;
 }  
 
@@ -1270,6 +1391,12 @@ static int gsensor_probe(struct platform_device *pdev)
 	HWM_LOG(" gsensor_probe +\n");
 
 	//
+/*
+     for(i = 0; i < MAX_CHOOSE_G_NUM; i++)
+     {
+       HWM_LOG(" gsensor_init_list[i]=%d\n",gsensor_init_list[i]);
+     }
+*/
 	//
 	for(i = 0; i < MAX_CHOOSE_G_NUM; i++)
 	{

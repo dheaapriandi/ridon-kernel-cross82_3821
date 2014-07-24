@@ -138,20 +138,15 @@ extern LCM_DRIVER r69429_wuxga_dsi_vdo_lcm_drv;
 extern LCM_DRIVER r69429_wuxga_dsi_cmd_lcm_drv;
 extern LCM_DRIVER rm68210_hd720_dsi_ufoe_cmd_lcm_drv;
 extern LCM_DRIVER r63311_fhd_dsi_vedio_lcm_drv;
-extern LCM_DRIVER hx8389b_byd_qhd_dsi_vdo_lcm_drv;
 LCM_DRIVER* lcm_driver_list[] = 
 { 
+#if defined(R63311_FHD_DSI_VDO)
+	&r63311_fhd_dsi_vedio_lcm_drv,
+#endif
 #if defined(NT35517_QHD_DSI_VDO)
 	&nt35517_dsi_vdo_lcm_drv,
 #endif
 
-#if defined(HX8389B_BYD_QHD_DSI_VDO)
-	&hx8389b_byd_qhd_dsi_vdo_lcm_drv,
-#endif
-
-#if defined(R63311_FHD_DSI_VDO)
-	&r63311_fhd_dsi_vedio_lcm_drv,
-#endif
 
 #if defined(LP079X01)
 	&lp079x01_lcm_drv,

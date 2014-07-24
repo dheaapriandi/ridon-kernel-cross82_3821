@@ -1,3 +1,25 @@
+/* alps/ALPS_SW/TRUNK/MAIN/alps/kernel/drivers/fm/AR1000_fm.c
+ *
+ * (C) Copyright 2009 
+ * MediaTek <www.MediaTek.com>
+ * William Chung <William.Chung@MediaTek.com>
+ *
+ * MT6516 AR1000 FM Radio Driver
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -30,6 +52,9 @@
 #define FM_DEBUG(f, s...)
 #endif
 
+/******************************************************************************
+ * CONSTANT DEFINITIONS
+ *****************************************************************************/
 #define AR1000_SLAVE_ADDR   0x20
 
 #define AR1000_MASK_STC     0x0020 // Seek/Tune complete D5 in 13H
@@ -53,6 +78,9 @@ static struct fm *g_fm_struct = NULL;
 
 #define FM_PROC_FILE "fm"
 
+/******************************************************************************
+ * STRUCTURE DEFINITIONS
+ *****************************************************************************/
 enum AR1000_REG {
     AR1000_R0 = 0,
     AR1000_R1,
@@ -130,6 +158,13 @@ struct fm {
 };
 
 //clk pin define for FM
+/*
+#define GPIO_FM_CLK_PIN        (GPIO117)
+#define GPIO_FM_CLK_PIN_M_CLK  (GPIO_MODE_01)
+#define GPIO_FM_CLK_PIN_M_GPIO (GPIO_MODE_00)
+#define GPIO_FM_CLK_PIN_CLK    (CLK_OUT2)
+#define GPIO_FM_CLK_PIN_FREQ   (CLK_SRC_F32K)
+*/
 #define AR1000_clear_hmute(c)  AR1000_set_bits((c), AR1000_R1, 0x0, 0x2)
 #define AR1000_enable_hmute(c) AR1000_set_bits((c), AR1000_R1, 0x2, 0x2)
 
@@ -139,6 +174,9 @@ struct fm {
 #define AR1000_clear_seek(c)   AR1000_set_bits((c), AR1000_R3, 0x0, 0x4000)
 #define AR1000_enable_seek(c)  AR1000_set_bits((c), AR1000_R3, 0x4000, 0x4000)
 
+/******************************************************************************
+ * FUNCTION PROTOTYPES
+ *****************************************************************************/
 extern void fm_low_power_wa(int fmon);
 
 static int AR1000_wait_stc(struct i2c_client *client, uint count);
@@ -174,6 +212,9 @@ static int fm_i2c_detect(struct i2c_client *client, int kind, struct i2c_board_i
 static int fm_i2c_remove(struct i2c_client *client);
 #endif
 
+/******************************************************************************
+ * GLOBAL DATA
+ *****************************************************************************/
 /* Addresses to scan */
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31))
 static unsigned short normal_i2c[] = {AR1000_SLAVE_ADDR, I2C_CLIENT_END};
@@ -240,8 +281,34 @@ static struct file_operations fm_ops = {
 
 static DECLARE_MUTEX(fm_ops_mutex);
 
+/******************************************************************************
+ *****************************************************************************/
 
+/*
+static void _open_audio_path(void)
+{
 
+    volatile uint *ANA_VOL = ( volatile uint *)0xF0060200;
+    volatile uint *ANA_REG = ( volatile uint *)0xF0060204;
+    volatile uint *ANA_PWR = ( volatile uint *)0xF0060208;
+
+    FM_DEBUG("<= 0x%X=0x%X,0x%X=0x%X, 0x%X=0x%X\n",
+        (uint)ANA_REG, *ANA_REG,
+        (uint)ANA_VOL, *ANA_VOL,
+        (uint)ANA_PWR, *ANA_PWR);
+
+    *ANA_REG = 0x480; // set audio path to wired headset
+    *ANA_PWR = 0x1F; // power all on
+
+    FM_DEBUG("=> 0x%X=0x%X,0x%X=0x%X, 0x%X=0x%X\n",
+        (uint)ANA_REG, *ANA_REG,
+        (uint)ANA_VOL, *ANA_VOL,
+        (uint)ANA_PWR, *ANA_PWR);
+}
+*/
+
+/******************************************************************************
+ *****************************************************************************/
 
 #ifdef FMDEBUG
 static void AR1000_dump_reg(struct i2c_client *client)
@@ -266,6 +333,9 @@ static void AR1000_dump_reg(struct i2c_client *client)
 }
 #endif // FMDEBUG
 
+/*
+ *  AR1000_wait_stc
+ */
 static int AR1000_wait_stc(struct i2c_client *client, uint count)
 {
     uint16_t val = 0;
@@ -293,6 +363,9 @@ static int AR1000_wait_stc(struct i2c_client *client, uint count)
     return -1;
 }
 
+/*
+ *  AR1000_read
+ */
 static int AR1000_read(struct i2c_client *client, uint8_t addr, uint16_t *val)
 {
     int n;
@@ -319,6 +392,9 @@ static int AR1000_read(struct i2c_client *client, uint8_t addr, uint16_t *val)
     return 0;
 }
 
+/*
+ *  AR1000_write
+ */
 static int AR1000_write(struct i2c_client *client, uint8_t addr, uint16_t val)
 {
     int n;
@@ -908,6 +984,9 @@ static int fm_destroy(struct fm *fm)
     return err;
 }
 
+/*
+ *  fm_powerup
+ */
 static int fm_powerup(struct fm *fm, struct fm_tune_parm *parm)
 {
     int i;
@@ -959,6 +1038,9 @@ static int fm_powerup(struct fm *fm, struct fm_tune_parm *parm)
     return 0;
 }
 
+/*
+ *  fm_powerdown
+ */
 static int fm_powerdown(struct fm *fm)
 {
     struct i2c_client *client = fm->i2c_client;
@@ -972,6 +1054,9 @@ static int fm_powerdown(struct fm *fm)
 }
 
 
+/*
+ *  fm_seek
+ */
 static int fm_seek(struct fm *fm, struct fm_seek_parm *parm)
 {
     int ret = 0;
@@ -1149,6 +1234,9 @@ static int fm_getrssi(struct fm *fm, uint32_t *rssi)
     return 0;
 }
 
+/*
+ *  fm_tune
+ */
 static int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 {
     int ret;
@@ -1258,6 +1346,9 @@ static int fm_tune(struct fm *fm, struct fm_tune_parm *parm)
 }
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31))
+/*
+ *  fm_i2c_attach_adapter
+ */
 static int fm_i2c_attach_adapter(struct i2c_adapter *adapter)
 {
     int err = 0;
@@ -1270,6 +1361,10 @@ static int fm_i2c_attach_adapter(struct i2c_adapter *adapter)
     return err;
 }
 
+/*
+ *  fm_i2c_detect
+ *  This function is called by i2c_detect
+ */
 static int fm_i2c_detect(struct i2c_adapter *adapter, int addr, int kind)
 {
     int err;
@@ -1414,6 +1509,9 @@ static struct platform_driver mt_fm_dev_drv =
     }
 };
 
+/*
+ *  mt_fm_init
+ */
 static int __init mt_fm_init(void)
 {
 	int err = 0;
@@ -1428,6 +1526,9 @@ static int __init mt_fm_init(void)
 	return err;
 }
 
+/*
+ *  mt_fm_exit
+ */
 static void __exit mt_fm_exit(void)
 {
     FM_ALERT("mt_fm_exit\n");

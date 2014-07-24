@@ -1,9 +1,323 @@
+/*
+** $Id: //Department/DaVinci/BRANCHES/MT6620_WIFI_DRIVER_V2_3/common/wlan_bow.c#1 $
+*/
+
+/*! \file wlan_bow.c
+    \brief This file contains the 802.11 PAL commands processing routines for
+           MediaTek Inc. 802.11 Wireless LAN Adapters.
+*/
 
 
 
+/*
+** $Log: wlan_bow.c $
+ *
+ * 03 02 2012 terry.wu
+ * NULL
+ * Sync CFG80211 modification from branch 2,2.
+ *
+ * 01 16 2012 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Support BOW for 5GHz band.
+ *
+ * 01 09 2012 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * [ALPS00110632] [Rose][LCA42][Cross Feature][Bluetooth]The "KE" pops up after the device reboots automatically.(once)
+ * 
+ * Fix bow link disconnected event dereference.
+ *
+ * 09 29 2011 cm.chang
+ * NULL
+ * Change the function prototype of rlmDomainGetChnlList()
+ *
+ * 07 06 2011 terry.wu
+ * [WCXRP00000735] [MT6620 Wi-Fi][BoW][FW/Driver] Protect BoW connection establishment
+ * Improve BoW connection establishment speed.
+ *
+ * 06 23 2011 cp.wu
+ * [WCXRP00000798] [MT6620 Wi-Fi][Firmware] Follow-ups for WAPI frequency offset workaround in firmware SCN module
+ * change parameter name from PeerAddr to BSSID
+ *
+ * 06 21 2011 terry.wu
+ * NULL
+ * Fix BoW KE.
+ *
+ * 06 20 2011 terry.wu
+ * NULL
+ * Add BoW Rate Limitation.
+ *
+ * 06 20 2011 cp.wu
+ * [WCXRP00000798] [MT6620 Wi-Fi][Firmware] Follow-ups for WAPI frequency offset workaround in firmware SCN module
+ * 1. specify target's BSSID when requesting channel privilege.
+ * 2. pass BSSID information to firmware domain
+ *
+ * 06 17 2011 terry.wu
+ * NULL
+ * Add BoW 11N support.
+ *
+ * 06 07 2011 cp.wu
+ * [WCXRP00000681] [MT5931][Firmware] HIF code size reduction
+ * aware more compile options.
+ *
+ * 05 25 2011 terry.wu
+ * [WCXRP00000735] [MT6620 Wi-Fi][BoW][FW/Driver] Protect BoW connection establishment
+ * Add BoW Cancel Scan Request and Turn On deactive network function.
+ *
+ * 05 23 2011 terry.wu
+ * [WCXRP00000735] [MT6620 Wi-Fi][BoW][FW/Driver] Protect BoW connection establishment
+ * Add some BoW error handling.
+ *
+ * 05 22 2011 terry.wu
+ * [WCXRP00000735] [MT6620 Wi-Fi][BoW][FW/Driver] Protect BoW connection establishment
+ * .
+ *
+ * 05 22 2011 terry.wu
+ * [WCXRP00000735] [MT6620 Wi-Fi][BoW][FW/Driver] Protect BoW connection establishment
+ * Only reply probe response to its peer or mached SSID for BoW AP.
+ *
+ * 05 22 2011 terry.wu
+ * [WCXRP00000735] [MT6620 Wi-Fi][BoW][FW/Driver] Protect BoW connection establishment
+ * Add BoW SAA retry and disable disconnect event when AAA fail .
+ *
+ * 05 21 2011 terry.wu
+ * [WCXRP00000735] [MT6620 Wi-Fi][BoW][FW/Driver] Protect BoW connection establishment
+ * Protect BoW connection establishment.
+ *
+ * 05 17 2011 terry.wu
+ * [WCXRP00000730] [MT6620 Wi-Fi][BoW] Send deauth while disconnecting
+ * Send deauth while disconnecting BoW link.
+ *
+ * 05 17 2011 terry.wu
+ * [WCXRP00000707] [MT6620 Wi-Fi][Driver] Fix BoW Multiple Physical Link connect/disconnect issue
+ * Fix wrong StaRec state of BoW .
+ *
+ * 05 06 2011 terry.wu
+ * [WCXRP00000707] [MT6620 Wi-Fi][Driver] Fix BoW Multiple Physical Link connect/disconnect issue
+ * Fix BoW Multiple Physical Link connect/disconnect issue.
+ *
+ * 05 03 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Use kalMemAlloc to allocate event buffer for kalIndicateBOWEvent.
+ *
+ * 04 15 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Fix prAssocRspSwRfb casting.
+ *
+ * 04 15 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Add BOW short range mode.
+ *
+ * 04 12 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Add WMM IE for BOW initiator data.
+ *
+ * 04 10 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Change Link disconnection event procedure for hotspot and change skb length check to 1514 bytes.
+ *
+ * 04 09 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Change Link connection event procedure and change skb length check to 1512 bytes.
+ *
+ * 03 28 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Simplify link disconnected routine, remove link disconnected other routine.
+ *
+ * 03 27 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Support multiple physical link.
+ *
+ * 03 27 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Add new feature - multiple physical link support.
+ *
+ * 02 22 2011 wh.su
+ * [WCXRP00000486] [MT6620 Wi-Fi][BOW] Fixed the bow send frame but not encrypted issue
+ * fixed the BOW packet sending without encrypted issue.
+ *
+ * 02 21 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Fix BOW link disconnection bug.
+ *
+ * 02 16 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Add bowNotifyAllLinkDisconnected  interface and change channel grant procedure for bow starting.
+ *
+ * 02 11 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Update BOW channel granted function.
+ *
+ * 02 10 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Fix kernel API change issue.
+ * Before ALPS 2.2 (2.2 included), kfifo_alloc() is
+ * struct kfifo *kfifo_alloc(unsigned int size, gfp_t gfp_mask, spinlock_t *lock);
+ * After ALPS 2.3, kfifo_alloc() is changed to
+ * int kfifo_alloc(struct kfifo *fifo, unsigned int size, gfp_t gfp_mask);
+ *
+ * 02 09 2011 cp.wu
+ * [WCXRP00000430] [MT6620 Wi-Fi][Firmware][Driver] Create V1.2 branch for MT6620E1 and MT6620E3
+ * create V1.2 driver branch based on label MT6620_WIFI_DRIVER_V1_2_110209_1031
+ * with BOW and P2P enabled as default
+ *
+ * 02 08 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Replace kfifo_get and kfifo_put with kfifo_out and kfifo_in.
+ * Update BOW get MAC status, remove returning event for AIS network type.
+ *
+ * 01 26 2011 cm.chang
+ * [WCXRP00000395] [MT6620 Wi-Fi][Driver][FW] Search STA_REC with additional net type index argument
+ * .
+ *
+ * 01 11 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Update BOW Activity Report structure and bug fix.
+ *
+ * 01 10 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Update BOW to support multiple physical link.
+ *
+ * 12 08 2010 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Support concurrent networks.
+ *
+ * 12 07 2010 cm.chang
+ * [WCXRP00000239] MT6620 Wi-Fi][Driver][FW] Merge concurrent branch back to maintrunk
+ * 1. BSSINFO include RLM parameter
+ * 2. free all sta records when network is disconnected
+ *
+ * 11 11 2010 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Fix BoW timer assert issue.
+ *
+ * 10 18 2010 chinghwa.yu
+ * [WCXRP00000110] [MT6620 Wi-Fi] [Driver] Fix BoW Connected event size
+ * Fix for event returnning Band.
+ *
+ * 10 18 2010 chinghwa.yu
+ * [WCXRP00000110] [MT6620 Wi-Fi] [Driver] Fix BoW Connected event size
+ * Fix wrong BoW event size.
+ *
+ * 10 04 2010 cp.wu
+ * [WCXRP00000077] [MT6620 Wi-Fi][Driver][FW] Eliminate use of ENUM_NETWORK_TYPE_T and replaced by ENUM_NETWORK_TYPE_INDEX_T only
+ * remove ENUM_NETWORK_TYPE_T definitions
+ *
+ * 09 27 2010 chinghwa.yu
+ * [WCXRP00000063] Update BCM CoEx design and settings[WCXRP00000065] Update BoW design and settings
+ * Update BCM/BoW design and settings.
+ *
+ * 09 16 2010 chinghwa.yu
+ * NULL
+ * Fix bowResponderScanDone error when prBssDesc is NULL.
+ *
+ * 09 14 2010 chinghwa.yu
+ * NULL
+ * Add bowRunEventAAAComplete.
+ *
+ * 09 14 2010 cp.wu
+ * NULL
+ * indicate correct AIS network information for PAL.
+ *
+ * 09 03 2010 kevin.huang
+ * NULL
+ * Refine #include sequence and solve recursive/nested #include issue
+ *
+ * 08 24 2010 cm.chang
+ * NULL
+ * Support RLM initail channel of Ad-hoc, P2P and BOW
+ *
+ * 08 24 2010 chinghwa.yu
+ * NULL
+ * Initialize nicActivateNetwork(prAdapter as soon as bow is starting..
+ *
+ * 08 24 2010 chinghwa.yu
+ * NULL
+ * Update BOW for the 1st time.
+ *
+ * 08 23 2010 cp.wu
+ * NULL
+ * revise constant definitions to be matched with implementation (original cmd-event definition is deprecated)
+ *
+ * 07 30 2010 cp.wu
+ * NULL
+ * 1) BoW wrapper: use definitions instead of hard-coded constant for error code
+ * 2) AIS-FSM: eliminate use of desired RF parameters, use prTargetBssDesc instead
+ * 3) add handling for RX_PKT_DESTINATION_HOST_WITH_FORWARD for GO-broadcast frames
+ *
+ * 07 15 2010 cp.wu
+ *
+ * sync. bluetooth-over-Wi-Fi interface to driver interface document v0.2.6.
+ *
+ * 07 08 2010 cp.wu
+ *
+ * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
+ *
+ * 06 25 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * add API in que_mgt to retrieve sta-rec index for security frames.
+ *
+ * 06 24 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 802.1x and bluetooth-over-Wi-Fi security frames are now delievered to firmware via command path instead of data path.
+ *
+ * 06 11 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 1) migrate assoc.c.
+ * 2) add ucTxSeqNum for tracking frames which needs TX-DONE awareness
+ * 3) add configuration options for CNM_MEM and RSN modules
+ * 4) add data path for management frames
+ * 5) eliminate rPacketInfo of MSDU_INFO_T
+ *
+ * 06 06 2010 kevin.huang
+ * [WPD00003832][MT6620 5931] Create driver base
+ * [MT6620 5931] Create driver base
+ *
+ * 05 17 2010 cp.wu
+ * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
+ * 1) add timeout handler mechanism for pending command packets
+ * 2) add p2p add/removal key
+ *
+ * 05 13 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * add NULL OID implementation for WOL-related OIDs.
+ *
+ * 05 13 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support
+ * 1) all BT physical handles shares the same RSSI/Link Quality.
+ * 2) simplify BT command composing
+ *
+ * 04 28 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support
+ * change prefix for data structure used to communicate with 802.11 PAL
+ * to avoid ambiguous naming with firmware interface
+ *
+ * 04 27 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support
+ * add multiple physical link support
+ *
+ * 04 14 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * information buffer for query oid/ioctl is now buffered in prCmdInfo
+ * instead of glue-layer variable to improve multiple oid/ioctl capability
+ *
+ * 04 13 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support
+ * add framework for BT-over-Wi-Fi support.
+ *  * 1) prPendingCmdInfo is replaced by queue for multiple handler capability
+ *  * 2) command sequence number is now increased atomically
+ *  * 3) private data could be hold and taken use for other purpose
+**
+*/
 
+/******************************************************************************
+*                         C O M P I L E R   F L A G S
+*******************************************************************************
+*/
 
-
+/******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+*******************************************************************************
+*/
 #include "precomp.h"
 
 #if CFG_ENABLE_BT_OVER_WIFI
@@ -13,13 +327,29 @@ extern UINT_32 g_arBowRevPalPacketTime[32];
 #endif
 
 
+/******************************************************************************
+*                              C O N S T A N T S
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                             D A T A   T Y P E S
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                            P U B L I C   D A T A
+*******************************************************************************
+*/
 
 static UINT_32         g_u4LinkCount = 0;
 static UINT_32         g_u4Beaconing = 0;
 static BOW_TABLE_T     arBowTable[CFG_BOW_PHYSICAL_LINK_NUM];
 
+/******************************************************************************
+*                           P R I V A T E   D A T A
+*******************************************************************************
+*/
 
 const BOW_CMD_T arBowCmdTable[] = {
     {BOW_CMD_ID_GET_MAC_STATUS,     bowCmdGetMacStatus},
@@ -32,10 +362,37 @@ const BOW_CMD_T arBowCmdTable[] = {
     {BOW_CMD_ID_GET_CHANNEL_LIST,   bowCmdGetChannelList},
 };
 
+/******************************************************************************
+*                                 M A C R O S
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                              F U N C T I O N S
+*******************************************************************************
+*/
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief command packet generation utility
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] ucCID              Command ID
+* \param[in] fgSetQuery         Set or Query
+* \param[in] fgNeedResp         Need for response
+* \param[in] pfCmdDoneHandler   Function pointer when command is done
+* \param[in] u4SetQueryInfoLen  The length of the set/query buffer
+* \param[in] pucInfoBuffer      Pointer to set/query buffer
+*
+*
+* \retval WLAN_STATUS_PENDING
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSendSetQueryBowCmd (
@@ -110,6 +467,15 @@ wlanoidSendSetQueryBowCmd (
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to dispatch command coming from 802.11 PAL
+*
+* \param[in] prAdapter  Pointer to the Adapter structure.
+* \param[in] prCmd      Pointer to the buffer that holds the command
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanbowHandleCommand(
@@ -135,6 +501,16 @@ wlanbowHandleCommand(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is command handler for BOW_CMD_ID_GET_MAC_STATUS
+*        coming from 802.11 PAL
+*
+* \param[in] prAdapter  Pointer to the Adapter structure.
+* \param[in] prCmd      Pointer to the buffer that holds the command
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 bowCmdGetMacStatus(
@@ -291,6 +667,16 @@ bowCmdGetMacStatus(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is command handler for BOW_CMD_ID_SETUP_CONNECTION
+*        coming from 802.11 PAL
+*
+* \param[in] prAdapter  Pointer to the Adapter structure.
+* \param[in] prCmd      Pointer to the buffer that holds the command
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 bowCmdSetupConnection(
@@ -476,6 +862,16 @@ bowCmdSetupConnection(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is command handler for BOW_CMD_ID_DESTROY_CONNECTION
+*        coming from 802.11 PAL
+*
+* \param[in] prAdapter  Pointer to the Adapter structure.
+* \param[in] prCmd      Pointer to the buffer that holds the command
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 bowCmdDestroyConnection(
@@ -564,6 +960,16 @@ bowCmdDestroyConnection(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is command handler for BOW_CMD_ID_SET_PTK
+*        coming from 802.11 PAL
+*
+* \param[in] prAdapter  Pointer to the Adapter structure.
+* \param[in] prCmd      Pointer to the buffer that holds the command
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 bowCmdSetPTK(
@@ -673,6 +1079,16 @@ bowCmdSetPTK(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is command handler for BOW_CMD_ID_READ_RSSI
+*        coming from 802.11 PAL
+*
+* \param[in] prAdapter  Pointer to the Adapter structure.
+* \param[in] prCmd      Pointer to the buffer that holds the command
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 bowCmdReadRSSI(
@@ -704,6 +1120,16 @@ bowCmdReadRSSI(
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is command handler for BOW_CMD_ID_READ_LINK_QUALITY
+*        coming from 802.11 PAL
+*
+* \param[in] prAdapter  Pointer to the Adapter structure.
+* \param[in] prCmd      Pointer to the buffer that holds the command
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 bowCmdReadLinkQuality(
@@ -736,6 +1162,16 @@ bowCmdReadLinkQuality(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is command handler for BOW_CMD_ID_SHORT_RANGE_MODE
+*        coming from 802.11 PAL
+*
+* \param[in] prAdapter  Pointer to the Adapter structure.
+* \param[in] prCmd      Pointer to the buffer that holds the command
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 bowCmdShortRangeMode(
@@ -843,6 +1279,16 @@ bowCmdShortRangeMode(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is command handler for BOW_CMD_ID_GET_CHANNEL_LIST
+*        coming from 802.11 PAL
+*
+* \param[in] prAdapter  Pointer to the Adapter structure.
+* \param[in] prCmd      Pointer to the buffer that holds the command
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 bowCmdGetChannelList(
@@ -859,6 +1305,15 @@ bowCmdGetChannelList(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is generic command done handler
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] prCmdInfo      Pointer to the buffer that holds the command info
+* \param[in] pucEventBuf    Pointer to the set buffer OR event buffer
+*
+* \retval none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 wlanbowCmdEventSetStatus(
@@ -891,6 +1346,15 @@ wlanbowCmdEventSetStatus(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is generic command done handler
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] prCmdInfo      Pointer to the buffer that holds the command info
+* \param[in] pucEventBuf    Pointer to the set buffer OR event buffer
+*
+* \retval none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 wlanbowCmdEventSetCommon(
@@ -923,6 +1387,15 @@ wlanbowCmdEventSetCommon(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief command done handler for CMD_ID_CMD_BT_OVER_WIFI
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] prCmdInfo      Pointer to the buffer that holds the command info
+* \param[in] pucEventBuf    Pointer to the set buffer OR event buffer
+*
+* \retval none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 wlanbowCmdEventLinkConnected(
@@ -997,6 +1470,15 @@ wlanbowCmdEventLinkConnected(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief command done handler for CMD_ID_CMD_BT_OVER_WIFI
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] prCmdInfo      Pointer to the buffer that holds the command info
+* \param[in] pucEventBuf    Pointer to the set buffer OR event buffer
+*
+* \retval none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 wlanbowCmdEventLinkDisconnected(
@@ -1144,6 +1626,15 @@ wlanbowCmdEventLinkDisconnected(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief command done handler for CMD_ID_CMD_BT_OVER_WIFI
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] prCmdInfo      Pointer to the buffer that holds the command info
+* \param[in] pucEventBuf    Pointer to the set buffer OR event buffer
+*
+* \retval none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 wlanbowCmdEventSetSetupConnection (
@@ -1188,6 +1679,15 @@ wlanbowCmdEventSetSetupConnection (
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is the command done handler for BOW_CMD_ID_READ_LINK_QUALITY
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] prCmdInfo      Pointer to the buffer that holds the command info
+* \param[in] pucEventBuf    Pointer to the set buffer OR event buffer
+*
+* \retval none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 wlanbowCmdEventReadLinkQuality (
@@ -1222,6 +1722,15 @@ wlanbowCmdEventReadLinkQuality (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is the command done handler for BOW_CMD_ID_READ_RSSI
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] prCmdInfo      Pointer to the buffer that holds the command info
+* \param[in] pucEventBuf    Pointer to the set buffer OR event buffer
+*
+* \retval none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 wlanbowCmdEventReadRssi (
@@ -1257,6 +1766,14 @@ wlanbowCmdEventReadRssi (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This is the default command timeout handler
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] prCmdInfo      Pointer to the buffer that holds the command info
+*
+* \retval none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 wlanbowCmdTimeoutHandler (
@@ -1617,6 +2134,18 @@ bowAssignSsid (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief This function will validate the Rx Probe Request Frame and then return
+*        result to BSS to indicate if need to send the corresponding Probe Response
+*        Frame if the specified conditions were matched.
+*
+* @param[in] prAdapter          Pointer to the Adapter structure.
+* @param[in] prSwRfb            Pointer to SW RFB data structure.
+* @param[out] pu4ControlFlags   Control flags for replying the Probe Response
+*
+* @retval TRUE      Reply the Probe Response
+* @retval FALSE     Don't reply the Probe Response
+*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 bowValidateProbeReq(
@@ -1697,6 +2226,13 @@ bowValidateProbeReq(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief This function will indicate an Event of "Media Disconnect" to HOST
+*
+* @param[in] u4Param  Unused timer parameter
+*
+* @return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowSendBeacon(
@@ -1723,6 +2259,13 @@ bowSendBeacon(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief This function will indicate an Event of "Media Disconnect" to HOST
+*
+* @param[in] u4Param  Unused timer parameter
+*
+* @return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowResponderScan(
@@ -1788,6 +2331,13 @@ bowResponderScan(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief
+*
+* \param[in]
+*
+* \return none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowResponderScanDone(
@@ -1901,6 +2451,14 @@ bowResponderScanDone(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief Function for cancelling scan request. There is another option to extend channel privilige
+*           for another purpose.
+*
+* @param fgIsChannelExtention - Keep the channel previlege, but can cancel scan timer.
+*
+* @return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowResponderCancelScan (
@@ -1954,6 +2512,13 @@ bowResponderCancelScan (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief Initialization of JOIN STATE
+*
+* @param[in] prBssDesc  The pointer of BSS_DESC_T which is the BSS we will try to join with.
+*
+* @return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowResponderJoin(
@@ -2054,6 +2619,13 @@ bowResponderJoin(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief This function will handle the Join Complete Event from SAA FSM for BOW FSM
+*
+* @param[in] prMsgHdr   Message of Join Complete of SAA FSM.
+*
+* @return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowFsmRunEventJoinComplete(
@@ -2189,6 +2761,14 @@ bowFsmRunEventJoinComplete(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief This function will indicate the Media State to HOST
+*
+* @param[in] eConnectionState   Current Media State
+* @param[in] fgDelayIndication  Set TRUE for postponing the Disconnect Indication.
+*
+* @return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowIndicationOfMediaStateToHost (
@@ -2303,6 +2883,14 @@ bowIndicationOfMediaStateToHost (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief This function will indiate the Event of Tx Fail of AAA Module.
+*
+* @param[in] prAdapter          Pointer to the Adapter structure.
+* @param[in] prStaRec           Pointer to the STA_RECORD_T
+*
+* @return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowRunEventAAATxFail (
@@ -2328,6 +2916,14 @@ bowRunEventAAATxFail (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief This function will indiate the Event of Successful Completion of AAA Module.
+*
+* @param[in] prAdapter          Pointer to the Adapter structure.
+* @param[in] prStaRec           Pointer to the STA_RECORD_T
+*
+* @return (none)
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 bowRunEventAAAComplete (
@@ -2369,6 +2965,14 @@ bowRunEventAAAComplete (
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief This function will handle RxDeauth
+*
+* @param[in] prAdapter          Pointer to the Adapter structure.
+* @param[in] prStaRec           Pointer to the STA_RECORD_T
+*
+* @return (none)
+*/
 /*----------------------------------------------------------------------------*/
 
 WLAN_STATUS
@@ -2431,6 +3035,16 @@ bowRunEventRxDeAuth (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function handle BoW Link disconnect.
+*
+* \param[in] pMsduInfo            Pointer to the Msdu Info
+* \param[in] rStatus              The Tx done status
+*
+* \return -
+*
+* \note after receive deauth frame, callback function call this
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowDisconnectLink (
@@ -2478,6 +3092,18 @@ bowDisconnectLink (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief This function will validate the Rx Assoc Req Frame and then return
+*        the status code to AAA to indicate if need to perform following actions
+*        when the specified conditions were matched.
+*
+* @param[in] prAdapter          Pointer to the Adapter structure.
+* @param[in] prSwRfb            Pointer to SW RFB data structure.
+* @param[out] pu2StatusCode     The Status Code of Validation Result
+*
+* @retval TRUE      Reply the Assoc Resp
+* @retval FALSE     Don't reply the Assoc Resp
+*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 bowValidateAssocReq (
@@ -2576,6 +3202,19 @@ bowValidateAssocReq (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief This function will validate the Rx Auth Frame and then return
+*        the status code to AAA to indicate if need to perform following actions
+*        when the specified conditions were matched.
+*
+* @param[in] prAdapter          Pointer to the Adapter structure.
+* @param[in] prSwRfb            Pointer to SW RFB data structure.
+* @param[in] pprStaRec          Pointer to pointer of STA_RECORD_T structure.
+* @param[out] pu2StatusCode     The Status Code of Validation Result
+*
+* @retval TRUE      Reply the Auth
+* @retval FALSE     Don't reply the Auth
+*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 bowValidateAuth (
@@ -2689,6 +3328,13 @@ bowValidateAuth (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief    This function is invoked when CNM granted channel privilege
+*
+* \param[in] prAdapter  Pointer of ADAPTER_T
+*
+* \return none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowRunEventChGrant (
@@ -2774,6 +3420,14 @@ bowRunEventChGrant (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief    This function is to inform CNM for channel privilege requesting
+*           has been released
+*
+* \param[in] prAdapter  Pointer of ADAPTER_T
+*
+* \return none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowRequestCh (
@@ -2826,6 +3480,14 @@ bowRequestCh (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief    This function is to inform BOW that channel privilege is granted
+*           has been released
+*
+* \param[in] prAdapter  Pointer of ADAPTER_T
+*
+* \return none
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowReleaseCh (
@@ -2870,6 +3532,13 @@ bowReleaseCh (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* @brief This function will indicate an Event of "Media Disconnect" to HOST
+*
+* @param[in] u4Param  Unused timer parameter
+*
+* @return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 bowChGrantedTimeout(
@@ -2953,6 +3622,15 @@ bowNotifyAllLinkDisconnected (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief to retrieve Bluetooth-over-Wi-Fi state from glue layer
+*
+* \param[in]
+*           prGlueInfo
+*           rPeerAddr
+* \return
+*           ENUM_BOW_DEVICE_STATE
+*/
 /*----------------------------------------------------------------------------*/
 
 BOOLEAN

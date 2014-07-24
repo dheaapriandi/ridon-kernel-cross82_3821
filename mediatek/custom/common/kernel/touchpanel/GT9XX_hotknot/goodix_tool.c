@@ -128,11 +128,26 @@ static struct miscdevice hotknot_misc_device =
     .name = HOTKNOTNAME,
     .fops = &hotknot_fops,
 };
+static ssize_t goodix_tool_upper_read(struct file *file, char __user *buffer,
+			  size_t count, loff_t *ppos)
+{
+  return goodix_tool_read(buffer, NULL,0, count, NULL, ppos);	
+}			  
+			  
+static ssize_t  goodix_tool_upper_write(struct file *file, const char __user *buffer,
+			   size_t count, loff_t *ppos)  
+{
+  return goodix_tool_write(file, buffer, count, ppos);
+}
 
+static const struct file_operations gt_tool_fops = { 
+    .write = goodix_tool_upper_read,
+    .read = goodix_tool_upper_write
+};
 
 static void tool_set_proc_name(char * procname)
 {
-#if 0	
+#if 1	
     char *months[12] = {"Jan", "Feb", "Mar", "Apr", "May", 
         "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
     char date[20] = {0};
@@ -272,14 +287,8 @@ s32 init_wr_node(struct i2c_client *client)
     register_i2c_func();
 
     tool_set_proc_name(procname);
-    goodix_proc_entry = create_proc_entry(procname, 0660, NULL);
-#if 1 // setting by hotknot feature 
-    if (misc_register(&hotknot_misc_device))
-    {
-        printk("mtk_tpd: hotknot_device register failed\n");
-        return FAIL;
-    }
-#endif    
+#if 0
+    goodix_proc_entry = create_proc_entry(procname, 0660, NULL);  
     if (goodix_proc_entry == NULL)
     {
         GTP_ERROR("Couldn't create proc entry!");
@@ -291,6 +300,21 @@ s32 init_wr_node(struct i2c_client *client)
         goodix_proc_entry->write_proc = goodix_tool_write;
         goodix_proc_entry->read_proc = goodix_tool_read;
     }
+#else
+    if(proc_create(procname, 0660, NULL, &gt_tool_fops)== NULL)
+    {
+        GTP_ERROR("create_proc_entry %s failed", procname);
+        return -1;
+    }   
+#endif
+
+#if 1 // setting by hotknot feature 
+    if (misc_register(&hotknot_misc_device))
+    {
+        printk("mtk_tpd: hotknot_device register failed\n");
+        return FAIL;
+    }
+#endif  
 
     return SUCCESS;
 }

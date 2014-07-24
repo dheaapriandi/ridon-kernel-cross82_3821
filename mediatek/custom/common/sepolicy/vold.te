@@ -30,8 +30,6 @@ allow vold tmpfs:dir mounton;
 allow vold self:capability { net_admin dac_override mknod sys_admin chown fowner fsetid };
 allow vold self:netlink_kobject_uevent_socket *;
 allow vold app_data_file:dir search;
-allow vold platform_app_data_file:dir search;
-allow vold platform_app_data_file:file {open read write getattr};
 allow vold app_data_file:file rw_file_perms;
 allow vold loop_device:blk_file rw_file_perms;
 allow vold dm_device:chr_file rw_file_perms;
@@ -213,5 +211,6 @@ allow vold device:file create;
 # 20131213 KKMR1_CQ_CTS_02
 allow vold device:file { write getattr open };
 
-# superumount for encryption
-allow vold superumount_exec:file { read execute open execute_no_trans getattr};
+# e2fsck for encryption
+allow vold rootfs:file execute;
+allow vold rootfs:file execute_no_trans;

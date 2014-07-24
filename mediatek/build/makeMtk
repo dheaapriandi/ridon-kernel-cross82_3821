@@ -1,5 +1,37 @@
 #!/usr/bin/perl
 # 
+# Copyright Statement:
+# --------------------
+# This software is protected by Copyright and the information contained
+# herein is confidential. The software may not be copied and the information
+# contained herein may not be used or disclosed except with the written
+# permission of MediaTek Inc. (C) 2010
+# 
+# BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+# THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+# RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
+# AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+# NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+# SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+# SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
+# THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+# NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
+# SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+# 
+# BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
+# LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+# AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+# OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
+# MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+# 
+# THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
+# WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
+# LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
+# RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
+# THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
+# 
 use Sys::Hostname;
 my $DEBUG = 0; # enable/disable script debugging message
 
@@ -68,8 +100,8 @@ qw(
    new n bm_new remake r bm_remake clean c listproject listp
    drvgen codegen emigen nandgen custgen javaoptgen ptgen run-preprocess remove-preprocessed
    check-modem update-modem sign-image encrypt-image sign-modem check-dep
-   dump-memusage gen-relkey check-appres perso
-   rel-cust modem-info bindergen mrproper pregen check-seandroid version jrdmagic
+   dump-memusage gen-relkey check-appres
+   rel-cust modem-info bindergen mrproper pregen check-seandroid
   );
 
 my @ABSNativeActions = 
@@ -77,7 +109,7 @@ qw(
    customimage bootimage systemimage recoveryimage secroimage cacheimage factoryimage
    userdataimage userdataimage-nodeps target-files-package
    sdk win_sdk banyan_addon banyan_addon_x86 cts otapackage dist updatepackage
-   update-api mm mma snod dump-comp-build-info dump-products bootimage-nodeps check-sign version
+   update-api mm mma snod dump-comp-build-info dump-products bootimage-nodeps
    ramdisk-nodeps
   );
 
@@ -225,7 +257,6 @@ foreach $uAct (@acts)
   ($uAct = "new") if ($uAct eq "n");
   ($uAct = "clean") if ($uAct eq "c");
   ($uAct = "remake") if ($uAct eq "r");
-
   if (($uAct eq "remake") || ($uAct eq "bm_remake"))
   {
      unshift(@mOpts, "MTK_DEPENDENCY_AUTO_CHECK=true");
@@ -252,7 +283,6 @@ foreach $uAct (@acts)
         if ($build_mode ne $TARGET_BUILD_VARIANT) { print "WARNING *** : Previous build is $build_mode build, and now is $TARGET_BUILD_VARIANT build\n"; }  
      }
   }
-  ($uAct = "perso") if ($uAct eq "p");
 }
 &writeINI;
 #print "@acts\n";
@@ -353,7 +383,7 @@ if (join(' ', @acts) =~ /($actPttn)/ || $project eq "banyan_addon" || $project e
         &p_system("rm -f $logdir/${project}_${act}.log_err");
       }
     }
-    if (join(' ', @acts) =~ /(new|remake|clean|perso)/)
+    if (join(' ', @acts) =~ /(new|remake|clean)/)
     {
       @create_arguments = ($#arguments < 0) ? @default_arguments : @arguments;
       foreach $uMod (@create_arguments)
@@ -490,7 +520,6 @@ Actions:
   bm_remake     : "remake" + GNU make's "-k"(keep going when encounter error) feature.
   mm            : Build module through Android native command "mm"
   mma           : Build module through Android native command "mma"
-  p, perso      : Build perso
 
   emigen        : Generate EMI setting source code.
   nandgen       : Generate supported NAND flash device list.
@@ -536,7 +565,6 @@ Actions:
                    as a post-build step.)
   updatepackage : Build the update package.
   dist          : Build distribution package.
-  check-sign    : Check 3rd party apk signature.
 
 Modules:
   pl, preloader : Specify to build preloader.
@@ -550,7 +578,6 @@ Modules:
                 : Specify to build kernel component/module with the source path.
   dr <module name>
                 : Specify to build android component/module with module name.
-  perso         : Specify to build perso.
 
 Other tools:
   prebuilts/misc/linux-x86/ccache/ccache -M 10G
@@ -772,44 +799,6 @@ sub setCacheEnvVars
 	}
 }
 
- # Add for modem build before we build Android source by chenshifeng 2013-05-30 start
- sub modemBuild
- {
-   print "**********start to build modem************\n";
-   # PR:508340  by chenshifeng 2013-08-15 start
-   $buildmode = 'eng';
-   $hwversion = 'proto';
-
-   print "**********project is '$project'**********\n";
-
-   if ("@mOpts" =~ /.*TARGET_BUILD_VARIANT=(user|eng).*/)
-   {
-           $buildmode = $1
-   }
-   print "**********buildmode is '$buildmode'**********\n";
-
-   if ("@mOpts" =~ /.*JRD_HW_VERSION=(proto|pio).*/)
-   {
-           $hwversion = $1
-   }
-   print "**********hwversion is '$hwversion'**********\n";
-
-   my $cmd = shift;
-
-   chdir('./modem');
-
-   my $status = system("$cmd '-p $project' '-m $buildmode' '-w $hwversion'");
-   # Fixed PR:508340 by chenshifeng 2013-08-15 end
-   chdir('../');
-   if ($status != 0){
-      print "\n**************[FAIL!!!]\n";
-      die "**************Modem build Failed! Please check the build process in the folder ./modem .\n"
-   }
-   print "**************[OK]\n";
-   print "***********end building modem*************\n";
- }
-# Add for modem build before we build Android source by chenshifeng 2013-05-30 end
-
 # interactive mode for inputting signature subject
 sub inputSignSubject
 {
@@ -848,3 +837,4 @@ sub inputSignSubject
 
   return $subjectStr;
 }
+

@@ -1155,22 +1155,9 @@ bssBuildBeaconProbeRespFrameCommonIEs (
     /* Compose the frame body of the Probe Response frame. */
     //4 <1> Fill the SSID element.
     SSID_IE(pucBuffer)->ucId = ELEM_ID_SSID;
-    if (prBssInfo->eHiddenSsidType == ENUM_HIDDEN_SSID_LEN) {
-        if ((!pucDestAddr) && // For Beacon only.
-            (prBssInfo->eCurrentOPMode == OP_MODE_ACCESS_POINT)) {
-            SSID_IE(pucBuffer)->ucLength = 0;
-        } else { // probe response
-            SSID_IE(pucBuffer)->ucLength = prBssInfo->ucSSIDLen;
-            if (prBssInfo->ucSSIDLen) {
-                kalMemCopy(SSID_IE(pucBuffer)->aucSSID, prBssInfo->aucSSID, prBssInfo->ucSSIDLen);
-            }
-        }
-    }
-    else {
-        SSID_IE(pucBuffer)->ucLength = prBssInfo->ucSSIDLen;
-        if (prBssInfo->ucSSIDLen) {
-            kalMemCopy(SSID_IE(pucBuffer)->aucSSID, prBssInfo->aucSSID, prBssInfo->ucSSIDLen);
-        }
+    SSID_IE(pucBuffer)->ucLength = prBssInfo->ucSSIDLen;
+    if (prBssInfo->ucSSIDLen) {
+        kalMemCopy(SSID_IE(pucBuffer)->aucSSID, prBssInfo->aucSSID, prBssInfo->ucSSIDLen);
     }
 
     prMsduInfo->u2FrameLength += IE_SIZE(pucBuffer);

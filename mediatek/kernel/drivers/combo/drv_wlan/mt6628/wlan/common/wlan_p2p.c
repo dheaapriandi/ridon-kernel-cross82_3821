@@ -1,18 +1,269 @@
+/*
+** $Id: //Department/DaVinci/TRUNK/WiFi_P2P_Driver/common/wlan_p2p.c#8 $
+*/
+
+/*! \file wlan_bow.c
+    \brief This file contains the Wi-Fi Direct commands processing routines for
+           MediaTek Inc. 802.11 Wireless LAN Adapters.
+*/
 
 
 
+/*
+** $Log: wlan_p2p.c $
+ *
+ * 07 17 2012 yuche.tsai
+ * NULL
+ * Compile no error before trial run.
+ *
+ * 11 24 2011 yuche.tsai
+ * NULL
+ * Fix P2P IOCTL of multicast address bug, add low power driver stop control.
+ *
+ * 11 22 2011 yuche.tsai
+ * NULL
+ * Update RSSI link quality of P2P Network query method. (Bug fix)
+ *
+ * 11 19 2011 yuche.tsai
+ * NULL
+ * Add RSSI support for P2P network.
+ *
+ * 11 08 2011 yuche.tsai
+ * [WCXRP00001094] [Volunteer Patch][Driver] Driver version & supplicant version query & set support for service discovery version check.
+ * Add support for driver version query & p2p supplicant verseion set.
+ * For new service discovery mechanism sync.
+ *
+ * 10 18 2011 yuche.tsai
+ * [WCXRP00001045] [WiFi Direct][Driver] Check 2.1 branch.
+ * Support Channle Query.
+ *
+ * 10 18 2011 yuche.tsai
+ * [WCXRP00001045] [WiFi Direct][Driver] Check 2.1 branch.
+ * New 2.1 branch
 
+ *
+ * 08 23 2011 yuche.tsai
+ * NULL
+ * Fix Multicast Issue of P2P.
+ *
+ * 04 27 2011 george.huang
+ * [WCXRP00000684] [MT6620 Wi-Fi][Driver] Support P2P setting ARP filter
+ * Support P2P ARP filter setting on early suspend/ late resume
+ *
+ * 04 08 2011 george.huang
+ * [WCXRP00000621] [MT6620 Wi-Fi][Driver] Support P2P supplicant to set power mode
+ * separate settings of P2P and AIS
+ *
+ * 03 22 2011 george.huang
+ * [WCXRP00000504] [MT6620 Wi-Fi][FW] Support Sigma CAPI for power saving related command
+ * link with supplicant commands
+ *
+ * 03 17 2011 wh.su
+ * [WCXRP00000571] [MT6620 Wi-Fi] [Driver] Not check the p2p role during set key
+ * Skip the p2p role for adding broadcast key issue.
+ *
+ * 03 16 2011 wh.su
+ * [WCXRP00000530] [MT6620 Wi-Fi] [Driver] skip doing p2pRunEventAAAComplete after send assoc response Tx Done
+ * fixed compiling error while enable dbg.
+ *
+ * 03 08 2011 yuche.tsai
+ * [WCXRP00000480] [Volunteer Patch][MT6620][Driver] WCS IE format issue[WCXRP00000509] [Volunteer Patch][MT6620][Driver] Kernal panic when remove p2p module.
+ * .
+ *
+ * 03 07 2011 terry.wu
+ * [WCXRP00000521] [MT6620 Wi-Fi][Driver] Remove non-standard debug message
+ * Toggle non-standard debug messages to comments.
+ *
+ * 03 07 2011 wh.su
+ * [WCXRP00000506] [MT6620 Wi-Fi][Driver][FW] Add Security check related code
+ * rename the define to anti_pviracy.
+ *
+ * 03 05 2011 wh.su
+ * [WCXRP00000506] [MT6620 Wi-Fi][Driver][FW] Add Security check related code
+ * add the code to get the check rsponse and indicate to app.
+ *
+ * 03 02 2011 wh.su
+ * [WCXRP00000506] [MT6620 Wi-Fi][Driver][FW] Add Security check related code
+ * Add Security check related code.
+ *
+ * 03 02 2011 yuche.tsai
+ * [WCXRP00000245] 1. Invitation Request/Response.
+2. Provision Discovery Request/Response
 
+ * Fix SD Request Query Length issue.
+ *
+ * 03 02 2011 yuche.tsai
+ * [WCXRP00000245] 1. Invitation Request/Response.
+2. Provision Discovery Request/Response
 
+ * Service Discovery Request.
+ *
+ * 03 01 2011 yuche.tsai
+ * [WCXRP00000245] 1. Invitation Request/Response.
+2. Provision Discovery Request/Response
+
+ * Update Service Discovery Wlan OID related function.
+ *
+ * 03 01 2011 yuche.tsai
+ * [WCXRP00000245] 1. Invitation Request/Response.
+2. Provision Discovery Request/Response
+
+ * Update Service Discovery Related wlanoid function.
+ *
+ * 02 09 2011 yuche.tsai
+ * [WCXRP00000245] 1. Invitation Request/Response.
+2. Provision Discovery Request/Response
+
+ * Add Service Discovery Indication Related code.
+ *
+ * 01 26 2011 yuche.tsai
+ * [WCXRP00000245] 1. Invitation Request/Response.
+2. Provision Discovery Request/Response
+
+ * Add Service Discovery Function.
+ *
+ * 01 05 2011 cp.wu
+ * [WCXRP00000283] [MT6620 Wi-Fi][Driver][Wi-Fi Direct] Implementation of interface for supporting Wi-Fi Direct Service Discovery
+ * ioctl implementations for P2P Service Discovery
+ *
+ * 01 04 2011 cp.wu
+ * [WCXRP00000338] [MT6620 Wi-Fi][Driver] Separate kalMemAlloc into kmalloc and vmalloc implementations to ease physically continous memory demands
+ * separate kalMemAlloc() into virtually-continous and physically-continous type to ease slab system pressure
+ *
+ * 12 22 2010 cp.wu
+ * [WCXRP00000283] [MT6620 Wi-Fi][Driver][Wi-Fi Direct] Implementation of interface for supporting Wi-Fi Direct Service Discovery
+ * 1. header file restructure for more clear module isolation
+ * 2. add function interface definition for implementing Service Discovery callbacks
+ *
+ * 10 04 2010 cp.wu
+ * [WCXRP00000077] [MT6620 Wi-Fi][Driver][FW] Eliminate use of ENUM_NETWORK_TYPE_T and replaced by ENUM_NETWORK_TYPE_INDEX_T only
+ * remove ENUM_NETWORK_TYPE_T definitions
+ *
+ * 09 28 2010 wh.su
+ * NULL
+ * [WCXRP00000069][MT6620 Wi-Fi][Driver] Fix some code for phase 1 P2P Demo.
+ *
+ * 09 21 2010 kevin.huang
+ * [WCXRP00000054] [MT6620 Wi-Fi][Driver] Restructure driver for second Interface
+ * Isolate P2P related function for Hardware Software Bundle
+ *
+ * 09 03 2010 kevin.huang
+ * NULL
+ * Refine #include sequence and solve recursive/nested #include issue
+ *
+ * 08 23 2010 cp.wu
+ * NULL
+ * revise constant definitions to be matched with implementation (original cmd-event definition is deprecated)
+ *
+ * 08 16 2010 cp.wu
+ * NULL
+ * add subroutines for P2P to set multicast list.
+ *
+ * 08 16 2010 george.huang
+ * NULL
+ * .
+ *
+ * 08 16 2010 george.huang
+ * NULL
+ * support wlanoidSetP2pPowerSaveProfile() in P2P
+ *
+ * 08 16 2010 george.huang
+ * NULL
+ * Support wlanoidSetNetworkAddress() for P2P
+ *
+ * 07 08 2010 cp.wu
+ *
+ * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
+ *
+ * 06 25 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * add API in que_mgt to retrieve sta-rec index for security frames.
+ *
+ * 06 24 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 802.1x and bluetooth-over-Wi-Fi security frames are now delievered to firmware via command path instead of data path.
+ *
+ * 06 11 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 1) migrate assoc.c.
+ * 2) add ucTxSeqNum for tracking frames which needs TX-DONE awareness
+ * 3) add configuration options for CNM_MEM and RSN modules
+ * 4) add data path for management frames
+ * 5) eliminate rPacketInfo of MSDU_INFO_T
+ *
+ * 06 06 2010 kevin.huang
+ * [WPD00003832][MT6620 5931] Create driver base
+ * [MT6620 5931] Create driver base
+ *
+ * 05 17 2010 cp.wu
+ * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
+ * 1) add timeout handler mechanism for pending command packets
+ * 2) add p2p add/removal key
+ *
+**
+*/
+
+/******************************************************************************
+*                         C O M P I L E R   F L A G S
+*******************************************************************************
+*/
+
+/******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+*******************************************************************************
+*/
 #include "precomp.h"
 
+/******************************************************************************
+*                              C O N S T A N T S
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                             D A T A   T Y P E S
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                            P U B L I C   D A T A
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                           P R I V A T E   D A T A
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                                 M A C R O S
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                              F U N C T I O N S
+*******************************************************************************
+*/
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief command packet generation utility
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] ucCID              Command ID
+* \param[in] fgSetQuery         Set or Query
+* \param[in] fgNeedResp         Need for response
+* \param[in] pfCmdDoneHandler   Function pointer when command is done
+* \param[in] u4SetQueryInfoLen  The length of the set/query buffer
+* \param[in] pucInfoBuffer      Pointer to set/query buffer
+*
+*
+* \retval WLAN_STATUS_PENDING
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSendSetQueryP2PCmd (
@@ -89,6 +340,22 @@ wlanoidSendSetQueryP2PCmd (
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set a key to Wi-Fi Direct driver
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetAddP2PKey(
@@ -184,6 +451,22 @@ wlanoidSetAddP2PKey(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to request Wi-Fi Direct driver to remove keys
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetRemoveP2PKey(
@@ -255,6 +538,21 @@ wlanoidSetRemoveP2PKey(
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Setting the IP address for pattern search function.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \return WLAN_STATUS_SUCCESS
+* \return WLAN_STATUS_ADAPTER_NOT_READY
+* \return WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetP2pNetworkAddress(
@@ -345,6 +643,20 @@ wlanoidSetP2pNetworkAddress(
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is used to query the power save profile.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \return WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryP2pPowerSaveProfile (
@@ -370,6 +682,20 @@ wlanoidQueryP2pPowerSaveProfile (
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is used to set the power save profile.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetP2pPowerSaveProfile (
@@ -425,6 +751,20 @@ wlanoidSetP2pPowerSaveProfile (
 } /* end of wlanoidSetP2pPowerSaveProfile() */
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is used to set the power save profile.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetP2pSetNetworkAddress (
@@ -534,6 +874,22 @@ wlanoidSetP2pSetNetworkAddress (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set Multicast Address List.
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_MULTICAST_FULL
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetP2PMulticastList(
@@ -600,6 +956,22 @@ wlanoidSetP2PMulticastList(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to send GAS frame for P2P Service Discovery Request
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_MULTICAST_FULL
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSendP2PSDRequest(
@@ -629,6 +1001,22 @@ wlanoidSendP2PSDRequest(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to send GAS frame for P2P Service Discovery Response
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_MULTICAST_FULL
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSendP2PSDResponse(
@@ -658,6 +1046,23 @@ wlanoidSendP2PSDResponse(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to get GAS frame for P2P Service Discovery Request
+*
+* \param[in]  prAdapter        Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer    A pointer to the buffer that holds the result of
+*                              the query.
+* \param[in]  u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen  If the call is successful, returns the number of
+*                              bytes written into the query buffer. If the call
+*                              failed due to invalid length of the query buffer,
+*                              returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_MULTICAST_FULL
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidGetP2PSDRequest(
@@ -738,6 +1143,23 @@ wlanoidGetP2PSDRequest(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to get GAS frame for P2P Service Discovery Response
+*
+* \param[in]  prAdapter        Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer    A pointer to the buffer that holds the result of
+*                              the query.
+* \param[in]  u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen  If the call is successful, returns the number of
+*                              bytes written into the query buffer. If the call
+*                              failed due to invalid length of the query buffer,
+*                              returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_MULTICAST_FULL
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidGetP2PSDResponse(
@@ -817,6 +1239,22 @@ wlanoidGetP2PSDResponse(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to terminate P2P Service Discovery Phase
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_MULTICAST_FULL
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetP2PTerminateSDPhase(
@@ -867,6 +1305,22 @@ wlanoidSetP2PTerminateSDPhase(
 
 #if CFG_SUPPORT_ANTI_PIRACY
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_MULTICAST_FULL
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetSecCheckRequest(
@@ -900,6 +1354,23 @@ wlanoidSetSecCheckRequest(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to
+*
+* \param[in]  prAdapter        Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer    A pointer to the buffer that holds the result of
+*                              the query.
+* \param[in]  u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen  If the call is successful, returns the number of
+*                              bytes written into the query buffer. If the call
+*                              failed due to invalid length of the query buffer,
+*                              returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_MULTICAST_FULL
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidGetSecCheckResponse(
@@ -1268,6 +1739,20 @@ wlanoidSetP2pSupplicantVersion (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is used to set the WPS mode.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetP2pWPSmode (

@@ -30,13 +30,71 @@
 #include "cust_battery_meter_table.h"
 #include "mach/mtk_rtc.h"
 
+
+
+#ifdef SUPPORT_TINNO_BQ27541
+//extern void bq27541_parameter_dump(void);
+extern int read_battery_temp(void);
+extern int read_battery_soc(void);
+extern int check_bq27541_state(void);
+#else
+int read_battery_temp(void)
+{
+	return 0;
+}
+
+int read_battery_soc(void)
+{
+	return 0;
+}
+
+int check_bq27541_state(void)
+{
+	return 0;
+}
+
+
+#endif
+
 // ============================================================ //
 // define
 // ============================================================ //
 static DEFINE_MUTEX(FGADC_mutex);
 
-int Enable_FGADC_LOG = 1;
+int Enable_FGADC_LOG = 1; /*modify by alik ,for debug*/
 
+#ifdef SUPPORT_TINNO_BATTERY_COMPENSATE
+#define  TINNO_NEW_FUNC_INIT_TABLE
+//#ifdef TINNO_NEW_FUNC_INIT_TABLE
+//#define TINNO_TABLE_TEST
+//#endif
+#define MTK_BAT_R_COMPENSTAE
+#ifdef MTK_BAT_R_COMPENSTAE
+extern bool upmu_is_chr_det(void);
+#endif
+#define TINNO_BAT_R_COMPENSTAE
+
+#define TINNO_SUSPEND_CAR_COUNT
+#ifdef  TINNO_SUSPEND_CAR_COUNT
+#define TINNO_STAND_CURRENT  150
+int  g_suspend_oam_car2=0;
+int  g_suspend_oam_car1=0;
+#endif
+
+#ifdef TINNO_BAT_R_COMPENSTAE
+#define TINNO_BAT_CAP_SCALES
+void table_init(void);
+#define TEMP_COMPENSATE_RANGE  3
+#define BATTERY_HIGH_CURRENT_COMPENSATE   15
+int g_per_adc_voltage=0;
+int g_table_temp=0;
+int high_curent_compensate=15;
+#endif
+
+extern u32 g_battery_init_voltage;
+ kal_bool  _gFG_chg_state_s=KAL_FALSE;
+ #define LK_CURRENT  1800
+#endif
 // ============================================================ //
 // global variable
 // ============================================================ //
@@ -47,9 +105,6 @@ static char proc_fgadc_data[32];
 
 kal_bool gFG_Is_Charging = KAL_FALSE;
 kal_int32 g_auxadc_solution = 0;
-U32 g_spm_timer = 600;
-bool bat_spm_timeout = false;
-U32 _g_bat_sleep_total_time = 0;
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 //// PMIC AUXADC Related Variable
@@ -142,68 +197,9 @@ kal_int32 g_d_hw_ocv=0;
 kal_int32 g_vol_bat_hw_ocv=0;
 kal_int32 g_hw_ocv_before_sleep=0;
 struct timespec g_rtc_time_before_sleep;
+struct timespec tinno_g_rtc_time_before_sleep;
 kal_int32 g_sw_vbat_temp=0;
 struct timespec last_oam_run_time;
-
-// JRD added for fuel gauge issue PR679477 start
-extern unsigned int UbVbat;
-bool IsBatMeterInited = KAL_FALSE;
-// JRD added for fuel gauge issue PR679477 end
-
-/* Temperature window size */
-#define TEMP_AVERAGE_SIZE 	30
-
-#ifdef MTK_MULTI_BAT_PROFILE_SUPPORT
-extern int IMM_GetOneChannelValue_Cali(int Channel, int*voltage);
-kal_uint32 g_fg_battery_id = 0;
-
-#ifdef MTK_GET_BATTERY_ID_BY_AUXADC
-void fgauge_get_profile_id(void)
-{
-	int id_volt = 0;
-    int id = 0;
-	int ret = 0;
-
-	ret = IMM_GetOneChannelValue_Cali(BATTERY_ID_CHANNEL_NUM, &id_volt);
-	if(ret != 0)
-        bm_print(BM_LOG_CRTI, "[fgauge_get_profile_id]id_volt read fail\n");
-	else
-        bm_print(BM_LOG_CRTI, "[fgauge_get_profile_id]id_volt = %d\n", id_volt);
-
-    if ( (sizeof(g_battery_id_voltage)/sizeof(kal_int32)) != TOTAL_BATTERY_NUMBER)
-    {
-        bm_print(BM_LOG_CRTI, "[fgauge_get_profile_id]error! voltage range incorrect!\n");
-        return;
-    }
-
-    for (id = 0; id < TOTAL_BATTERY_NUMBER; id++)
-    {
-        if(id_volt < g_battery_id_voltage[id])
-        {
-            g_fg_battery_id = id;
-            break;
-        }
-        else if (g_battery_id_voltage[id] == -1)
-        {
-            g_fg_battery_id = TOTAL_BATTERY_NUMBER-1;
-        }
-    }
-
-    bm_print(BM_LOG_CRTI, "[fgauge_get_profile_id]Battery id (%d)\n", g_fg_battery_id);		
-}
-#elif defined(MTK_GET_BATTERY_ID_BY_GPIO)
-void fgauge_get_profile_id(void)
-{
-    g_fg_battery_id = 0;
-}
-#else
-void fgauge_get_profile_id(void)
-{
-    g_fg_battery_id = 0;
-}
-#endif
-#endif
-
 // ============================================================ //
 // function prototype
 // ============================================================ //
@@ -218,274 +214,38 @@ void fgauge_get_profile_id(void)
 //extern int get_rtc_spare_fg_value(void);
 //extern unsigned long rtc_read_hw_time(void);
 
-
-#ifdef BATT_ID_CHECK_SUPPORT
-extern int byd_sucd_batt_id;
-#endif
+#ifdef SUPPORT_TINNO_BATTERY_DEBUG
+extern int use_fake_temp_flag;
+extern int fake_temp;
+#endif	  
 
 // ============================================================ //
 int get_r_fg_value(void)
 {
     return (R_FG_VALUE+CUST_R_FG_OFFSET);
 }
-#ifdef MTK_MULTI_BAT_PROFILE_SUPPORT
-int BattThermistorConverTemp(int Res)
-{
-    int i=0;
-    int RES1=0,RES2=0;
-    int TBatt_Value=-200,TMP1=0,TMP2=0;
-
-    BATT_TEMPERATURE *batt_temperature_table = &Batt_Temperature_Table[g_fg_battery_id];
-    if(Res>=batt_temperature_table[0].TemperatureR)
-    {
-        TBatt_Value = -20;
-    }
-    else if(Res<=batt_temperature_table[16].TemperatureR)
-    {
-        TBatt_Value = 60;
-    }
-    else
-    {
-        RES1=batt_temperature_table[0].TemperatureR;
-        TMP1=batt_temperature_table[0].BatteryTemp;
-
-        for(i=0;i<=16;i++)
-        {
-            if(Res>=batt_temperature_table[i].TemperatureR)
-            {
-                RES2=batt_temperature_table[i].TemperatureR;
-                TMP2=batt_temperature_table[i].BatteryTemp;
-                break;
-            }
-            else
-            {
-                RES1=batt_temperature_table[i].TemperatureR;
-                TMP1=batt_temperature_table[i].BatteryTemp;
-            }
-        }
-        
-        TBatt_Value = (((Res-RES2)*TMP1)+((RES1-Res)*TMP2))/(RES1-RES2);
-    }
-
-    return TBatt_Value;    
-}
-
-kal_int32 fgauge_get_Q_max(kal_int16 temperature)
-{
-    kal_int32 ret_Q_max=0;
-    kal_int32 low_temperature = 0, high_temperature = 0;
-    kal_int32 low_Q_max = 0, high_Q_max = 0;
-
-    if (temperature <= TEMPERATURE_T1)
-    {
-        low_temperature = (-10);
-        high_temperature = TEMPERATURE_T1;
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_NEG_10;
-			high_Q_max = BYD_Q_MAX_POS_0;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_NEG_10;
-			high_Q_max = SCUD_Q_MAX_POS_0;
-		}
-#else
-        low_Q_max = g_Q_MAX_NEG_10[g_fg_battery_id];
-        high_Q_max = g_Q_MAX_POS_0[g_fg_battery_id];
-#endif
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else if (temperature <= TEMPERATURE_T2)
-    {
-        low_temperature = TEMPERATURE_T1;
-        high_temperature = TEMPERATURE_T2;
-
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_POS_0;
-			high_Q_max = BYD_Q_MAX_POS_25;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_POS_0;
-			high_Q_max = SCUD_Q_MAX_POS_25;
-		}
-#else
-        low_Q_max = g_Q_MAX_POS_0;
-        high_Q_max = g_Q_MAX_POS_25;
-#endif
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else
-    {
-        low_temperature  = TEMPERATURE_T2;
-        high_temperature = TEMPERATURE_T3;
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_POS_25;
-			high_Q_max = BYD_Q_MAX_POS_50;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_POS_25;
-			high_Q_max = SCUD_Q_MAX_POS_50;
-		}
-#else
-        low_Q_max = g_Q_MAX_POS_25;
-        high_Q_max = g_Q_MAX_POS_50;
-#endif
-        
-        if(temperature > high_temperature)
-        {
-            temperature = high_temperature;
-        }
-    }
-
-    ret_Q_max = low_Q_max +
-    (
-        (
-            (temperature - low_temperature) * 
-            (high_Q_max - low_Q_max)
-        ) / 
-        (high_temperature - low_temperature)                
-    );
-
-    bm_print(BM_LOG_FULL, "[fgauge_get_Q_max] Q_max = %d\r\n", ret_Q_max);
-
-    return ret_Q_max;
-}
-
-
-kal_int32 fgauge_get_Q_max_high_current(kal_int16 temperature)
-{
-    kal_int32 ret_Q_max=0;
-    kal_int32 low_temperature = 0, high_temperature = 0;
-    kal_int32 low_Q_max = 0, high_Q_max = 0;
-
-    if (temperature <= TEMPERATURE_T1)
-    {
-        low_temperature = (-10);
-        high_temperature = TEMPERATURE_T1;
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_NEG_10_H_CURRENT;
-			high_Q_max = BYD_Q_MAX_POS_0_H_CURRENT;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_NEG_10_H_CURRENT;
-			high_Q_max = SCUD_Q_MAX_POS_0_H_CURRENT;
-		}
-#else
-        low_Q_max = g_Q_MAX_NEG_10_H_CURRENT;
-        high_Q_max = g_Q_MAX_POS_0_H_CURRENT;
-#endif
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else if (temperature <= TEMPERATURE_T2)
-    {
-        low_temperature = TEMPERATURE_T1;
-        high_temperature = TEMPERATURE_T2;
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_POS_0_H_CURRENT;
-			high_Q_max = BYD_Q_MAX_POS_25_H_CURRENT;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_POS_0_H_CURRENT;
-			high_Q_max = SCUD_Q_MAX_POS_25_H_CURRENT;
-		}
-#else
-        low_Q_max = g_Q_MAX_POS_0_H_CURRENT;
-        high_Q_max = g_Q_MAX_POS_25_H_CURRENT;
-#endif
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else
-    {
-        low_temperature  = TEMPERATURE_T2;
-        high_temperature = TEMPERATURE_T3;
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_POS_25_H_CURRENT;
-			high_Q_max = BYD_Q_MAX_POS_50_H_CURRENT;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_POS_25_H_CURRENT;
-			high_Q_max = SCUD_Q_MAX_POS_50_H_CURRENT;
-		}
-#else
-        low_Q_max = g_Q_MAX_POS_25_H_CURRENT;
-        high_Q_max = g_Q_MAX_POS_50_H_CURRENT;
-#endif
-        
-        if(temperature > high_temperature)
-        {
-            temperature = high_temperature;
-        }
-    }
-
-    ret_Q_max = low_Q_max +
-    (
-        (
-            (temperature - low_temperature) * 
-            (high_Q_max - low_Q_max)
-        ) / 
-        (high_temperature - low_temperature)                
-    );
-
-    bm_print(BM_LOG_FULL, "[fgauge_get_Q_max_high_current] Q_max = %d\r\n", ret_Q_max);
-
-    return ret_Q_max;
-}
-
-#else
 
 int BattThermistorConverTemp(int Res)
 {
     int i=0;
     int RES1=0,RES2=0;
     int TBatt_Value=-200,TMP1=0,TMP2=0;
-
+    int table_size=0;
+    table_size=sizeof(Batt_Temperature_Table)/sizeof(BATT_TEMPERATURE);
     if(Res>=Batt_Temperature_Table[0].TemperatureR)
     {
-        TBatt_Value = -20;
+        TBatt_Value = Batt_Temperature_Table[0].BatteryTemp;
     }
-    else if(Res<=Batt_Temperature_Table[16].TemperatureR)
+    else if(Res<=Batt_Temperature_Table[table_size-1].TemperatureR)
     {
-        TBatt_Value = 60;
+        TBatt_Value = Batt_Temperature_Table[table_size-1].BatteryTemp;;
     }
     else
     {
         RES1=Batt_Temperature_Table[0].TemperatureR;
         TMP1=Batt_Temperature_Table[0].BatteryTemp;
 
-        for(i=0;i<=16;i++)
+        for(i=0;i<table_size;i++)
         {
             if(Res>=Batt_Temperature_Table[i].TemperatureR)
             {
@@ -506,201 +266,6 @@ int BattThermistorConverTemp(int Res)
     return TBatt_Value;    
 }
 
-kal_int32 fgauge_get_Q_max(kal_int16 temperature)
-{
-    kal_int32 ret_Q_max=0;
-    kal_int32 low_temperature = 0, high_temperature = 0;
-    kal_int32 low_Q_max = 0, high_Q_max = 0;
-
-    if (temperature <= TEMPERATURE_T1)
-    {
-        low_temperature = (-10);
-        high_temperature = TEMPERATURE_T1;
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_NEG_10;
-			high_Q_max = BYD_Q_MAX_POS_0;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_NEG_10;
-			high_Q_max = SCUD_Q_MAX_POS_0;
-		}
-#else
-        low_Q_max = Q_MAX_NEG_10;
-        high_Q_max = Q_MAX_POS_0;
-#endif
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else if (temperature <= TEMPERATURE_T2)
-    {
-        low_temperature = TEMPERATURE_T1;
-        high_temperature = TEMPERATURE_T2;
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_POS_0;
-			high_Q_max = BYD_Q_MAX_POS_25;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_POS_0;
-			high_Q_max = SCUD_Q_MAX_POS_25;
-		}
-#else
-        low_Q_max = Q_MAX_POS_0;
-        high_Q_max = Q_MAX_POS_25;
-#endif
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else
-    {
-        low_temperature  = TEMPERATURE_T2;
-        high_temperature = TEMPERATURE_T3;
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_POS_25;
-			high_Q_max = BYD_Q_MAX_POS_50;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_POS_25;
-			high_Q_max = SCUD_Q_MAX_POS_50;
-		}
-#else
-        low_Q_max = Q_MAX_POS_25;
-        high_Q_max = Q_MAX_POS_50;
-#endif
-        
-        if(temperature > high_temperature)
-        {
-            temperature = high_temperature;
-        }
-    }
-
-    ret_Q_max = low_Q_max +
-    (
-        (
-            (temperature - low_temperature) * 
-            (high_Q_max - low_Q_max)
-        ) / 
-        (high_temperature - low_temperature)                
-    );
-
-    bm_print(BM_LOG_FULL, "[fgauge_get_Q_max] Q_max = %d\r\n", ret_Q_max);
-
-    return ret_Q_max;
-}
-
-
-kal_int32 fgauge_get_Q_max_high_current(kal_int16 temperature)
-{
-    kal_int32 ret_Q_max=0;
-    kal_int32 low_temperature = 0, high_temperature = 0;
-    kal_int32 low_Q_max = 0, high_Q_max = 0;
-
-    if (temperature <= TEMPERATURE_T1)
-    {
-        low_temperature = (-10);
-        high_temperature = TEMPERATURE_T1;
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_NEG_10_H_CURRENT;
-			high_Q_max = BYD_Q_MAX_POS_0_H_CURRENT;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_NEG_10_H_CURRENT;
-			high_Q_max = SCUD_Q_MAX_POS_0_H_CURRENT;
-		}
-#else
-        low_Q_max = Q_MAX_NEG_10_H_CURRENT;
-        high_Q_max = Q_MAX_POS_0_H_CURRENT;
-#endif
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else if (temperature <= TEMPERATURE_T2)
-    {
-        low_temperature = TEMPERATURE_T1;
-        high_temperature = TEMPERATURE_T2;
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_POS_0_H_CURRENT;
-			high_Q_max = BYD_Q_MAX_POS_25_H_CURRENT;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_POS_0_H_CURRENT;
-			high_Q_max = SCUD_Q_MAX_POS_25_H_CURRENT;
-		}
-#else
-        low_Q_max = Q_MAX_POS_0_H_CURRENT;
-        high_Q_max = Q_MAX_POS_25_H_CURRENT;
-#endif
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else
-    {
-        low_temperature  = TEMPERATURE_T2;
-        high_temperature = TEMPERATURE_T3;
-#ifdef BATT_ID_CHECK_SUPPORT
-		if (byd_sucd_batt_id == 1)
-		{
-			low_Q_max = BYD_Q_MAX_POS_25_H_CURRENT;
-			high_Q_max = BYD_Q_MAX_POS_50_H_CURRENT;
-		}
-		else
-		{
-			low_Q_max = SCUD_Q_MAX_POS_25_H_CURRENT;
-			high_Q_max = SCUD_Q_MAX_POS_50_H_CURRENT;
-		}
-#else
-        low_Q_max = Q_MAX_POS_25_H_CURRENT;
-        high_Q_max = Q_MAX_POS_50_H_CURRENT;
-#endif
-        
-        if(temperature > high_temperature)
-        {
-            temperature = high_temperature;
-        }
-    }
-
-    ret_Q_max = low_Q_max +
-    (
-        (
-            (temperature - low_temperature) * 
-            (high_Q_max - low_Q_max)
-        ) / 
-        (high_temperature - low_temperature)                
-    );
-
-    bm_print(BM_LOG_FULL, "[fgauge_get_Q_max_high_current] Q_max = %d\r\n", ret_Q_max);
-
-    return ret_Q_max;
-}
-
-#endif
-
 int BattVoltToTemp(int dwVolt)
 {
     kal_int64 TRes_temp;
@@ -718,7 +283,16 @@ int BattVoltToTemp(int dwVolt)
 
     /* convert register to temperature */
     sBaTTMP = BattThermistorConverTemp((int)TRes);
-      
+#ifdef SUPPORT_TINNO_BATTERY_DEBUG
+	if(use_fake_temp_flag!=0)
+	return fake_temp;
+#endif	  
+
+	if(check_bq27541_state())
+	{
+		sBaTTMP= read_battery_temp();
+	}
+
     return sBaTTMP;
 }
 
@@ -772,168 +346,14 @@ int force_get_tbat(void)
 }
 EXPORT_SYMBOL(force_get_tbat);
 
-#ifdef MTK_MULTI_BAT_PROFILE_SUPPORT
 int fgauge_get_saddles(void)
 {
-#ifdef BATT_ID_CHECK_SUPPORT
-	if (byd_sucd_batt_id == 1)
-		return sizeof(byd_battery_profile_t2) / sizeof(BATTERY_PROFILE_STRUC);
-	else
-		return sizeof(scud_battery_profile_t2) / sizeof(BATTERY_PROFILE_STRUC);
-#else
-    return sizeof(battery_profile_temperature) / sizeof(BATTERY_PROFILE_STRUC);
-#endif
-}
-
-int fgauge_get_saddles_r_table(void)
-{
-#ifdef BATT_ID_CHECK_SUPPORT
-	if (byd_sucd_batt_id == 1)
-		return sizeof(byd_r_profile_t2) / sizeof(R_PROFILE_STRUC);
-	else
-		return sizeof(scud_r_profile_t2) / sizeof(R_PROFILE_STRUC);
-#else
-    return sizeof(r_profile_temperature) / sizeof(R_PROFILE_STRUC);
-#endif
-}
-
-BATTERY_PROFILE_STRUC_P fgauge_get_profile(kal_uint32 temperature)
-{
-    switch (temperature)
-    {
-        case TEMPERATURE_T0:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_battery_profile_t0[0];
-			else
-				return &scud_battery_profile_t0[0];
-#else
-            return &battery_profile_t0;
-#endif
-            break;    
-        case TEMPERATURE_T1:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_battery_profile_t1[0];
-			else
-				return &scud_battery_profile_t1[0];
-#else
-            return &battery_profile_t1[0];
-#endif
-            break;
-        case TEMPERATURE_T2:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_battery_profile_t2[0];
-			else
-				return &scud_battery_profile_t2[0];
-#else
-            return &battery_profile_t2[0];
-#endif
-            break;
-        case TEMPERATURE_T3:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_battery_profile_t3[0];
-			else
-				return &scud_battery_profile_t3[0];
-#else
-            return &battery_profile_t3[0];
-#endif
-            break;
-        case TEMPERATURE_T:
-            return &battery_profile_temperature[0];
-            break;
-        default:
-            return NULL;
-            break;
-    }
-}
-
-R_PROFILE_STRUC_P fgauge_get_profile_r_table(kal_uint32 temperature)
-{
-    switch (temperature)
-    {
-        case TEMPERATURE_T0:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_r_profile_t0[0];
-			else
-				return &scud_r_profile_t0[0];
-#else
-            return &r_profile_t0[0];
-#endif
-            break;
-        case TEMPERATURE_T1:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_r_profile_t1[0];
-			else
-				return &scud_r_profile_t1[0];
-#else
-            return &r_profile_t1[0];
-#endif
-            break;
-		case TEMPERATURE_T2:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_r_profile_t2[0];
-			else
-				return &scud_r_profile_t2[0];
-#else
-            return &r_profile_t2[0];
-#endif
-            break;
-        case TEMPERATURE_T3:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_r_profile_t3[0];
-			else
-				return &scud_r_profile_t3[0];
-#else
-            return &r_profile_t3[0];
-#endif
-            break;
-        case TEMPERATURE_T:
-            return &r_profile_temperature[0];
-            break;
-        default:
-            return NULL;
-            break;
-    }
-}
-#else
-int fgauge_get_saddles(void)
-{
-#ifdef BATT_ID_CHECK_SUPPORT
-	if (byd_sucd_batt_id == 1)
-	{
-		return sizeof(byd_battery_profile_t2) / sizeof(BATTERY_PROFILE_STRUC);
-	}
-	else
-	{
-		return sizeof(scud_battery_profile_t2) / sizeof(BATTERY_PROFILE_STRUC);
-	}
-#else
     return sizeof(battery_profile_t2) / sizeof(BATTERY_PROFILE_STRUC);
-#endif
 }
 
 int fgauge_get_saddles_r_table(void)
 {
-#ifdef BATT_ID_CHECK_SUPPORT
-	if (byd_sucd_batt_id == 1)
-	{
-		return sizeof(byd_r_profile_t2) / sizeof(R_PROFILE_STRUC);
-	}
-	else
-	{
-		return sizeof(scud_r_profile_t2) / sizeof(R_PROFILE_STRUC);
-	}
-#else
     return sizeof(r_profile_t2) / sizeof(R_PROFILE_STRUC);
-#endif
-
 }
 
 BATTERY_PROFILE_STRUC_P fgauge_get_profile(kal_uint32 temperature)
@@ -941,44 +361,16 @@ BATTERY_PROFILE_STRUC_P fgauge_get_profile(kal_uint32 temperature)
     switch (temperature)
     {
         case TEMPERATURE_T0:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_battery_profile_t0[0];
-			else
-				return &scud_battery_profile_t0[0];
-#else
             return &battery_profile_t0[0];
-#endif
             break;    
         case TEMPERATURE_T1:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_battery_profile_t1[0];
-			else
-				return &scud_battery_profile_t1[0];
-#else
             return &battery_profile_t1[0];
-#endif
             break;
         case TEMPERATURE_T2:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_battery_profile_t2[0];
-			else
-				return &scud_battery_profile_t2[0];
-#else
             return &battery_profile_t2[0];
-#endif
             break;
         case TEMPERATURE_T3:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_battery_profile_t3[0];
-			else
-				return &scud_battery_profile_t3[0];
-#else
             return &battery_profile_t3[0];
-#endif
             break;
         case TEMPERATURE_T:
             return &battery_profile_temperature[0];
@@ -994,44 +386,16 @@ R_PROFILE_STRUC_P fgauge_get_profile_r_table(kal_uint32 temperature)
     switch (temperature)
     {
         case TEMPERATURE_T0:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_r_profile_t0[0];
-			else
-				return &scud_r_profile_t0[0];
-#else
             return &r_profile_t0[0];
-#endif
             break;
         case TEMPERATURE_T1:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_r_profile_t1[0];
-			else
-				return &scud_r_profile_t1[0];
-#else
             return &r_profile_t1[0];
-#endif
             break;
         case TEMPERATURE_T2:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_r_profile_t2[0];
-			else
-				return &scud_r_profile_t2[0];
-#else
             return &r_profile_t2[0];
-#endif
             break;
         case TEMPERATURE_T3:
-#ifdef BATT_ID_CHECK_SUPPORT
-			if (byd_sucd_batt_id == 1)
-				return &byd_r_profile_t3[0];
-			else
-				return &scud_r_profile_t3[0];
-#else
             return &r_profile_t3[0];
-#endif
             break;
         case TEMPERATURE_T:
             return &r_profile_temperature[0];
@@ -1041,7 +405,7 @@ R_PROFILE_STRUC_P fgauge_get_profile_r_table(kal_uint32 temperature)
             break;
     }
 }
-#endif
+
 
 kal_int32 fgauge_read_capacity_by_v(kal_int32 voltage)
 {    
@@ -1133,6 +497,50 @@ kal_int32 fgauge_read_v_by_capacity(int bat_capacity)
     return ret_volt;
 }
 
+#ifdef TINNO_NEW_FUNC_INIT_TABLE
+kal_int32 fgauge_read_d_by_v_by_table(BATTERY_PROFILE_STRUC_P profile_p,kal_int32 volt_bat)
+{
+    int i = 0, saddles = 0;
+    kal_int32 ret_d = 0;
+    if (profile_p == NULL)
+    {
+        bm_print(BM_LOG_CRTI, "[FGADC] fgauge get ZCV profile : fail !\r\n");
+        return 100;
+    }
+
+    saddles = fgauge_get_saddles();
+
+    if (volt_bat > (profile_p+0)->voltage)
+    {
+        return 0; 
+    }    
+    if (volt_bat < (profile_p+saddles-1)->voltage)
+    {
+        return 100; 
+    }
+
+    for (i = 0; i < saddles - 1; i++)
+    {
+        if ((volt_bat <= (profile_p+i)->voltage) && (volt_bat >= (profile_p+i+1)->voltage))
+        {
+            ret_d = (profile_p+i)->percentage +
+                (
+                    (
+                        ( ((profile_p+i)->voltage) - volt_bat ) * 
+                        ( ((profile_p+i+1)->percentage) - ((profile_p + i)->percentage) ) 
+                    ) /
+                    ( ((profile_p+i)->voltage) - ((profile_p+i+1)->voltage) )
+                );         
+            
+            break;
+        }
+        
+    }
+
+    return ret_d;
+}
+#endif
+
 kal_int32 fgauge_read_d_by_v(kal_int32 volt_bat)
 {    
     int i = 0, saddles = 0;
@@ -1222,6 +630,48 @@ kal_int32 fgauge_read_v_by_d(int d_val)
     return ret_volt;
 }
 
+#ifdef TINNO_NEW_FUNC_INIT_TABLE
+kal_int32 fgauge_read_r_bat_by_v_by_table(R_PROFILE_STRUC_P profile_p,kal_int32 voltage){
+ int i = 0, saddles = 0;
+    kal_int32 ret_r = 0;
+
+    if (profile_p == NULL)
+    {
+        bm_print(BM_LOG_CRTI, "[FGADC] fgauge get R-Table profile : fail !\r\n");
+        return 0;
+    }
+
+    saddles = fgauge_get_saddles_r_table();
+
+    if (voltage > (profile_p+0)->voltage)
+    {
+        return (profile_p+0)->resistance; 
+    }    
+    if (voltage < (profile_p+saddles-1)->voltage)
+    {
+        return (profile_p+saddles-1)->resistance; 
+    }
+
+    for (i = 0; i < saddles - 1; i++)
+    {
+        if ((voltage <= (profile_p+i)->voltage) && (voltage >= (profile_p+i+1)->voltage))
+        {
+            ret_r = (profile_p+i)->resistance +
+                (
+                    (
+                        ( ((profile_p+i)->voltage) - voltage ) * 
+                        ( ((profile_p+i+1)->resistance) - ((profile_p + i)->resistance) ) 
+                    ) /
+                    ( ((profile_p+i)->voltage) - ((profile_p+i+1)->voltage) )
+                );
+            break;
+        }
+    }
+    return ret_r;
+}
+#endif
+
+
 kal_int32 fgauge_read_r_bat_by_v(kal_int32 voltage)
 {    
     int i = 0, saddles = 0;
@@ -1261,11 +711,132 @@ kal_int32 fgauge_read_r_bat_by_v(kal_int32 voltage)
             break;
         }
     }
+#ifdef MTK_BAT_R_COMPENSTAE
+if(upmu_is_chr_det() == KAL_FALSE)
+{
+	ret_r=(ret_r*4)/5;
+}
+#endif
 
     return ret_r;
 }
 
+#ifdef TINNO_NEW_FUNC_INIT_TABLE
+void fgauge_construct_battery_profile(kal_int32 temperature, BATTERY_PROFILE_STRUC_P temp_profile_p)
+{
+    BATTERY_PROFILE_STRUC_P low_profile_p, high_profile_p;
+    kal_int32 low_temperature, high_temperature;
+    int i, saddles;
+    kal_int32 temp_d_1 = 0, temp_d_2 = 0;
+    kal_int32 high_profile_d = 0, low_profile_d = 0;
 
+    if (temperature <= TEMPERATURE_T1)
+    {
+        low_profile_p    = fgauge_get_profile(TEMPERATURE_T0);
+        high_profile_p   = fgauge_get_profile(TEMPERATURE_T1);
+        low_temperature  = (-10);
+        high_temperature = TEMPERATURE_T1;
+        
+        if(temperature < low_temperature)
+        {
+            temperature = low_temperature;
+        }
+    }
+    else if (temperature <= TEMPERATURE_T2)
+    {
+        low_profile_p    = fgauge_get_profile(TEMPERATURE_T1);
+        high_profile_p   = fgauge_get_profile(TEMPERATURE_T2);
+        low_temperature  = TEMPERATURE_T1;
+        high_temperature = TEMPERATURE_T2;
+        
+        if(temperature < low_temperature)
+        {
+            temperature = low_temperature;
+        }
+    }
+    else
+    {
+        low_profile_p    = fgauge_get_profile(TEMPERATURE_T2);
+        high_profile_p   = fgauge_get_profile(TEMPERATURE_T3);
+        low_temperature  = TEMPERATURE_T2;
+        high_temperature = TEMPERATURE_T3;
+        
+        if(temperature > high_temperature)
+        {
+            temperature = high_temperature;
+        }
+    }
+
+    saddles = fgauge_get_saddles();
+
+    for (i = 0; i < saddles; i++)
+    {
+            (temp_profile_p + i)->voltage =(high_profile_p + i)->voltage;
+
+     }
+
+
+
+    /* Interpolation for R_BAT */
+    for (i = 0; i < saddles; i++)
+    {
+	high_profile_d=fgauge_read_d_by_v_by_table(high_profile_p,(temp_profile_p + i)->voltage);
+	low_profile_d=fgauge_read_d_by_v_by_table(low_profile_p,(temp_profile_p + i)->voltage);
+	
+        if( high_profile_d>low_profile_d)
+        {
+            temp_d_1 = high_profile_d;
+            temp_d_2 =low_profile_d;    
+
+            (temp_profile_p + i)->percentage = temp_d_2 +
+            (
+                (
+                    (temperature - low_temperature) * 
+                    (temp_d_1 - temp_d_2)
+                ) / 
+                (high_temperature - low_temperature)                
+            );
+        }
+        else
+        {
+            temp_d_1 =low_profile_d;
+            temp_d_2 =high_profile_d;
+
+            (temp_profile_p + i)->percentage= temp_d_2 +
+            (
+                (
+                    (high_temperature - temperature) * 
+                    (temp_d_1 - temp_d_2)
+                ) / 
+                (high_temperature - low_temperature)                
+            );
+        }
+
+
+	
+
+#if 0        
+        (temp_profile_p + i)->voltage = temp_v_2 +
+            (
+                (
+                    (temperature - low_temperature) * 
+                    (temp_v_1 - temp_v_2)
+                ) / 
+                (high_temperature - low_temperature)                
+            );
+#endif
+    }
+
+    
+    // Dumpt new battery profile
+    for (i = 0; i < saddles ; i++)
+    {
+        bm_print(BM_LOG_CRTI, "<DOD,Voltage> at %d = <%d,%d>\r\n",
+            temperature, (temp_profile_p+i)->percentage, (temp_profile_p+i)->voltage);
+    }
+    
+}
+#else
 void fgauge_construct_battery_profile(kal_int32 temperature, BATTERY_PROFILE_STRUC_P temp_profile_p)
 {
     BATTERY_PROFILE_STRUC_P low_profile_p, high_profile_p;
@@ -1365,7 +936,121 @@ void fgauge_construct_battery_profile(kal_int32 temperature, BATTERY_PROFILE_STR
     }
     
 }
+#endif
 
+#ifdef TINNO_NEW_FUNC_INIT_TABLE
+void fgauge_construct_r_table_profile(kal_int32 temperature, R_PROFILE_STRUC_P temp_profile_p)
+{
+    R_PROFILE_STRUC_P low_profile_p, high_profile_p;
+    kal_int32 low_temperature, high_temperature;
+    int i, saddles;
+    kal_int32 high_profile_r = 0, low_profile_r = 0;
+    kal_int32 temp_r_1 = 0, temp_r_2 = 0;
+    
+
+    if (temperature <= TEMPERATURE_T1)
+    {
+        low_profile_p    = fgauge_get_profile_r_table(TEMPERATURE_T0);
+        high_profile_p   = fgauge_get_profile_r_table(TEMPERATURE_T1);
+        low_temperature  = (-10);
+        high_temperature = TEMPERATURE_T1;
+        
+        if(temperature < low_temperature)
+        {
+            temperature = low_temperature;
+        }
+    }
+    else if (temperature <= TEMPERATURE_T2)
+    {
+        low_profile_p    = fgauge_get_profile_r_table(TEMPERATURE_T1);
+        high_profile_p   = fgauge_get_profile_r_table(TEMPERATURE_T2);
+        low_temperature  = TEMPERATURE_T1;
+        high_temperature = TEMPERATURE_T2;
+        
+        if(temperature < low_temperature)
+        {
+            temperature = low_temperature;
+        }
+    }
+    else
+    {
+        low_profile_p    = fgauge_get_profile_r_table(TEMPERATURE_T2);
+        high_profile_p   = fgauge_get_profile_r_table(TEMPERATURE_T3);
+        low_temperature  = TEMPERATURE_T2;
+        high_temperature = TEMPERATURE_T3;
+        
+        if(temperature > high_temperature)
+        {
+            temperature = high_temperature;
+        }
+    }
+
+    saddles = fgauge_get_saddles_r_table();
+
+/*use the high temp voltage*/
+ for (i = 0; i < saddles; i++){
+	 (temp_profile_p + i)->voltage =(high_profile_p + i)->voltage;
+ }
+
+
+    /* Interpolation for R_BAT */
+    for (i = 0; i < saddles; i++)
+    {
+	high_profile_r=fgauge_read_r_bat_by_v_by_table(high_profile_p,(temp_profile_p + i)->voltage);
+	low_profile_r=fgauge_read_r_bat_by_v_by_table(low_profile_p,(temp_profile_p + i)->voltage);
+	
+        if( high_profile_r>low_profile_r)
+        {
+            temp_r_1 = high_profile_r;
+            temp_r_2 =low_profile_r;    
+
+            (temp_profile_p + i)->resistance = temp_r_2 +
+            (
+                (
+                    (temperature - low_temperature) * 
+                    (temp_r_1 - temp_r_2)
+                ) / 
+                (high_temperature - low_temperature)                
+            );
+        }
+        else
+        {
+            temp_r_1 =low_profile_r;
+            temp_r_2 =high_profile_r;
+
+            (temp_profile_p + i)->resistance = temp_r_2 +
+            (
+                (
+                    (high_temperature - temperature) * 
+                    (temp_r_1 - temp_r_2)
+                ) / 
+                (high_temperature - low_temperature)                
+            );
+        }
+
+#if 0    
+        //(temp_profile_p + i)->voltage = (high_profile_p + i)->voltage;
+        
+        (temp_profile_p + i)->resistance = temp_r_2 +
+            (
+                (
+                    (temperature - low_temperature) * 
+                    (temp_r_1 - temp_r_2)
+                ) / 
+                (high_temperature - low_temperature)                
+            );
+#endif
+    }
+
+    // Dumpt new r-table profile
+    for (i = 0; i < saddles ; i++)
+    {
+        bm_print(BM_LOG_CRTI, "<Rbat,VBAT> at %d = <%d,%d>\r\n",
+            temperature, (temp_profile_p+i)->resistance, (temp_profile_p+i)->voltage);
+    }
+    
+}
+#else 
 void fgauge_construct_r_table_profile(kal_int32 temperature, R_PROFILE_STRUC_P temp_profile_p)
 {
     R_PROFILE_STRUC_P low_profile_p, high_profile_p;
@@ -1514,49 +1199,8 @@ void fgauge_construct_r_table_profile(kal_int32 temperature, R_PROFILE_STRUC_P t
     
 }
 
-void fgauge_construct_table_by_temp(void)
-{
-#if defined(CONFIG_POWER_EXT)
-#else
-    kal_uint32 i;
-    static kal_int32 init_temp = KAL_TRUE;
-    static kal_int32 curr_temp, last_temp, avg_temp;
-    static kal_int32 battTempBuffer[TEMP_AVERAGE_SIZE];
-    static kal_int32 temperature_sum;
-    static kal_uint8 tempIndex = 0;
-
-    curr_temp = battery_meter_get_battery_temperature();
-
-    // Temperature window init
-    if (init_temp == KAL_TRUE)
-    {
-        for (i=0; i<TEMP_AVERAGE_SIZE; i++)
-		{
-            battTempBuffer[i] = curr_temp;            
-		}
-        last_temp = curr_temp;
-        temperature_sum = curr_temp * TEMP_AVERAGE_SIZE;
-        init_temp = KAL_FALSE;
-    }
-
-    // Temperature sliding window 
-	temperature_sum -= battTempBuffer[tempIndex];
-	temperature_sum += curr_temp;
-	battTempBuffer[tempIndex] = curr_temp;
-    avg_temp = (temperature_sum)/TEMP_AVERAGE_SIZE;
-
-    if (avg_temp != last_temp)
-    {
-        bm_print(BM_LOG_FULL, "[fgauge_construct_table_by_temp] reconstruct table by temperature change from (%d) to (%d)\r\n", last_temp, avg_temp);
-        fgauge_construct_r_table_profile(curr_temp, fgauge_get_profile_r_table(TEMPERATURE_T));
-        fgauge_construct_battery_profile(curr_temp, fgauge_get_profile(TEMPERATURE_T));
-        last_temp = avg_temp;
-    }
-
-    tempIndex = (tempIndex+1)%TEMP_AVERAGE_SIZE;
 
 #endif
-}
 
 void fg_qmax_update_for_aging(void)
 {
@@ -1578,18 +1222,7 @@ void fg_qmax_update_for_aging(void)
 
             if(gFG_BATT_CAPACITY_aging == 0)
             {
-#ifdef BATT_ID_CHECK_SUPPORT
-				if (byd_sucd_batt_id == 1)
-				{
-					gFG_BATT_CAPACITY_aging = BYD_Q_MAX_POS_25;
-				}
-				else
-				{
-					gFG_BATT_CAPACITY_aging = SCUD_Q_MAX_POS_25;
-				}
-#else
-                gFG_BATT_CAPACITY_aging = fgauge_get_Q_max(battery_meter_get_battery_temperature());
-#endif
+                gFG_BATT_CAPACITY_aging = Q_MAX_POS_25;
                 bm_print(BM_LOG_CRTI, "[fg_qmax_update_for_aging] error, restore gFG_BATT_CAPACITY_aging (%d)\n", gFG_BATT_CAPACITY_aging);
             }
             
@@ -1622,8 +1255,7 @@ void dod_init(void)
         gFG_voltage, gFG_capacity_by_v, gFG_capacity_by_v_init);
     
     // compare with hw_ocv & sw_ocv, check if less than or equal to 5% tolerance 
-    if ((abs(gFG_capacity_by_v_init - gFG_capacity_by_v) > 5) && (bat_is_charger_exist() == KAL_TRUE))
-    {
+    if (abs(gFG_capacity_by_v_init - gFG_capacity_by_v) > 5) {
         gFG_capacity_by_v = gFG_capacity_by_v_init;
     }
     //-------------------------------------------------------------------------------
@@ -1636,19 +1268,53 @@ void dod_init(void)
     #endif
     if(g_rtc_fg_soc >= gFG_capacity_by_v)
     {
-        if(((g_rtc_fg_soc != 0) && ((g_rtc_fg_soc-gFG_capacity_by_v) < CUST_POWERON_DELTA_CAPACITY_TOLRANCE) &&(( gFG_capacity_by_v > CUST_POWERON_LOW_CAPACITY_TOLRANCE || bat_is_charger_exist() == KAL_TRUE)))
+//	if(((g_rtc_fg_soc != 0) && ((g_rtc_fg_soc-gFG_capacity_by_v) < 10)&&(( gFG_capacity_by_v > 5 || bat_is_charger_exist() == KAL_TRUE))))
+        if(((g_rtc_fg_soc != 0) && ((g_rtc_fg_soc-gFG_capacity_by_v) < CUST_POWERON_DELTA_CAPACITY_TOLRANCE) &&(( gFG_capacity_by_v > CUST_POWERON_LOW_CAPACITY_TOLRANCE /*|| bat_is_charger_exist() == KAL_TRUE*/)))
 			|| ((g_rtc_fg_soc != 0) &&(g_boot_reason == BR_WDT_BY_PASS_PWK || g_boot_reason == BR_WDT || g_boot_reason == BR_TOOL_BY_PASS_PWK || g_boot_reason == BR_2SEC_REBOOT || g_boot_mode == RECOVERY_BOOT)))
             
         {
-            gFG_capacity_by_v = g_rtc_fg_soc;            
+//modify by alik
+           if((g_rtc_fg_soc-gFG_capacity_by_v) >((CUST_POWERON_DELTA_CAPACITY_TOLRANCE*2)/3))
+           {
+		gFG_capacity_by_v=(g_rtc_fg_soc*2+gFG_capacity_by_v)/3;
+	    }
+	     else if((g_rtc_fg_soc-gFG_capacity_by_v) >(CUST_POWERON_DELTA_CAPACITY_TOLRANCE/2))
+		{
+		gFG_capacity_by_v=(g_rtc_fg_soc+gFG_capacity_by_v)/2;
+	    }else
+		 {
+            		gFG_capacity_by_v = g_rtc_fg_soc;
+	     	}
+//modify end		 
         }
     }
     else
     {
-    	if(((g_rtc_fg_soc != 0) && ((gFG_capacity_by_v-g_rtc_fg_soc) < CUST_POWERON_DELTA_CAPACITY_TOLRANCE) &&(( gFG_capacity_by_v > CUST_POWERON_LOW_CAPACITY_TOLRANCE || bat_is_charger_exist() == KAL_TRUE)))
+    	if(((g_rtc_fg_soc != 0) && ((gFG_capacity_by_v-g_rtc_fg_soc) < CUST_POWERON_DELTA_CAPACITY_TOLRANCE) &&(( gFG_capacity_by_v > CUST_POWERON_LOW_CAPACITY_TOLRANCE /*|| bat_is_charger_exist() == KAL_TRUE*/)))
 			|| ((g_rtc_fg_soc != 0) &&(g_boot_reason == BR_WDT_BY_PASS_PWK || g_boot_reason == BR_WDT || g_boot_reason == BR_TOOL_BY_PASS_PWK || g_boot_reason == BR_2SEC_REBOOT || g_boot_mode == RECOVERY_BOOT)))
         {
-            gFG_capacity_by_v = g_rtc_fg_soc;            
+#if 0    /* do not allowed the  gFG_capacity_by_v >g_rtc_fg_soc */
+ //modify by alik       
+		if((gFG_capacity_by_v-g_rtc_fg_soc) >((CUST_POWERON_DELTA_CAPACITY_TOLRANCE*2)/3))
+		{
+			gFG_capacity_by_v=(g_rtc_fg_soc*2+gFG_capacity_by_v)/3;
+		}	  
+		else if((gFG_capacity_by_v-g_rtc_fg_soc) >(CUST_POWERON_DELTA_CAPACITY_TOLRANCE/2))
+		{
+			gFG_capacity_by_v=(g_rtc_fg_soc+gFG_capacity_by_v)/2;
+		}
+		else{
+			gFG_capacity_by_v = g_rtc_fg_soc;
+		}      
+//modify end	
+#else
+			if((g_rtc_fg_soc==1)&&(gFG_capacity_by_v>=4))
+			{
+				gFG_capacity_by_v=4;
+			}else{
+				gFG_capacity_by_v = g_rtc_fg_soc;
+			}
+#endif
         }
     }        
 
@@ -1721,29 +1387,26 @@ void oam_init(void)
     int ret=0;
 	int vol_bat=0;
 	kal_int32 vbat_capacity = 0;
-
+#ifdef SUPPORT_TINNO_BATTERY_COMPENSATE
+        int hw_ocv_vol=0;
+#endif
 	vol_bat = 5; //set avg times
     ret = battery_meter_ctrl(BATTERY_METER_CMD_GET_ADC_V_BAT_SENSE, &vol_bat);
     ret = battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_OCV, &gFG_voltage);
-
-    // JRD added for fuel gauge issue PR679477 start
-	bm_print(BM_LOG_CRTI,"~~willcaiRead hw_ocv(%d) \n",gFG_voltage);
-        IsBatMeterInited=KAL_TRUE;
-	if(UbVbat!=0)
-	{
-		if (UbVbat &(1 << 31))
-		{
-			bm_print(BM_LOG_CRTI,"charger exist ~~willcaiSet gFG_voltage(%d) to UbVbat(%d)\n ",gFG_voltage,UbVbat);
-			UbVbat &= ~(1 << 31);
-		}
-		gFG_voltage = UbVbat;
-		bm_print(BM_LOG_CRTI,"~~willcaiSet gFG_voltage(%d) to UbVbat(%d)\n ",gFG_voltage,UbVbat);
-	}
-    // JRD added for fuel gauge issue PR679477 end
-
-	gFG_capacity_by_v = fgauge_read_capacity_by_v(gFG_voltage);
-	vbat_capacity = fgauge_read_capacity_by_v(vol_bat);
 	
+#ifdef SUPPORT_TINNO_BATTERY_COMPENSATE
+        hw_ocv_vol=gFG_voltage;
+        bm_print(BM_LOG_CRTI, "[oam_init_tinno] hw_ocv_vol gFG_voltage=%d \n",gFG_voltage);
+	    gFG_voltage=g_battery_init_voltage;
+	  bm_print(BM_LOG_CRTI, "[oam_init_tinno] before tracking gFG_voltage=%d \n",gFG_voltage);
+	    gFG_voltage = gFG_voltage + mtk_imp_tracking(gFG_voltage,LK_CURRENT,5); //mV  
+	  bm_print(BM_LOG_CRTI, "[oam_init_tinno] after tracking gFG_voltage=%d ,hw_ocv_vol=%d , distance:%d \n",gFG_voltage,hw_ocv_vol,(hw_ocv_vol-gFG_voltage));
+	   
+#endif
+	gFG_capacity_by_v = fgauge_read_capacity_by_v(gFG_voltage);
+
+#ifndef SUPPORT_TINNO_BATTERY_COMPENSATE
+	vbat_capacity = fgauge_read_capacity_by_v(vol_bat);
     if(bat_is_charger_exist() == KAL_TRUE)
     {
     	bm_print(BM_LOG_CRTI, "[oam_init_inf] gFG_capacity_by_v=%d, vbat_capacity=%d, \n",gFG_capacity_by_v,vbat_capacity);
@@ -1758,22 +1421,13 @@ void oam_init(void)
 			gFG_capacity_by_v = vbat_capacity;
     	}   	
     }    
+#endif	
 	
     gFG_capacity_by_v_init = gFG_capacity_by_v;
 
     dod_init();
-#ifdef BATT_ID_CHECK_SUPPORT
-	if (byd_sucd_batt_id == 1)
-	{
-		gFG_BATT_CAPACITY_aging = BYD_Q_MAX_POS_25;
-	}
-	else
-	{
-		gFG_BATT_CAPACITY_aging = SCUD_Q_MAX_POS_25;
-	}
-#else
-    gFG_BATT_CAPACITY_aging = fgauge_get_Q_max(battery_meter_get_battery_temperature());
-#endif
+
+    gFG_BATT_CAPACITY_aging = Q_MAX_POS_25;
 
     //oam_v_ocv_1 = gFG_voltage;
     //oam_v_ocv_2 = gFG_voltage;
@@ -1835,103 +1489,114 @@ void oam_run(void)
 	last_oam_run_time.tv_sec, now_time.tv_sec, delta_time);
 	
 	last_oam_run_time = now_time;
-
-    // Reconstruct table if temp changed;
-    fgauge_construct_table_by_temp();
-    bm_print(BM_LOG_CRTI,"~~UbVbat: %d  \n ",UbVbat);// JRD added for fuel gauge issue PR679477 start
-
+		
     vol_bat = 15; //set avg times
     ret = battery_meter_ctrl(BATTERY_METER_CMD_GET_ADC_V_BAT_SENSE, &vol_bat);
 
     //ret = battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_OCV, &vol_bat_hw_ocv);
     //d_hw_ocv = fgauge_read_d_by_v(vol_bat_hw_ocv);
-#if defined(JRD_FUEL_GAUGE_OPTIMIZE)
-	oam_i_1 = (((oam_v_ocv_1-vol_bat)*1000)*10) / oam_r_1;    //0.1mA
-    oam_i_2 = (((oam_v_ocv_2-vol_bat)*1000)*10) / oam_r_2;    //0.1mA
 
-	 if(gFG_Is_Charging == KAL_FALSE)
-	 {
-		 if (oam_d_2 < 20)
-			if(oam_i_2 > 9000)
-				vol_bat -= 90;
-			else if(oam_i_2 > 8000)
-				vol_bat -= 80;
-			else if (oam_i_2 > 7000)
-				vol_bat -= 70;
-			else if (oam_i_2 > 6000)
-				vol_bat -= 60;
-			else if (oam_i_2 > 5000)
-				vol_bat -= 50;
-			else if (oam_i_2 > 4000)
-				vol_bat -= 40;
-			else if (oam_i_2 > 3000)
-				vol_bat -= 30;
-			else
-				vol_bat -= 20;
-		else if (oam_d_2 < 40)
-			if(oam_i_2 > 9000)
-				vol_bat -= 85;
-			else if(oam_i_2 > 8000)
-				vol_bat -= 75;
-			else if (oam_i_2 > 7000)
-				vol_bat -= 65;
-			else if (oam_i_2 > 6000)
-				vol_bat -= 55;
-			else if (oam_i_2 > 5000)
-				vol_bat -= 45;
-			else if (oam_i_2 > 4000)
-				vol_bat -= 35;
-			else if (oam_i_2 > 3000)
-				vol_bat -= 25;
-			else
-				vol_bat -= 15;
-		else if (oam_d_2 < 60)
-			if(oam_i_2 > 9000)
-				vol_bat -= 80;
-			else if(oam_i_2 > 8000)
-				vol_bat -= 70;
-			else if (oam_i_2 > 7000)
-				vol_bat -= 60;
-			else if (oam_i_2> 6000)
-				vol_bat -= 50;
-			else if (oam_i_2 > 5000)
-				vol_bat -= 40;
-			else if (oam_i_2 > 4000)
-				vol_bat -= 30;
-			else if (oam_i_2 > 3000)
-				vol_bat -= 20;
-			else
-				vol_bat -= 10;
-		else if ((oam_d_2 < 85) &&(BMT_status.bat_vol > 3600))
-			if(oam_i_2 > 9000)
-				vol_bat -= 75;
-			else if(oam_i_2 > 8000)
-				vol_bat -= 65;
-			else if (oam_i_2 > 7000)
-				vol_bat -= 55;
-			else if (oam_i_2 > 6000)
-				vol_bat -= 45;
-			else if (oam_i_2 > 5000)
-				vol_bat -= 35;
-			else if (oam_i_2 > 4000)
-				vol_bat -= 25;
-			else if (oam_i_2 > 3000)
-				vol_bat -= 15;
-			else
-				vol_bat -= 5;
-	 }
+#ifdef TINNO_BAT_R_COMPENSTAE
+    int temperature = force_get_tbat();
+	if(temperature>=25)
+     {
+    	if(((temperature-g_table_temp)>TEMP_COMPENSATE_RANGE)||((g_table_temp-temperature)>TEMP_COMPENSATE_RANGE))
+    	{
+	   	 table_init();
+	    	bm_print(BM_LOG_CRTI,"before temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
+		oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	 
+	    oam_r_1 = fgauge_read_r_bat_by_v(oam_v_ocv_1);
+	    oam_v_ocv_2 = fgauge_read_v_by_d(oam_d_2);
+	    oam_r_2 = fgauge_read_r_bat_by_v(oam_v_ocv_2);    
+		bm_print(BM_LOG_CRTI,"after temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
+		oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	 
+		 
+	}
+    }else{
+                if(temperature!=g_table_temp)
+                {
+		  	table_init();
+			bm_print(BM_LOG_CRTI,"before temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
+			oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	 
+			oam_r_1 = fgauge_read_r_bat_by_v(oam_v_ocv_1);
+			oam_v_ocv_2 = fgauge_read_v_by_d(oam_d_2);
+			oam_r_2 = fgauge_read_r_bat_by_v(oam_v_ocv_2);    
+			bm_print(BM_LOG_CRTI,"after temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
+			oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);
+                }
+	}
 #endif
+    
     oam_i_1 = (((oam_v_ocv_1-vol_bat)*1000)*10) / oam_r_1;    //0.1mA
     oam_i_2 = (((oam_v_ocv_2-vol_bat)*1000)*10) / oam_r_2;    //0.1mA
+
+
+#ifdef TINNO_BAT_R_COMPENSTAE
+
+    //oam_i_1 = (oam_i_1*110)/100
+   // oam_i_2 = (oam_i_2*110)/100;    //0.1mA
+
+	if(oam_i_2>=0)/*not chging */
+	{	
+	   if(oam_i_2<2000)
+	   {
+		high_curent_compensate=5;
+	   }else if(oam_i_2<5000)
+	   	{
+			high_curent_compensate=10;
+	   	}else{
+			high_curent_compensate=15;
+		}
+	}else{/*chging*/
+		if(oam_i_2>(-2000))
+	   {
+		high_curent_compensate=-5;
+	   }else if(oam_i_2>(-5000))
+	   	{
+			high_curent_compensate=-10;
+	   	}else{
+			high_curent_compensate=-15;
+		}
+	}
+	bm_print(BM_LOG_CRTI,"before high curent compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,high_curent_compensate=%d \n",
+		oam_v_ocv_1,oam_v_ocv_2,high_curent_compensate);
+	oam_v_ocv_1=oam_v_ocv_1-high_curent_compensate;
+	oam_v_ocv_2=oam_v_ocv_2-high_curent_compensate;
+
+    oam_i_1 = (((oam_v_ocv_1-vol_bat)*1000)*10) / oam_r_1;    //0.1mA
+    oam_i_2 = (((oam_v_ocv_2-vol_bat)*1000)*10) / oam_r_2;    //0.1mA
+
+	bm_print(BM_LOG_CRTI,"after high curent compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,high_curent_compensate=%d \n",
+	oam_v_ocv_1,oam_v_ocv_2,high_curent_compensate);
+	
+    #endif
 
     oam_car_1 = (oam_i_1*delta_time/3600) + oam_car_1; //0.1mAh
     oam_car_2 = (oam_i_2*delta_time/3600) + oam_car_2; //0.1mAh
 
+#ifdef TINNO_BAT_CAP_SCALES
+if(oam_i_1>0)
+{
+    oam_d_1 = oam_d0 + (oam_car_1*1000)/(gFG_BATT_CAPACITY_aging*95);
+}else{
     oam_d_1 = oam_d0 + (oam_car_1*100/10)/gFG_BATT_CAPACITY_aging;
+}
+#else
+    oam_d_1 = oam_d0 + (oam_car_1*100/10)/gFG_BATT_CAPACITY_aging;
+#endif
     if(oam_d_1 < 0)   oam_d_1 = 0;
     if(oam_d_1 > 100) oam_d_1 = 100;
-    
+	
+#ifdef TINNO_BAT_CAP_SCALES
+if(oam_i_2>0)
+{
+    oam_d_2 = oam_d0 + (oam_car_2*1000)/(gFG_BATT_CAPACITY_aging*95);
+}else{
     oam_d_2 = oam_d0 + (oam_car_2*100/10)/gFG_BATT_CAPACITY_aging;
+}
+#else
+    oam_d_2 = oam_d0 + (oam_car_2*100/10)/gFG_BATT_CAPACITY_aging;
+#endif
     if(oam_d_2 < 0)   oam_d_2 = 0;
     if(oam_d_2 > 100) oam_d_2 = 100;
     
@@ -1976,7 +1641,7 @@ void oam_run(void)
         d5_count_time = d5_count_time_rate;
     }
 #else
-    d5_count_time = 40;
+    d5_count_time = 30;
 #endif    
 
     if(d5_count >= d5_count_time)
@@ -2075,15 +1740,34 @@ void table_init(void)
 {
     BATTERY_PROFILE_STRUC_P profile_p;
     R_PROFILE_STRUC_P profile_p_r_table;
-
+#ifdef TINNO_NEW_FUNC_INIT_TABLE
+#ifdef TINNO_TABLE_TEST
+	int i=0;
+#endif
+#endif
     int temperature = force_get_tbat();
-    
+
+#ifdef TINNO_BAT_R_COMPENSTAE
+	g_table_temp=temperature;
+#endif
     // Re-constructure r-table profile according to current temperature
     profile_p_r_table = fgauge_get_profile_r_table(TEMPERATURE_T);
     if (profile_p_r_table == NULL)
     {
         bm_print(BM_LOG_CRTI, "[FGADC] fgauge_get_profile_r_table : create table fail !\r\n");
     }
+
+#ifdef TINNO_NEW_FUNC_INIT_TABLE
+	#ifdef TINNO_TABLE_TEST
+   bm_print(BM_LOG_CRTI, "[FGADC] start test r table !\r\n");
+   for(i=-10;i<50;i+=5)
+   {
+    	fgauge_construct_r_table_profile(i, profile_p_r_table);
+   }	
+   bm_print(BM_LOG_CRTI, "[FGADC] stop test r table !\r\n");
+	#endif
+#endif
+	
     fgauge_construct_r_table_profile(temperature, profile_p_r_table);
 
     // Re-constructure battery profile according to current temperature
@@ -2092,6 +1776,18 @@ void table_init(void)
     {
         bm_print(BM_LOG_CRTI, "[FGADC] fgauge_get_profile : create table fail !\r\n");
     }
+#ifdef TINNO_NEW_FUNC_INIT_TABLE
+	#ifdef TINNO_TABLE_TEST
+   bm_print(BM_LOG_CRTI, "[FGADC] start test v table !\r\n");
+   for(i=-10;i<50;i+=5)
+   {
+    fgauge_construct_battery_profile(i, profile_p);
+   }	
+   bm_print(BM_LOG_CRTI, "[FGADC] stop test  v table !\r\n");
+	#endif
+#endif
+
+	
     fgauge_construct_battery_profile(temperature, profile_p);
 }
 
@@ -2137,6 +1833,123 @@ void update_fg_dbg_tool_value(void)
 
     g_fg_dbg_percentage_voltmode = gfg_percent_check_point;
 }
+
+
+kal_int32 fgauge_get_Q_max(kal_int16 temperature)
+{
+    kal_int32 ret_Q_max=0;
+    kal_int32 low_temperature = 0, high_temperature = 0;
+    kal_int32 low_Q_max = 0, high_Q_max = 0;
+
+    if (temperature <= TEMPERATURE_T1)
+    {
+        low_temperature = (-10);
+        low_Q_max = Q_MAX_NEG_10;
+        high_temperature = TEMPERATURE_T1;
+        high_Q_max = Q_MAX_POS_0;
+        
+        if(temperature < low_temperature)
+        {
+            temperature = low_temperature;
+        }
+    }
+    else if (temperature <= TEMPERATURE_T2)
+    {
+        low_temperature = TEMPERATURE_T1;
+        low_Q_max = Q_MAX_POS_0;
+        high_temperature = TEMPERATURE_T2;
+        high_Q_max = Q_MAX_POS_25;
+        
+        if(temperature < low_temperature)
+        {
+            temperature = low_temperature;
+        }
+    }
+    else
+    {
+        low_temperature  = TEMPERATURE_T2;
+        low_Q_max = Q_MAX_POS_25;
+        high_temperature = TEMPERATURE_T3;
+        high_Q_max = Q_MAX_POS_50;
+        
+        if(temperature > high_temperature)
+        {
+            temperature = high_temperature;
+        }
+    }
+
+    ret_Q_max = low_Q_max +
+    (
+        (
+            (temperature - low_temperature) * 
+            (high_Q_max - low_Q_max)
+        ) / 
+        (high_temperature - low_temperature)                
+    );
+
+    bm_print(BM_LOG_FULL, "[fgauge_get_Q_max] Q_max = %d\r\n", ret_Q_max);
+
+    return ret_Q_max;
+}
+
+
+kal_int32 fgauge_get_Q_max_high_current(kal_int16 temperature)
+{
+    kal_int32 ret_Q_max=0;
+    kal_int32 low_temperature = 0, high_temperature = 0;
+    kal_int32 low_Q_max = 0, high_Q_max = 0;
+
+    if (temperature <= TEMPERATURE_T1)
+    {
+        low_temperature = (-10);
+        low_Q_max = Q_MAX_NEG_10_H_CURRENT;
+        high_temperature = TEMPERATURE_T1;
+        high_Q_max = Q_MAX_POS_0_H_CURRENT;
+        
+        if(temperature < low_temperature)
+        {
+            temperature = low_temperature;
+        }
+    }
+    else if (temperature <= TEMPERATURE_T2)
+    {
+        low_temperature = TEMPERATURE_T1;
+        low_Q_max = Q_MAX_POS_0_H_CURRENT;
+        high_temperature = TEMPERATURE_T2;
+        high_Q_max = Q_MAX_POS_25_H_CURRENT;
+        
+        if(temperature < low_temperature)
+        {
+            temperature = low_temperature;
+        }
+    }
+    else
+    {
+        low_temperature  = TEMPERATURE_T2;
+        low_Q_max = Q_MAX_POS_25_H_CURRENT;
+        high_temperature = TEMPERATURE_T3;
+        high_Q_max = Q_MAX_POS_50_H_CURRENT;
+        
+        if(temperature > high_temperature)
+        {
+            temperature = high_temperature;
+        }
+    }
+
+    ret_Q_max = low_Q_max +
+    (
+        (
+            (temperature - low_temperature) * 
+            (high_Q_max - low_Q_max)
+        ) / 
+        (high_temperature - low_temperature)                
+    );
+
+    bm_print(BM_LOG_FULL, "[fgauge_get_Q_max_high_current] Q_max = %d\r\n", ret_Q_max);
+
+    return ret_Q_max;
+}
+
 
 kal_int32 fgauge_compensate_battery_voltage(kal_int32 ori_voltage)
 {
@@ -2337,7 +2150,7 @@ kal_int32 fgauge_read_capacity(kal_int32 type)
     kal_int32 voltage;
     kal_int32 temperature;
     kal_int32 dvalue = 0;
-    
+
 #ifndef CUST_DISABLE_CAPACITY_OCV2CV_TRANSFORM    
     kal_int32 C_0mA=0;
     kal_int32 C_400mA=0;
@@ -2427,9 +2240,6 @@ void fgauge_algo_run(void)
 {
     int i=0;
     int ret=0;
-
-    // Reconstruct table if temp changed;
-    fgauge_construct_table_by_temp();
     
 //1. Get Raw Data  
     ret=battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_FG_CURRENT, &gFG_current);
@@ -2613,8 +2423,8 @@ void fgauge_initialization(void)
     int i = 0;
     kal_uint32 ret=0;
 
-    //gFG_BATT_CAPACITY_init_high_current = fgauge_get_Q_max_high_current(25);    
-    //gFG_BATT_CAPACITY_aging = fgauge_get_Q_max(25);
+    gFG_BATT_CAPACITY_init_high_current = Q_MAX_POS_25_H_CURRENT;    
+    gFG_BATT_CAPACITY_aging = Q_MAX_POS_25;
 
     // 1. HW initialization
     ret = battery_meter_ctrl(BATTERY_METER_CMD_HW_FG_INIT, NULL);
@@ -2647,9 +2457,6 @@ void fgauge_initialization(void)
 
     gFG_BATT_CAPACITY = fgauge_get_Q_max(gFG_temp);
 
-    gFG_BATT_CAPACITY_init_high_current = fgauge_get_Q_max_high_current(gFG_temp);    
-    gFG_BATT_CAPACITY_aging = fgauge_get_Q_max(gFG_temp);
-
     ret = battery_meter_ctrl(BATTERY_METER_CMD_DUMP_REGISTER, NULL);
     
     bm_print(BM_LOG_CRTI, "[fgauge_initialization] Done\n");
@@ -2666,22 +2473,23 @@ kal_int32 get_dynamic_period(int first_use, int first_wakeup_time, int battery_c
 #elif defined(SOC_BY_AUXADC) ||  defined(SOC_BY_SW_FG)
 
     kal_int32 vbat_val = 0;
+    kal_int32 ret_time = 600;
 
     vbat_val = g_sw_vbat_temp;    
     
     // change wake up period when system suspend.
     if(vbat_val > VBAT_NORMAL_WAKEUP)				//3.6v
-        g_spm_timer = NORMAL_WAKEUP_PERIOD; // 90 min
+        ret_time = NORMAL_WAKEUP_PERIOD; // 90 min
     else if(vbat_val > VBAT_LOW_POWER_WAKEUP)     //3.5v   
-        g_spm_timer = LOW_POWER_WAKEUP_PERIOD; // 5 min
+        ret_time = LOW_POWER_WAKEUP_PERIOD; // 5 min
     else
-        g_spm_timer = CLOSE_POWEROFF_WAKEUP_PERIOD; // 0.5 min
+        ret_time = CLOSE_POWEROFF_WAKEUP_PERIOD; // 0.5 min
 
 
 
-    bm_print(BM_LOG_CRTI, "vbat_val=%d, g_spm_timer=%d\n", vbat_val, g_spm_timer);
+    bm_print(BM_LOG_CRTI, "vbat_val=%d, ret_time=%d\n", vbat_val, ret_time);
 
-    return g_spm_timer;    
+    return ret_time;    
 #else
 
     kal_int32 car_instant=0;
@@ -2995,10 +2803,6 @@ kal_int32 battery_meter_initial(void)
 #if defined(CONFIG_POWER_EXT)
     return 0;
 #else
-
-#ifdef MTK_MULTI_BAT_PROFILE_SUPPORT
-    fgauge_get_profile_id();
-#endif
 
     #if defined(SOC_BY_AUXADC)
     g_auxadc_solution = 1;
@@ -3447,13 +3251,15 @@ static int battery_meter_suspend(struct platform_device *dev, pm_message_t state
 #if defined(CONFIG_POWER_EXT)
 
 #elif defined(SOC_BY_SW_FG)
-    struct timespec xts, tom;
-
-	get_xtime_and_monotonic_and_sleep_offset(&xts, &tom, &g_rtc_time_before_sleep);
-	if (_g_bat_sleep_total_time < g_spm_timer) {
-		return 0;
-	}
+	//g_rtc_time_before_sleep = rtc_read_hw_time(); 
+	getrawmonotonic(&g_rtc_time_before_sleep);
 	battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_OCV, &g_hw_ocv_before_sleep);
+
+#ifdef SUPPORT_TINNO_BATTERY_COMPENSATE
+	  struct timespec xts,tom;
+        get_xtime_and_monotonic_and_sleep_offset(&xts, &tom, &tinno_g_rtc_time_before_sleep);
+#endif
+
 #endif	
 
     bm_print(BM_LOG_CRTI, "[battery_meter_suspend]\n");
@@ -3466,17 +3272,19 @@ static int battery_meter_resume(struct platform_device *dev)
 
 #elif defined(SOC_BY_SW_FG)
 	kal_int32 hw_ocv_after_sleep;
-	struct timespec xts, tom, rtc_time_after_sleep;
+	//kal_uint32 rtc_time_after_sleep;
+    struct timespec rtc_time_after_sleep;
 //    kal_int32 sw_vbat;
 //    kal_int32 vbat_diff = 200;
-	get_xtime_and_monotonic_and_sleep_offset(&xts, &tom, &rtc_time_after_sleep);
-	_g_bat_sleep_total_time += rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec;
-	battery_xlog_printk(BAT_LOG_CRTI, "[battery_meter_resume] sleep time = %d, g_spm_timer = %d\n", _g_bat_sleep_total_time, g_spm_timer);
-	if (_g_bat_sleep_total_time < g_spm_timer) {
-		return 0;
-	}
-	bat_spm_timeout = true;
-	battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_OCV, &hw_ocv_after_sleep);    
+ 
+	battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_OCV, &hw_ocv_after_sleep);
+
+#ifdef SUPPORT_TINNO_BATTERY_COMPENSATE
+    struct timespec xts,tom;
+    struct timespec tinno_rtc_time_after_sleep;
+	get_xtime_and_monotonic_and_sleep_offset(&xts, &tom, &tinno_rtc_time_after_sleep);
+#endif
+
 #if 0    
     sw_vbat = battery_meter_get_battery_voltage();
     
@@ -3492,31 +3300,125 @@ static int battery_meter_resume(struct platform_device *dev)
     }
     else
 #endif        
-    {    
-        
-        
-    	if(_g_bat_sleep_total_time > 3600)	//1hr
+    {
+        //rtc_time_after_sleep = rtc_read_hw_time();
+		getrawmonotonic(&rtc_time_after_sleep);
+
+
+
+#ifndef TINNO_CALIBRATION_DOD
+
+#ifdef  SUPPORT_TINNO_BATTERY_COMPENSATE		
+    	if(tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec > 1200)/*SLEEP 10 MINE ,THE BATTERY CAN BACK TO ZCV*/
+#else
+    	if(rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec > 3600)
+#endif
     	{
     		if(hw_ocv_after_sleep != g_hw_ocv_before_sleep)
     		{
     			 gFG_DOD0 = fgauge_read_d_by_v(hw_ocv_after_sleep); 
     			 oam_v_ocv_2 = oam_v_ocv_1 = hw_ocv_after_sleep;
+			 oam_d0=gFG_DOD0;
+			 oam_d_5=oam_d0;
     			 oam_car_1 = 0;
     			 oam_car_2 = 0;
     		}
     		else
     		{
-    			 oam_car_1 = oam_car_1 + (40* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
-    		     oam_car_2 = oam_car_2 + (40* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
+    			 oam_car_1 = oam_car_1 + (33* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
+    		     oam_car_2 = oam_car_2 + (33* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
     		}
     	}
     	else
     	{
-    			oam_car_1 = oam_car_1 + (20* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
-    			oam_car_2 = oam_car_2 + (20* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
-    	}	
+    			oam_car_1 = oam_car_1 + (33* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
+    			oam_car_2 = oam_car_2 + (33* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
+    	}
+#else
+#ifdef  SUPPORT_TINNO_BATTERY_COMPENSATE		
+    	if(tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec > 1200)/*SLEEP 10 MINE ,THE BATTERY CAN BACK TO ZCV*/
+#else
+    	if(rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec > 3600)
+#endif
+
+	{
+#ifdef TINNO_BAT_R_COMPENSTAE
+	    int temperature = force_get_tbat();
+		if(temperature>=25)
+	     {
+	    	if(((temperature-g_table_temp)>TEMP_COMPENSATE_RANGE)||((g_table_temp-temperature)>TEMP_COMPENSATE_RANGE))
+	    	{
+		   	 table_init();
+		    	bm_print(BM_LOG_CRTI,"resume before temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
+			oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	 
+			gFG_DOD0 = fgauge_read_d_by_v(hw_ocv_after_sleep); 
+			oam_v_ocv_2 = oam_v_ocv_1 = hw_ocv_after_sleep;
+			oam_r_1 = fgauge_read_r_bat_by_v(oam_v_ocv_1);
+			oam_r_2 = fgauge_read_r_bat_by_v(oam_v_ocv_2);    
+			bm_print(BM_LOG_CRTI,"resume after temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
+			oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	 
+			 
+		}
+	    }else{
+	                if(temperature!=g_table_temp)
+	                {
+			  	table_init();
+				bm_print(BM_LOG_CRTI,"resume before temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
+				oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	
+				gFG_DOD0 = fgauge_read_d_by_v(hw_ocv_after_sleep); 
+    			 	oam_v_ocv_2 = oam_v_ocv_1 = hw_ocv_after_sleep;
+				oam_r_1 = fgauge_read_r_bat_by_v(oam_v_ocv_1);
+				oam_r_2 = fgauge_read_r_bat_by_v(oam_v_ocv_2);  
+				bm_print(BM_LOG_CRTI,"resume after temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
+				oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);
+	                }
+		}
+#endif
+			 gFG_DOD0 = fgauge_read_d_by_v(hw_ocv_after_sleep); 
+    			 oam_v_ocv_2 = oam_v_ocv_1 = hw_ocv_after_sleep;
+			 oam_d0=gFG_DOD0;
+			 oam_d_5=oam_d0;
+    			 oam_car_1 = 0;
+    			 oam_car_2 = 0;
+#ifdef  TINNO_SUSPEND_CAR_COUNT
+			g_suspend_oam_car2=0;
+			g_suspend_oam_car1=0;
+#endif
+	  }else{
+	  #ifdef  TINNO_SUSPEND_CAR_COUNT
+
+			if(tinno_rtc_time_after_sleep.tv_sec==tinno_g_rtc_time_before_sleep.tv_sec)
+			{
+					g_suspend_oam_car2=g_suspend_oam_car2+TINNO_STAND_CURRENT*1;
+					g_suspend_oam_car1=g_suspend_oam_car1+TINNO_STAND_CURRENT*1;
+			}else{
+					g_suspend_oam_car2=g_suspend_oam_car2+TINNO_STAND_CURRENT* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec);
+					g_suspend_oam_car1=g_suspend_oam_car1+TINNO_STAND_CURRENT* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec);
+				}
+
+			if(g_suspend_oam_car2>=3600)
+			{
+				g_suspend_oam_car2=g_suspend_oam_car2-3600;
+				oam_car_2 = oam_car_2 + 1; //0.1mAh	
+			}
+
+			if(g_suspend_oam_car1>=3600)
+			{
+				g_suspend_oam_car1=g_suspend_oam_car1-3600;
+				oam_car_1 = oam_car_1 +1; //0.1mAh
+			}
+
+		bm_print(BM_LOG_CRTI, "g_suspend_oam_car1=(%d)s, g_suspend_oam_car1=(%d),  \n",g_suspend_oam_car1,g_suspend_oam_car2);
+			
+         #else
+		     oam_car_1 = oam_car_1 + (TINNO_STAND_CURRENT* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
+    		     oam_car_2 = oam_car_2 + (TINNO_STAND_CURRENT* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
+    	  #endif	     
+	  }
+#endif
+		
         bm_print(BM_LOG_CRTI, "sleeptime=(%d)s, be_ocv=(%d), af_ocv=(%d), D0=(%d), car1=(%d), car2=(%d) \n",
-    		rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec, g_hw_ocv_before_sleep, hw_ocv_after_sleep,gFG_DOD0, oam_car_1, oam_car_2);
+    		tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec, g_hw_ocv_before_sleep, hw_ocv_after_sleep,gFG_DOD0, oam_car_1, oam_car_2);
     }
 #endif		
     bm_print(BM_LOG_CRTI, "[battery_meter_resume]\n");

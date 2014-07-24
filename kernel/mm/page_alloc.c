@@ -2623,6 +2623,24 @@ retry_cpuset:
                         if (!preferred_zone)
                                 goto out;
                 }
+		
+#ifdef CONFIG_MTKPASR
+		else if (gfp_mask & __GFP_WAIT) {
+			if (gfp_mask & GFP_NO_MTKPASR) {
+				/* Do nothing, just go ahead */
+			} else {
+#ifdef CONFIG_HIGHMEM
+				if (high_zoneidx == ZONE_HIGHMEM) {
+#endif
+				gfp_mask |= GFP_MTKPASR_HIGHUSER;
+				migratetype = MIGRATE_MOVABLE;
+#ifdef CONFIG_HIGHMEM
+				}
+#endif
+			}
+		}
+#endif
+
 		page = __alloc_pages_slowpath(gfp_mask, order,
 				zonelist, high_zoneidx, nodemask,
 				preferred_zone, migratetype);

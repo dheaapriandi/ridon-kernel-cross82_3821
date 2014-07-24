@@ -1,3 +1,24 @@
+/* linux/drivers/hwmon/lis33de.c
+ *
+ * (C) Copyright 2008
+ * MediaTek <www.mediatek.com>
+ *
+ * AFA830 driver for MT6516
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #ifndef AFA830_H
 #define AFA830_H
 
@@ -91,6 +112,10 @@ extern struct acc_hw* AFA830_get_cust_acc_hw(void);
 #define Wakeup (1 << 2)
 
 
+/*
+ * Maximum value our axis may get in full res mode for the input device
+ * (signed 16 bits)
+ */
 #define AFA_FULLRES_MAX_VAL 32767
 #define AFA_FULLRES_MIN_VAL 32768
 

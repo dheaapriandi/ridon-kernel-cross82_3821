@@ -1,3 +1,25 @@
+/* fm_config.c
+ *
+ * (C) Copyright 2011
+ * MediaTek <www.MediaTek.com>
+ * hongcheng <hongcheng.xia@MediaTek.com>
+ *
+ * FM Radio Driver
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #include <linux/string.h>
 #include <linux/slab.h>
 
@@ -100,6 +122,39 @@ static fm_s32 MT6620cfg_item_handler(fm_s8 *grp, fm_s8 *key, fm_s8 *val, fm_cust
         WCN_DBG(FM_WAR | MAIN, "invalid key\n");
         return -1;
     }
+/*    if (0 <= (ret = cfg_item_match(key, val, "FMR_RSSI_TH_L_MT6620", &rx_cfg->long_ana_rssi_th))) {//FMR_RSSI_TH_L = 0x0301
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_RSSI_TH_S_MT6620", &rx_cfg->short_ana_rssi_th))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_CQI_TH_MT6620", &rx_cfg->cqi_th))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_MR_TH_MT6620", &rx_cfg->mr_th))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_SMG_TH_MT6620", &rx_cfg->smg_th))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_SCAN_CH_SIZE_MT6620", &rx_cfg->scan_ch_size))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_SCAN_SORT_MT6620", &rx_cfg->scan_sort))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_SEEK_SPACE_MT6620", &rx_cfg->seek_space))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_BAND_MT6620", &rx_cfg->band))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_BAND_FREQ_L_MT6620", &rx_cfg->band_freq_l))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_BAND_FREQ_H_MT6620", &rx_cfg->band_freq_h))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_FAKE_CH_MT6620", &rx_cfg->fake_ch[fm_index]))) {
+        fm_index += 1;
+        rx_cfg->fake_ch_num = (rx_cfg->fake_ch_num < fm_index) ? fm_index : rx_cfg->fake_ch_num;
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_FAKE_CH_RSSI_MT6620", &rx_cfg->fake_ch_rssi_th))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_DEEMPHASIS_MT6620", &rx_cfg->deemphasis))) {
+        return ret;
+    } else if (0 <= (ret = cfg_item_match(key, val, "FMR_OSC_FREQ_MT6620", &rx_cfg->osc_freq))) {
+        return ret;
+    } */
 }
 static fm_s32 MT6620fm_cust_config_default(fm_cust_cfg *cfg)
 {

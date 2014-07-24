@@ -19,24 +19,6 @@
 #include <asm/uaccess.h>
 #include "kd_camera_hw.h"
 
-#ifdef MT6582
-#include <mach/pmic_mt6323_sw.h>
-#endif
-
-#ifdef MT6592
-#include <mach/pmic_sw.h>
-#endif
-
-
-#ifdef MT6582
-    #define DEF_HAS_LOW_POWER_KERNEL 1
-#elif defined MT6592
-    #define DEF_HAS_LOW_POWER_KERNEL 1
-#else
-    #define DEF_HAS_LOW_POWER_KERNEL 0
-#endif
-
-
 #define USE_UNLOCKED_IOCTL
 
 //s_add new flashlight driver here
@@ -265,68 +247,16 @@ int kdSetFlashlightDrv(unsigned int *pSensorId)
 /*****************************************************************************
 
 *****************************************************************************/
-#if DEF_HAS_LOW_POWER_KERNEL
-    static int g_lowPowerLevel=LOW_BATTERY_LEVEL_0;
-    static void lowPowerCB(LOW_BATTERY_LEVEL lev)
-    {
-
-    	g_lowPowerLevel=lev;
-    	PK_DBG(" lowPowerCB line=%d %d\n",__LINE__,g_lowPowerLevel);
-    }
-    static int FL_hasLowPowerDetect()
-    {
-    	return 1;
-    }
-    static int detLowPowerStart()
-    {
-    }
-    static int detLowPowerEnd()
-    {
-    	if(g_lowPowerLevel!=LOW_BATTERY_LEVEL_0)
-    		return 1;
-    	else
-    		return 0;
-    }
-#else
-    static int FL_hasLowPowerDetect()
-    {
-    	return 0;
-    }
-    static int detLowPowerStart()
-    {
-    }
-    static int detLowPowerEnd()
-    {
-    	return 0;
-    }
-#endif
-
-
-
-
-
-
-
 #ifdef USE_UNLOCKED_IOCTL
 static long flashlight_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #else
 static int flashlight_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
 #endif
 {
-    int temp;
 	int partId;
     int i4RetValue = 0;
 
     PK_DBG("XXflashlight_ioctl cmd,arg= %x, %x +\n",cmd,(unsigned int)arg);
-
-    static int bInit=1;
-    if(bInit==1)
-    {
-#if DEF_HAS_LOW_POWER_KERNEL
-        register_low_battery_notify(&lowPowerCB, LOW_BATTERY_PRIO_FLASHLIGHT);
-#endif
-        bInit=0;
-    }
 
     switch(cmd)
     {
@@ -362,24 +292,6 @@ static int flashlight_ioctl(struct inode *inode, struct file *file, unsigned int
 			    return -EFAULT;
 			}
           	break;
-        case FLASH_IOC_HAS_LOW_POWER_DETECT:
-    		PK_DBG("FLASH_IOC_HAS_LOW_POWER_DETECT");
-    		temp=FL_hasLowPowerDetect();
-    		if(copy_to_user((void __user *) arg , (void*)&temp , 4))
-            {
-                PK_DBG(" ioctl copy to user failed\n");
-                return -1;
-            }
-    		break;
-    	case FLASH_IOC_LOW_POWER_DETECT_START:
-    	    PK_DBG("FLASH_IOC_LOW_POWER_DETECT_START");
-    		detLowPowerStart();
-    		break;
-    	case FLASH_IOC_LOW_POWER_DETECT_END:
-    	    PK_DBG("FLASH_IOC_LOW_POWER_DETECT_END");
-    		i4RetValue = detLowPowerEnd();
-    		break;
-
     	default :
     	    if (g_pFlashlightFunc) {
     	        i4RetValue = g_pFlashlightFunc->flashlight_ioctl(cmd,arg);

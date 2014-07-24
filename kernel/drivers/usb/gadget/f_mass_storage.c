@@ -313,6 +313,15 @@ static const char fsg_string_interface[] = "Mass Storage";
 /*Caution: Use the method would cause write performance drop!!*/
 #define SYNC_THRESHOLD 0 /*This value should be tuned EX:(508*8*1024)*/
 /*-------------------------------------------------------------------------*/
+#if defined (CUSTOM_WIKO_VERSION)
+#define BRAND_NAME  "HIGHWAY" 
+#define MODEL_NAME1 "MASS Storage"
+#define MODEL_NAME2 MODEL_NAME1
+#else
+#define BRAND_NAME "Linux"
+#define MODEL_NAME1 "File-Stor Gadget"
+#define MODEL_NAME2 "File-CD Gadget"
+#endif
 
 struct fsg_dev;
 struct fsg_common;
@@ -2948,11 +2957,11 @@ buffhds_first_it:
 		}
 	}
 	snprintf(common->inquiry_string, sizeof common->inquiry_string,
-		 "%-8s%-16s%04x", cfg->vendor_name ?: "Linux",
+		 "%-8s%-16s%04x", cfg->vendor_name ?: BRAND_NAME,
 		 /* Assume product name dependent on the first LUN */
 		 cfg->product_name ?: (common->luns->cdrom
-				     ? "File-Stor Gadget"
-				     : "File-CD Gadget"),
+				     ? MODEL_NAME1
+				     : MODEL_NAME2),
 		 i);
 
 	/*

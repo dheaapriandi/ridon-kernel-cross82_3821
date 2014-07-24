@@ -1,8 +1,144 @@
+/******************************************************************************
+*[File]             ahb.c
+*[Version]          v1.0
+*[Revision Date]    2013-01-16
+*[Author]
+*[Description]
+*    The program provides AHB HIF driver
+*[Copyright]
+*    Copyright (C) 2013 MediaTek Incorporation. All Rights Reserved.
+******************************************************************************/
 
 
 
+/*
+** $Log: ahb.c $
+ *
+ * 01 16 2013 vend_samp.lin
+ * Port sdio.c to ahb.c on MT6572/MT6582
+ * 1) Initial version
+ *
+ * 04 12 2012 terry.wu
+ * NULL
+ * Add AEE message support
+ * 1) Show AEE warning(red screen) if SDIO access error occurs
+ *
+ * 02 14 2012 cp.wu
+ * [WCXRP00000851] [MT6628 Wi-Fi][Driver] Add HIFSYS related definition to driver source tree
+ * include correct header file upon setting.
+ *
+ * 11 10 2011 cp.wu
+ * [WCXRP00001098] [MT6620 Wi-Fi][Driver] Replace printk by DBG LOG macros in linux porting layer
+ * 1. eliminaite direct calls to printk in porting layer.
+ * 2. replaced by DBGLOG, which would be XLOG on ALPS platforms.
+ *
+ * 09 20 2011 cp.wu
+ * [WCXRP00000994] [MT6620 Wi-Fi][Driver] dump message for bus error and reset bus error flag while re-initialized
+ * 1. always show error message for SDIO bus errors.
+ * 2. reset bus error flag when re-initialization
+ *
+ * 08 17 2011 cp.wu
+ * [WCXRP00000851] [MT6628 Wi-Fi][Driver] Add HIFSYS related definition to driver source tree
+ * add MT6628 related definitions for Linux/Android driver.
+ *
+ * 05 18 2011 cp.wu
+ * [WCXRP00000702] [MT5931][Driver] Modify initialization sequence for E1 ASIC
+ * add device ID for MT5931.
+ *
+ * 04 08 2011 pat.lu
+ * [WCXRP00000623] [MT6620 Wi-Fi][Driver] use ARCH define to distinguish PC Linux driver
+ * Use CONFIG_X86 instead of PC_LINUX_DRIVER_USE option to have proper compile settting for PC Linux driver
+ *
+ * 03 22 2011 pat.lu
+ * [WCXRP00000592] [MT6620 Wi-Fi][Driver] Support PC Linux Environment Driver Build
+ * Add a compiler option "PC_LINUX_DRIVER_USE" for building driver in PC Linux environment.
+ *
+ * 03 18 2011 cp.wu
+ * [WCXRP00000559] [MT6620 Wi-Fi][Driver] Combine TX/RX DMA buffers into a single one to reduce physically continuous memory consumption
+ * deprecate CFG_HANDLE_IST_IN_SDIO_CALLBACK.
+ *
+ * 03 15 2011 cp.wu
+ * [WCXRP00000559] [MT6620 Wi-Fi][Driver] Combine TX/RX DMA buffers into a single one to reduce physically continuous memory consumption
+ * 1. deprecate CFG_HANDLE_IST_IN_SDIO_CALLBACK
+ * 2. Use common coalescing buffer for both TX/RX directions
+ *
+ *
+ * 03 07 2011 terry.wu
+ * [WCXRP00000521] [MT6620 Wi-Fi][Driver] Remove non-standard debug message
+ * Toggle non-standard debug messages to comments.
+ *
+ * 11 15 2010 jeffrey.chang
+ * [WCXRP00000181] [MT6620 Wi-Fi][Driver] fix the driver message "GLUE_FLAG_HALT skip INT" during unloading
+ * Fix GLUE_FALG_HALT message which cause driver to hang
+ *
+ * 11 08 2010 cp.wu
+ * [WCXRP00000166] [MT6620 Wi-Fi][Driver] use SDIO CMD52 for enabling/disabling interrupt to reduce transaction period
+ * correct typo
+ *
+ * 11 08 2010 cp.wu
+ * [WCXRP00000166] [MT6620 Wi-Fi][Driver] use SDIO CMD52 for enabling/disabling interrupt to reduce transaction period
+ * change to use CMD52 for enabling/disabling interrupt to reduce SDIO transaction time
+ *
+ * 11 01 2010 yarco.yang
+ * [WCXRP00000149] [MT6620 WI-Fi][Driver]Fine tune performance on MT6516 platform
+ * Add code to run WlanIST in SDIO callback.
+ *
+ * 10 19 2010 cp.wu
+ * [WCXRP00000122] [MT6620 Wi-Fi][Driver] Preparation for YuSu source tree integration
+ * remove HIF_SDIO_ONE flags because the settings could be merged for runtime detection instead of compile-time.
+ *
+ * 10 19 2010 jeffrey.chang
+ * [WCXRP00000120] [MT6620 Wi-Fi][Driver] Refine linux kernel module to the license of MTK propietary and enable MTK HIF by default
+ * Refine linux kernel module to the license of MTK and enable MTK HIF
+ *
+ * 08 21 2010 jeffrey.chang
+ * NULL
+ * 1) add sdio two setting
+ * 2) bug fix of sdio glue
+ *
+ * 08 18 2010 jeffrey.chang
+ * NULL
+ * support multi-function sdio
+ *
+ * 08 18 2010 cp.wu
+ * NULL
+ * #if defined(__X86__) is not working, change to use #ifdef CONFIG_X86.
+ *
+ * 08 17 2010 cp.wu
+ * NULL
+ * add ENE SDIO host workaround for x86 linux platform.
+ *
+ * 07 08 2010 cp.wu
+ *
+ * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
+ *
+ * 06 06 2010 kevin.huang
+ * [WPD00003832][MT6620 5931] Create driver base
+ * [MT6620 5931] Create driver base
+ *
+ * 05 07 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * Fix hotplug bug
+ *
+ * 03 28 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * clear sdio interrupt
+ *
+ * 03 24 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * initial import for Linux port
+**
+*/
 
+/*******************************************************************************
+*                         C O M P I L E R   F L A G S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 
 #include "gl_os.h"
 
@@ -42,12 +178,28 @@
 #endif /* HIF_DEBUG_SUP */
 
 
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 
 
+/*******************************************************************************
+*                             D A T A   T Y P E S
+********************************************************************************
+*/
 
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
 
 
+/*******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 
 static void
 HifAhbDmaEnhanceModeConf(
@@ -166,9 +318,17 @@ HifDmaISR(
 
 
 
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/
 extern BOOLEAN fgIsResetting;
 
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 
 /* initialiation function from other module */
 static probe_card pfWlanProbe = NULL;
@@ -222,6 +382,10 @@ static struct platform_device *HifAhbPDev;
 
 
 
+/*******************************************************************************
+*                       P U B L I C   F U N C T I O N S
+********************************************************************************
+*/
 
 #if 0
 /*set JTAG Mode for MCU*/
@@ -372,6 +536,14 @@ static int wmt_set_jtag_for_gps(void)
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function will register sdio bus to the os
+*
+* \param[in] pfProbe    Function pointer to detect card
+* \param[in] pfRemove   Function pointer to remove card
+*
+* \return The result of registering HIF driver (WLAN_STATUS_SUCCESS = 0)
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 glRegisterBus (
@@ -412,6 +584,13 @@ glRegisterBus (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function will unregister sdio bus to the os
+*
+* \param[in] pfRemove   Function pointer to remove card
+*
+* \return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 glUnregisterBus(
@@ -439,6 +618,13 @@ glUnregisterBus(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function will inform us whole chip reset start event.
+*
+* \param[in] GlueInfo   Pointer to glue info structure
+*
+* \return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 glResetHif (
@@ -456,6 +642,14 @@ glResetHif (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function stores hif related info, which is initialized before.
+*
+* \param[in] GlueInfo Pointer to glue info structure
+* \param[in] u4Cookie   Pointer to UINT_32 memory base variable for _HIF_HPI
+*
+* \return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 glSetHifInfo (
@@ -537,6 +731,13 @@ glSetHifInfo (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function clears hif related info.
+*
+* \param[in] GlueInfo Pointer to glue info structure
+*
+* \return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 glClearHifInfo (
@@ -549,6 +750,13 @@ glClearHifInfo (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function clears hif related info.
+*
+* \param[in] GlueInfo Pointer to glue info structure
+*
+* \return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 glGetChipInfo (
@@ -565,21 +773,19 @@ glGetChipInfo (
 	else if (HifInfo->ChipID == MTK_CHIP_ID_8127)
 		kalMemCopy(pucChipBuf, "MT8127", strlen("MT8127"));
 	else
-	{
-		pucChipBuf[0] = 'M';
-		pucChipBuf[1] = 'T';
-		pucChipBuf[2] = '6';
-		pucChipBuf[3] = '5';
-		pucChipBuf[4] = '8';
-		pucChipBuf[5] = '2';
-		pucChipBuf[6] = 0x00;
-//		kalMemCopy(pucChipBuf, "MT6582", strlen("MT6582"));
-	}
+		kalMemCopy(pucChipBuf, "MT6582", strlen("MT6582"));
 } /* end of glGetChipInfo() */
 
 
 #if CFG_SPM_WORKAROUND_FOR_HOTSPOT
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function to check if we need wakelock under Hotspot mode.
+*
+* \param[in] GlueInfo Pointer to glue info structure
+*
+* \return (none)
+*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 glIsChipNeedWakelock (
@@ -598,6 +804,15 @@ glIsChipNeedWakelock (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Initialize bus operation and hif related information, request resources.
+*
+* \param[out] pvData    A pointer to HIF-specific data type buffer.
+*                       For eHPI, pvData is a pointer to UINT_32 type and stores a
+*                       mapped base address.
+*
+* \return (none)
+*/
 /*----------------------------------------------------------------------------*/
 BOOL
 glBusInit (
@@ -610,6 +825,13 @@ glBusInit (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Stop bus operation and release resources.
+*
+* \param[in] pvData A pointer to struct net_device.
+*
+* \return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 glBusRelease (
@@ -622,6 +844,16 @@ glBusRelease (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Setup bus interrupt operation and interrupt handler for os.
+*
+* \param[in] pvData     A pointer to struct net_device.
+* \param[in] pfnIsr     A pointer to interrupt handler function.
+* \param[in] pvCookie   Private data for pfnIsr function.
+*
+* \retval WLAN_STATUS_SUCCESS   if success
+*         NEGATIVE_VALUE   if fail
+*/
 /*----------------------------------------------------------------------------*/
 /* the name is different in 72 and 82 */
 #ifndef MT_WF_HIF_IRQ_ID /* for 72 */
@@ -682,6 +914,14 @@ glBusSetIrq (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Stop bus interrupt operation and disable interrupt handling for os.
+*
+* \param[in] pvData     A pointer to struct net_device.
+* \param[in] pvCookie   Private data for pfnIsr function.
+*
+* \return (none)
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 glBusFreeIrq (
@@ -720,6 +960,16 @@ glBusFreeIrq (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Read a 32-bit device register
+*
+* \param[in] GlueInfo Pointer to the GLUE_INFO_T structure.
+* \param[in] RegOffset Register offset
+* \param[in] pu4Value   Pointer to variable used to store read value
+*
+* \retval TRUE          operation success
+* \retval FALSE         operation fail
+*/
 /*----------------------------------------------------------------------------*/
 BOOL
 kalDevRegRead (
@@ -750,6 +1000,16 @@ kalDevRegRead (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Write a 32-bit device register
+*
+* \param[in] GlueInfo   Pointer to the GLUE_INFO_T structure.
+* \param[in] RegOffset  Register offset
+* \param[in] RegValue   RegValue to be written
+*
+* \retval TRUE          operation success
+* \retval FALSE         operation fail
+*/
 /*----------------------------------------------------------------------------*/
 BOOL
 kalDevRegWrite (
@@ -779,6 +1039,18 @@ kalDevRegWrite (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Read device I/O port
+*
+* \param[in] GlueInfo   Pointer to the GLUE_INFO_T structure.
+* \param[in] Port       I/O port offset
+* \param[in] Size       Length to be read
+* \param[out] Buf       Pointer to read buffer
+* \param[in] MaxBufSize Length of the buffer valid to be accessed
+*
+* \retval TRUE          operation success
+* \retval FALSE         operation fail
+*/
 /*----------------------------------------------------------------------------*/
 BOOL
 kalDevPortRead (
@@ -1056,6 +1328,18 @@ LabelErr:
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Write device I/O port
+*
+* \param[in] GlueInfo   Pointer to the GLUE_INFO_T structure.
+* \param[in] Port       I/O port offset
+* \param[in] Size       Length to be write
+* \param[in] Buf        Pointer to write buffer
+* \param[in] MaxBufSize Length of the buffer valid to be accessed
+*
+* \retval TRUE          operation success
+* \retval FALSE         operation fail
+*/
 /*----------------------------------------------------------------------------*/
 BOOL
 kalDevPortWrite (
@@ -1356,6 +1640,16 @@ LabelErr:
 
 #if 0 /* only for SDIO HIF */
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Write device I/O port in byte with CMD52
+*
+* \param[in] GlueInfo         Pointer to the GLUE_INFO_T structure.
+* \param[in] RegOffset             I/O port offset
+* \param[in] RegData             Single byte of data to be written
+*
+* \retval TRUE          operation success
+* \retval FALSE         operation fail
+*/
 /*----------------------------------------------------------------------------*/
 BOOL
 kalDevWriteWithSdioCmd52 (
@@ -1381,8 +1675,19 @@ kalDevWriteWithSdioCmd52 (
 #endif
 
 
+/*******************************************************************************
+*                       P R I V A T E   F U N C T I O N S
+********************************************************************************
+*/
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function is a SDIO interrupt callback function
+*
+* \param[in] func  pointer to SDIO handle
+*
+* \return void
+*/
 /*----------------------------------------------------------------------------*/
 extern UINT_32 IsrCnt, IsrPassCnt;
 static irqreturn_t
@@ -1445,6 +1750,13 @@ HifAhbISR(
 
 #if (CONF_HIF_DMA_INT == 1)
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function is a SDIO interrupt callback function
+*
+* \param[in] func  pointer to SDIO handle
+*
+* \return void
+*/
 /*----------------------------------------------------------------------------*/
 
 static irqreturn_t
@@ -1485,6 +1797,14 @@ HifDmaISR(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function is a SDIO probe function
+*
+* \param[in] func   pointer to SDIO handle
+* \param[in] id     pointer to SDIO device id table
+*
+* \return void
+*/
 /*----------------------------------------------------------------------------*/
 
 static int
@@ -1528,6 +1848,13 @@ HifAhbProbe (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function will do module remove.
+*
+* \param[in] None
+*
+* \return The result of remove (WLAN_STATUS_SUCCESS = 0)
+*/
 /*----------------------------------------------------------------------------*/
 static int
 HifAhbRemove (
@@ -1557,6 +1884,13 @@ HifAhbRemove (
 
 #if (MTK_WCN_SINGLE_MODULE == 0)
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function gets the TX count pass through HIF AHB bus.
+*
+* \param[in] None
+*
+* \return TX count
+*/
 /*----------------------------------------------------------------------------*/
 static int
 HifAhbBusCntGet(
@@ -1568,6 +1902,13 @@ HifAhbBusCntGet(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function resets the TX count pass through HIF AHB bus.
+*
+* \param[in] None
+*
+* \return 0
+*/
 /*----------------------------------------------------------------------------*/
 static int
 HifAhbBusCntClr(
@@ -1581,6 +1922,16 @@ HifAhbBusCntClr(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function configs the DMA TX/RX settings before any real TX/RX.
+*
+* \param[in] GlueInfo       Pointer to the GLUE_INFO_T structure.
+* \param[in] BurstLen       0(1DW), 1(4DW), 2(8DW), Others(Reserved)
+* \param[in] PortId         0(TXD0), 1(TXD1), 2(RXD0), 3(RXD1), 4(WHISR enhance)
+* \param[in] TransByte      Should be 4-byte align.
+*
+* \return void
+*/
 /*----------------------------------------------------------------------------*/
 static void
 HifAhbDmaEnhanceModeConf(
@@ -1690,6 +2041,13 @@ HifAhbMiscClose(
 #else
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function is called by OS platform device module.
+*
+* \param[in] PDev           Pointer to the platform device structure.
+*
+* \return 0
+*/
 /*----------------------------------------------------------------------------*/
 static int
 HifAhbPltmProbe(
@@ -1757,6 +2115,13 @@ HifAhbPltmProbe(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function is called by OS platform device module.
+*
+* \param[in] PDev           Pointer to the platform device structure.
+*
+* \return 0
+*/
 /*----------------------------------------------------------------------------*/
 static int __exit
 HifAhbPltmRemove(
@@ -1780,6 +2145,14 @@ HifAhbPltmRemove(
 
 #ifdef CONFIG_PM
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function is called by OS platform device module.
+*
+* \param[in] PDev           Pointer to the platform device structure.
+* \param[in] Message        
+*
+* \return 0
+*/
 /*----------------------------------------------------------------------------*/
 static int
 HifAhbPltmSuspend(
@@ -1792,6 +2165,13 @@ HifAhbPltmSuspend(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This function is called by OS platform device module.
+*
+* \param[in] PDev           Pointer to the platform device structure.
+*
+* \return 0
+*/
 /*----------------------------------------------------------------------------*/
 static int
 HifAhbPltmResume(
@@ -1808,6 +2188,13 @@ HifAhbPltmResume(
 
 #if (CONF_HIF_LOOPBACK_AUTO == 1)
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Trigger to do HIF loopback test.
+*
+* \param[in] arg   Pointer to the GLUE_INFO_T structure.
+*
+* \retval None
+*/
 /*----------------------------------------------------------------------------*/
 static VOID
 HifAhbLoopbkAuto(

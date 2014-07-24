@@ -1,3 +1,41 @@
+# Copyright Statement:
+#
+# This software/firmware and related documentation ("MediaTek Software") are
+# protected under relevant copyright laws. The information contained herein
+# is confidential and proprietary to MediaTek Inc. and/or its licensors.
+# Without the prior written permission of MediaTek inc. and/or its licensors,
+# any reproduction, modification, use or disclosure of MediaTek Software,
+# and information contained herein, in whole or in part, shall be strictly prohibited.
+#
+# MediaTek Inc. (C) 2010. All rights reserved.
+#
+# BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+# THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+# RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+# AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+# NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+# SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+# SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+# THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+# THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+# CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+# SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+# STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+# CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+# AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+# OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+# MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+#
+# The following software/firmware and/or related documentation ("MediaTek Software")
+# have been modified by MediaTek Inc. All revisions are subject to any receiver's
+# applicable license agreements with MediaTek Inc.
+
+
+# *************************************************************************
+# Set shell align with Android build system
+# *************************************************************************
 SHELL        := /bin/bash
 .DELETE_ON_ERROR:
 MAKEFLAGS += -rR
@@ -40,7 +78,7 @@ export KERNEL_SOURCE
          dump-memusage gen-relkey check-appres \
          codegen btcodegen javaoptgen clean-javaoptgen emigen nandgen custgen drvgen ptgen \
          pregen preclean \
-         update-api modem-info bindergen clean-modem check-seandroid perso check-sign
+         update-api modem-info bindergen clean-modem check-seandroid
 
 S_MODULE_LOG  =  $(OUT_DIR)/target/product/$(PROJECT)_$(CUR_MODULE).log
 S_CODEGEN_LOG =  $(OUT_DIR)/target/product/$(PROJECT)_codegen.log
@@ -64,22 +102,8 @@ CMD_ARGU2    :=  $(filter-out -j%, $(CMD_ARGU))
 REMAKECMD    :=  make -f$(MTK_ROOT_BUILD)/makemtk.mk CMD_ARGU=$(CMD_ARGU) $(CMD_ARGU2) $(MAKE_DEBUG)
 CPUCORES     :=  $(shell cat /proc/cpuinfo | grep processor | wc -l)
 MAKEJOBS     :=  -j$(CPUCORES)
-MAKEPERSO    :=  make $(MAKEJOBS) perso $(CMD_ARGU) $(MAKE_DEBUG)
-
 makemtk_temp := $(shell mkdir -p $(LOGDIR))
 
-
-VERSIONLEN := 12
-#PRJDEF := mtk6582
-#VERSIONDEF := version/version.inc
-#VERSIONDEF := version_$(PRJDEF)/version.inc
-VERSIONDEF=development/version/include/version.inc
-
-VERSIONLEN := 12
-#PRJDEF := mtk6592
-VERSIONDEF := version/version.inc
-#VERSIONDEF := version_$(PRJDEF)/version.inc
-#VERSIONDEF=development/version/include/version.inc
 
 #ifeq ($(ACTION),update-api)
 #   MAKEJOBS :=
@@ -181,7 +205,6 @@ ifeq ($(ENABLE_TEE), TRUE)
   DEAL_STDOUT_CUSTREL := 2>&1 | tee -a $(LOG)rel-cust.log
   DEAL_STDOUT_CHK_APPRES := 2>&1 | tee -a $(LOG)check-appres.log
   DEAL_STDOUT_BINDERGEN := 2>&1 | tee -a $(LOG)bindergen.log
-  DEAL_STDOUT_PERSO := 2>&1 | tee -a $(LOG)perso.log
   DEAL_STDOUT_TRUSTZONE := 2>&1 | tee -a $(LOG)trustzone.log
   DEAL_STDOUT_CHECK_SEANDROID :=2>&1 | tee -a $(LOG)check-seandroid.log
 else
@@ -207,7 +230,6 @@ else
   DEAL_STDOUT_CUSTREL := > $(LOG)rel-cust.log 2>&1
   DEAL_STDOUT_CHK_APPRES := >> $(LOG)check-appres.log 2>&1
   DEAL_STDOUT_BINDERGEN := > $(LOG)bindergen.log 2>&1
-  DEAL_STDOUT_PERSO := > $(LOG)perso.log 2>&1
   DEAL_STDOUT_TRUSTZONE := > $(LOG)trustzone.log 2>&1
   DEAL_STDOUT_CHECK_SEANDROID := > $(LOG)check-seandroid.log 2>&1
 endif
@@ -552,14 +574,6 @@ endif
          $(SHOWRSLT) $${PIPESTATUS[0]} $(LOG)$@.log
 
 
-perso:  javaoptgen ptgen custgen dfogen
-	$(hide) echo $(SHOWTIME) $@ing...
-	$(hide) /usr/bin/perl mediatek/build/tools/mtkBegin.pl $(PROJECT)
-	$(hide) $(MAKEPERSO) $(DEAL_STDOUT_PERSO)
-
-check-sign:
-	$(hide) make check-sign
-
 custgen: $(PRJ_MF)
 	$(hide) echo $(SHOWTIME) $@ing...
 	$(hide) echo -e \\t\\t\\t\\b\\b\\b\\bLOG: $(S_LOG)$@.log
@@ -761,10 +775,6 @@ ifeq ($(BUILD_PRELOADER),yes)
 	  $(SHOWRSLT) $${PIPESTATUS[0]} $(MODULE_LOG) $(ACTION) || \
 	  $(SHOWRSLT) $${PIPESTATUS[0]} $(MODULE_LOG) $(ACTION)) && cd $(MKTOPDIR)
   else
-	if [ -f $(MKTOPDIR)/$(VERSIONDEF) ]; then \
-	  echo -n "#define PRELOADER_VER JRD_VERSION_MARK_" > $(MKTOPDIR)/mediatek/platform/mt6582/preloader/src/init/inc/version.h ;\
-	  awk ' /PRELOADER_VER/ { print substr($$NF, 2, $(VERSIONLEN)) }' $(MKTOPDIR)/$(VERSIONDEF) >> $(MKTOPDIR)/mediatek/platform/mt6582/preloader/src/init/inc/version.h ;\
-	fi
 	$(hide) cd $(PRELOADER_WD) && \
 	  (./build.sh $(PROJECT) $(ACTION) $(DEAL_STDOUT) && \
 	  cd $(MKTOPDIR) && \
@@ -813,10 +823,6 @@ ifeq ($(BUILD_LK),yes)
 	  $(SHOWRSLT) $${PIPESTATUS[0]} $(MODULE_LOG) $(ACTION) || \
 	  $(SHOWRSLT) $${PIPESTATUS[0]} $(MODULE_LOG) $(ACTION)) && cd $(MKTOPDIR)
   else
-	if [ -f $(MKTOPDIR)/$(VERSIONDEF) ]; then \
-	  echo -n "#define LK_VER JRD_VERSION_MARK_" > $(LK_WD)/include/version.h ;\
-	  awk ' /UBOOT_VER/ { print substr($$NF, 2, $(VERSIONLEN)) }' $(MKTOPDIR)/$(VERSIONDEF) >> $(LK_WD)/include/version.h ;\
-	fi
 	$(hide) cd $(LK_WD) && \
 	  (FULL_PROJECT=$(FULL_PROJECT) make $(MAKEJOBS) $(PROJECT) $(ACTION) $(DEAL_STDOUT) && \
 	  cd $(MKTOPDIR) && \
@@ -917,12 +923,6 @@ else
 	  $(SHOWRSLT) $${PIPESTATUS[0]} $(MODULE_LOG) $(ACTION) || \
 	  $(SHOWRSLT) $${PIPESTATUS[0]} $(MODULE_LOG) $(ACTION)
 endif
-ifeq ($(ACTION), )
-	$(hide) /usr/bin/perl mediatek/build/tools/jrd_magic.pl $(PROJECT)
-endif
-
-jrdmagic:
-	/usr/bin/perl mediatek/build/tools/jrd_magic.pl $(PROJECT)
 
 
 define chkImgSize

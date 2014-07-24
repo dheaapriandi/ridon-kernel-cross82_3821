@@ -108,8 +108,8 @@
   Region: EMMC_USER
   Reserved: N
   Size_KB:
-    eng: 128
-    user: 128
+    eng: 256
+    user: 256
   Type: Raw data
 - Download: Y
   Download_File: lk.bin
@@ -140,8 +140,8 @@
   Region: EMMC_USER
   Reserved: N
   Size_KB:
-    eng: 6144
-    user: 6144
+    eng: 10240
+    user: 10240
   Type: Raw data
 - Download: Y
   Download_File: recovery.img
@@ -156,8 +156,8 @@
   Region: EMMC_USER
   Reserved: N
   Size_KB:
-    eng: 6144
-    user: 6144
+    eng: 10240
+    user: 10240
   Type: Raw data
 - Download: Y
   Download_File: secro.img
@@ -204,8 +204,8 @@
   Region: EMMC_USER
   Reserved: N
   Size_KB:
-    eng: 3072
-    user: 3072
+    eng: 8192
+    user: 8192
   Type: Raw data
 - Download: Y
   Download_File: AUTO
@@ -252,8 +252,8 @@
   Region: EMMC_USER
   Reserved: N
   Size_KB:
-    eng: 716800
-    user: 716800
+    eng: 921600
+    user: 921600
   Type: EXT4
 - Download: Y
   Download_File: cache.img
@@ -268,8 +268,8 @@
   Region: EMMC_USER
   Reserved: N
   Size_KB:
-    eng: 129024
-    user: 129024
+    eng: 131072
+    user: 131072
   Type: EXT4
 - Download: Y
   Download_File: userdata.img
@@ -284,8 +284,8 @@
   Region: EMMC_USER
   Reserved: N
   Size_KB:
-    eng: 1048576
-    user: 1048576
+    eng: 1208320
+    user: 1208320
   Type: EXT4
 - Download: N
   Download_File: NONE

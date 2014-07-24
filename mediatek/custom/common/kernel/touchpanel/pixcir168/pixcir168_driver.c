@@ -88,6 +88,27 @@ static int tpd_i2c_detect(struct i2c_client *client, struct i2c_board_info *info
     return 0;
 }
 
+/*
+static int tpd_i2c_write(struct i2c_client *client, const uint8_t *buf, int len)
+{
+    int i = 0;
+    for(i = 0 ; i < len; i++)
+    {
+        I2CDMABuf_va[i] = buf[i];
+    }
+    
+    if(len < 8)
+    {
+        client->addr = ( client->addr & I2C_MASK_FLAG ) | I2C_ENEXT_FLAG;
+        return i2c_master_send(client, buf, len);
+    }
+    else
+    {
+        client->addr = client->addr & I2C_MASK_FLAG | I2C_DMA_FLAG | I2C_ENEXT_FLAG;
+        return i2c_master_send(client, I2CDMABuf_pa, len);
+    }    
+}
+*/
 
 static int tpd_i2c_read(struct i2c_client *client, uint8_t *buf, int len)
 {

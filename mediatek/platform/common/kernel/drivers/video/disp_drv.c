@@ -908,7 +908,7 @@ DISP_STATUS DISP_Init(UINT32 fbVA, UINT32 fbPA, BOOL isLcmInited)
     r = (disp_if_drv->init) ?
         (disp_if_drv->init(fbVA, fbPA, isLcmInited)) :
           DISP_STATUS_NOT_IMPLEMENTED;
-
+	msleep(50);
 #ifndef MTKFB_FPGA_ONLY
    DISP_InitVSYNC((100000000/lcd_fps) + 1);//us
 #endif
@@ -1527,7 +1527,10 @@ void DISP_UnRegisterExTriggerSource(int u4ID)
     ReleaseUpdateMutex();
 }
 #if defined (MTK_HDMI_SUPPORT)
-extern 	bool is_hdmi_active(void);
+extern bool is_hdmi_active(void);
+#if defined (SINGLE_PANEL_OUTPUT)
+extern void hdmi_config_overlay_wdma(void); 
+#endif
 #endif
 
 
@@ -1867,6 +1870,18 @@ static int _DISP_ConfigDlinkDatapath (disp_path_config_dirty *dirty_flag, struct
 	int i;
     unsigned long flags;
 	disp_path_get_mutex();
+
+
+#if defined(SINGLE_PANEL_OUTPUT) && defined(MTK_HDMI_SUPPORT)
+	//This is only for 82 HDMI feature using
+	//Because only one RDMA can be used for main display and HDMI
+	//Replace OVL->RDMA with OVL->WDMA to release RDMA and consume ovl output
+	if(is_hdmi_active())
+	{
+		hdmi_config_overlay_wdma();
+	}
+#endif
+
 	if (dirty_flag->ovl_dirty) {
 		MMProfileLog(MTKFB_MMP_Events.ConfigOVL, MMProfileFlagStart);
 		for (i=0; i<DDP_OVL_LAYER_MUN; i++) {
@@ -2103,7 +2118,6 @@ static void _DISP_RegUpdateCallback(void* pParam)
             }
         }
         spin_unlock_irqrestore(&buf_usage_lock, flags);
-
 
     	clean_up_task_wakeup = 1;
     	wake_up_interruptible(&clean_up_wq);
@@ -2821,10 +2835,6 @@ unsigned int DISP_AutoTest()
         return DISP_STATUS_ERROR;
     }
     ret = disphal_check_lcm(color);
-    if(LCM_TYPE_DSI == lcm_params->type && lcm_params->dsi.mode != CMD_MODE){
-        is_video_mode_running = FALSE;
-        needStartEngine = true;
-    }
     up(&sem_update_screen);
     return ret;
 }
@@ -2836,7 +2846,7 @@ unsigned int DISP_BLS_Query(void)
 
 void DISP_BLS_Enable(BOOL enable)
 {
-    disphal_bls_enable(enable);
+//	disphal_bls_enable(enable);
 }
 
 const char* DISP_GetLCMId(void)
@@ -2948,6 +2958,8 @@ unsigned long DISP_GetLCMIndex(void)
 
 DISP_STATUS DISP_PrepareSuspend(void)
 {
+    lcm_drv->earlysuspendsharp();	 //lcd test 9121
+    
     disphal_prepare_suspend();
     return DISP_STATUS_OK;
 }

@@ -94,6 +94,26 @@ struct i2c_driver tpd_i2c_driver = {
 
 #define C_I2C_FIFO_SIZE         8       /*according i2c_mt6575.c*/
 
+/*
+static int tangleM32_16_read_byte_sr(struct i2c_client *client, u8 addr, u8 *data)
+{
+   u8 buf;
+    int ret = 0;
+	
+    client->addr = client->addr& I2C_MASK_FLAG | I2C_WR_FLAG |I2C_RS_FLAG;
+    buf = addr;
+	ret = i2c_master_send(client, (const char*)&buf, 1<<8 | 1);
+    //ret = i2c_master_send(client, (const char*)&buf, 1);
+    if (ret < 0) {
+        printk("tangleM32_16_read_byte_sr send command error!!\n");
+        return -EFAULT;
+    }
+
+    *data = buf;
+	client->addr = client->addr& I2C_MASK_FLAG;
+    return 0;
+}
+*/
 
 static int tangleM32_16_write_byte(struct i2c_client *client, u8 addr, u8 data)
 {
@@ -183,6 +203,12 @@ static int tangleM32_16_read_block(struct i2c_client *client, u8 addr, u8 *data,
 
 
 
+/*
+static int tpd_i2c_detect(struct i2c_client *client, int kind, struct i2c_board_info *info) {
+    strcpy(info->type, "mtk-tpd");
+    return 0;
+}
+*/
 
 static void setResolution(struct i2c_client *client)
 {

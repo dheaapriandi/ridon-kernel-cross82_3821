@@ -1,9 +1,49 @@
+/*
+** $Id: @(#) gl_rst.c@@
+*/
+
+/*! \file   gl_rst.c
+    \brief  Main routines for supporintg MT6620 whole-chip reset mechanism
+
+    This file contains the support routines of Linux driver for MediaTek Inc. 802.11
+    Wireless LAN Adapters.
+*/
 
 
 
+/*
+** $Log: gl_rst.c $
+ *
+ * 11 10 2011 cp.wu
+ * [WCXRP00001098] [MT6620 Wi-Fi][Driver] Replace printk by DBG LOG macros in linux porting layer
+ * 1. eliminaite direct calls to printk in porting layer.
+ * 2. replaced by DBGLOG, which would be XLOG on ALPS platforms.
+ *
+ * 04 22 2011 cp.wu
+ * [WCXRP00000598] [MT6620 Wi-Fi][Driver] Implementation of interface for communicating with user space process for RESET_START and RESET_END events
+ * skip power-off handshaking when RESET indication is received.
+ *
+ * 04 14 2011 cp.wu
+ * [WCXRP00000598] [MT6620 Wi-Fi][Driver] Implementation of interface for communicating with user space process for RESET_START and RESET_END events
+ * 1. add code to put whole-chip resetting trigger when abnormal firmware assertion is detected
+ * 2. add dummy function for both Win32 and Linux part.
+ *
+ * 03 30 2011 cp.wu
+ * [WCXRP00000598] [MT6620 Wi-Fi][Driver] Implementation of interface for communicating with user space process for RESET_START and RESET_END events
+ * use netlink unicast instead of broadcast
+ *
+**
+*/
 
+/*******************************************************************************
+*                         C O M P I L E R   F L A G S
+********************************************************************************
+*/
 
-
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 #include "gl_os.h"
 #include "debug.h"
 #include "wlan_lib.h"
@@ -15,6 +55,10 @@
 
 #if CFG_CHIP_RESET_SUPPORT
 
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 #define MAX_BIND_PROCESS    (4)
 
 #define MTK_WIFI_FAMILY_NAME        "MTK_WIFI"
@@ -23,6 +67,10 @@
 #define MTK_WIFI_RESET_TEST_NAME    "GENETLINK_START"
 
 
+/*******************************************************************************
+*                             D A T A   T Y P E S
+********************************************************************************
+*/
 enum {
     __MTK_WIFI_ATTR_INVALID,
     MTK_WIFI_ATTR_MSG,
@@ -39,7 +87,15 @@ enum {
 };
 #define MTK_WIFI_COMMAND_MAX    (__MTK_WIFI_COMMAND_MAX - 1)
 
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/BOOLEAN fgIsResetting = FALSE;
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 static UINT_32 mtk_wifi_seqnum = 0;
 static int num_bind_process = 0;
 static pid_t bind_pid[MAX_BIND_PROCESS];
@@ -88,7 +144,15 @@ static struct genl_ops mtk_wifi_gnl_ops_reset = {
 };
 
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 extern int
 mtk_wcn_wmt_msgcb_reg(
     ENUM_WMTDRV_TYPE_T eType,
@@ -115,7 +179,20 @@ glResetSendMessage (
     );
 
 
+/*******************************************************************************
+*                              F U N C T I O N S
+********************************************************************************
+*/
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for 
+ *        1. registering for reset callbacks
+ *        2. initialize netlink socket 
+ *
+ * @param none
+ *
+ * @retval none
+ */
 /*----------------------------------------------------------------------------*/
 VOID
 glResetInit(
@@ -145,6 +222,15 @@ glResetInit(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for 
+ *        1. uninitialize netlink socket 
+ *        2. deregistering for reset callbacks
+ *
+ * @param none
+ *
+ * @retval none
+ */
 /*----------------------------------------------------------------------------*/
 VOID
 glResetUninit(
@@ -162,6 +248,17 @@ glResetUninit(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is invoked when there is reset messages indicated
+ *
+ * @param   eSrcType
+ *          eDstType
+ *          eMsgType
+ *          prMsgBody
+ *          u4MsgLength
+ *
+ * @retval 
+ */
 /*----------------------------------------------------------------------------*/
 static void *
 glResetCallback (
@@ -204,6 +301,15 @@ glResetCallback (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine send out message via netlink socket
+ *
+ * @param   aucMsg
+ *          u4MsgLength
+ *
+ * @retval  TRUE
+ *          FALSE
+ */
 /*----------------------------------------------------------------------------*/
 static BOOLEAN
 glResetSendMessage(
@@ -257,6 +363,15 @@ glResetSendMessage(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is called to identify PID for process binding
+ *
+ * @param   skb
+ *          info
+ *
+ * @retval  0
+ *          nonzero
+ */
 /*----------------------------------------------------------------------------*/
 int mtk_wifi_bind(
     struct sk_buff *skb,
@@ -300,6 +415,15 @@ out:
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is called for reset, shout not happen
+ *
+ * @param   skb
+ *          info
+ *
+ * @retval  0
+ *          nonzero
+ */
 /*----------------------------------------------------------------------------*/
 int mtk_wifi_reset(
     struct sk_buff *skb,
@@ -313,6 +437,13 @@ int mtk_wifi_reset(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is called for generating reset request to WMT
+ *
+ * @param   None
+ *
+ * @retval  None
+ */
 /*----------------------------------------------------------------------------*/
 VOID
 glSendResetRequest(
@@ -325,6 +456,14 @@ glSendResetRequest(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is called for checking if MT6620 is resetting
+ *
+ * @param   None
+ *
+ * @retval  TRUE
+ *          FALSE
+ */
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 kalIsResetting(

@@ -1752,6 +1752,18 @@ kalRxIndicatePkts (
 
         }
 
+		/* check if the "unicast" packet is from us */
+		if (kalMemCmp(prSkb->data, prSkb->data+6, 6) == 0)
+		{
+			/* we will filter broadcast/multicast packet sent from us in hardware */
+			/* source address = destination address ? */
+			DBGLOG(RX, EVENT,
+				("kalRxIndicatePkts got from us!!! Drop it! (["MACSTR"] len %d)\n",
+				MAC2STR(prSkb->data), prSkb->len));
+			nicRxReturnRFB(prGlueInfo->prAdapter, prSkb);
+			return WLAN_STATUS_SUCCESS;
+		}
+
         prNetDev->last_rx = jiffies;
         prSkb->protocol = eth_type_trans(prSkb, prNetDev);
         prSkb->dev = prNetDev;

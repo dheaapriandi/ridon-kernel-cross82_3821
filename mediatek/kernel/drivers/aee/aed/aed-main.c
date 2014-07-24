@@ -1,3 +1,10 @@
+/* 
+ * (C) Copyright 2010
+ * MediaTek <www.MediaTek.com>
+ *
+ * Android Exception Device
+ *
+ */
 #include <linux/cdev.h>
 #include <linux/delay.h>
 #include <linux/device.h>
@@ -28,10 +35,17 @@ static LIST_HEAD(ke_request_list);
 static struct work_struct work;
 
 static DEFINE_SEMAPHORE(aed_ke_sem);
+/*
+ *  may be accessed from irq
+*/
 static spinlock_t aed_device_lock;
 static int aee_mode = AEE_MODE_CUSTOMER_USER;	
+static int force_red_screen = AEE_FORCE_NOT_SET;	
 
 static struct proc_dir_entry *aed_proc_dir;
+/******************************************************************************
+ * DEBUG UTILITIES
+ *****************************************************************************/
 
 void msg_show(const char *prefix, AE_Msg *msg)
 {
@@ -93,6 +107,9 @@ void msg_show(const char *prefix, AE_Msg *msg)
 }
 
 
+/******************************************************************************
+ * CONSTANT DEFINITIONS
+ *****************************************************************************/
 #define CURRENT_KE_CONSOLE "current-ke-console"
 #define CURRENT_EE_COREDUMP "current-ee-coredump"
 
@@ -105,6 +122,9 @@ void msg_show(const char *prefix, AE_Msg *msg)
 
 #define MAX_EE_COREDUMP 0x800000
 
+/******************************************************************************
+ * STRUCTURE DEFINITIONS
+ *****************************************************************************/
 
 struct aed_eerec { // external exception record
 	char assert_type[32];
@@ -134,11 +154,20 @@ struct aed_dev {
 };
 
 
+/******************************************************************************
+ * FUNCTION PROTOTYPES
+ *****************************************************************************/
 static long aed_ioctl(struct file *file, unsigned int cmd, unsigned long arg);
 
 
+/******************************************************************************
+ * GLOBAL DATA
+ *****************************************************************************/
 static struct aed_dev aed_dev;
 
+/******************************************************************************
+ * Message Utilities
+ *****************************************************************************/
 
 inline void msg_destroy(char **ppmsg)
 {
@@ -202,6 +231,9 @@ out:
 	return ret;
 }
 
+/******************************************************************************
+ * Kernel message handlers
+ *****************************************************************************/
 static void ke_gen_notavail_msg(void)
 {
 	AE_Msg *rep_msg;
@@ -454,6 +486,9 @@ static void ke_worker(struct work_struct *work) {
     ke_destroy_log();
   }
 }
+/******************************************************************************
+ * EE message handlers
+ *****************************************************************************/
 static void ee_gen_notavail_msg(void)
 {
 	AE_Msg *rep_msg;
@@ -632,6 +667,9 @@ static int ee_log_avail(void)
 	return (aed_dev.eerec.ee_log != NULL);
 }
 
+/******************************************************************************
+ * AED EE File operations
+ *****************************************************************************/
 static int aed_ee_open(struct inode *inode, struct file *filp)
 {
     ee_destroy_log(); //Destroy last log record
@@ -735,6 +773,9 @@ static ssize_t aed_ee_write(struct file *filp, const char __user *buf, size_t co
 	return count;
 }
 
+/******************************************************************************
+ * AED KE File operations
+ *****************************************************************************/
 static int aed_ke_open(struct inode *inode, struct file *filp)
 {
 	struct aee_oops *oops_open = NULL;
@@ -949,6 +990,10 @@ extern void aee_kernel_RT_Monitor_api(int lParam);
 // QHQ RT Monitor    end
 
 
+/*
+ * aed process daemon and other command line may access me 
+ * concurrently
+ */
 DEFINE_SEMAPHORE(aed_dal_sem);
 static long aed_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
@@ -1172,6 +1217,16 @@ static long aed_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		break;
 	}
 
+    case AEEIOCTL_SET_FORECE_RED_SCREEN:
+	{
+		if (copy_from_user(&force_red_screen, (void __user *)arg, sizeof(force_red_screen))) {
+			ret = -EFAULT;
+			goto EXIT;
+		}
+		printk("force aee red screen = %d\n", force_red_screen);
+		break;
+	}
+
 	default:
 		ret = -EINVAL;
 	}
@@ -1213,7 +1268,8 @@ void aee_kernel_dal_api(const char *file, const int line, const char *msg)
 			up(&aed_dal_sem);
 			return;
 		}
-		if (aee_mode < AEE_MODE_CUSTOMER_ENG) {
+		if (((aee_mode == AEE_MODE_MTK_ENG) && (force_red_screen == AEE_FORCE_NOT_SET)) 
+			|| ((aee_mode < AEE_MODE_CUSTOMER_ENG) && (force_red_screen == AEE_FORCE_RED_SCREEN))) {
 			dal_setcolor.foreground = 0xff00ff; // fg: purple
 			dal_setcolor.background = 0x00ff00; // bg: green
 			DAL_SetColor(dal_setcolor.foreground, dal_setcolor.background);
@@ -1406,6 +1462,9 @@ static int aed_proc_done(void)
 	return 0;
 }
 
+/******************************************************************************
+ * Module related
+ *****************************************************************************/
 static struct file_operations aed_ee_fops = {
 	.owner   = THIS_MODULE,
 	.open    = aed_ee_open,
@@ -1425,16 +1484,10 @@ static struct file_operations aed_ke_fops = {
 	.write   = aed_ke_write,
 	.unlocked_ioctl   = aed_ioctl,
 };
-// QHQ RT Monitor  
-//begin mtk patch for PR 639508
-static int aed_RT_Monitor_open(struct inode *inode, struct file *filp)
-{
-	return 0;
-}
-//end
+// QHQ RT Monitor    
 static struct file_operations aed_wdt_RT_Monitor_fops = {
 	.owner   = THIS_MODULE,
-	.open    = aed_RT_Monitor_open,//mtk patch for PR 639508
+	.open    = aed_ke_open,
 	.release = aed_ke_release,
 	.poll    = aed_ke_poll,
 	.read    = aed_ke_read,

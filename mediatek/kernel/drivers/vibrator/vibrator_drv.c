@@ -1,3 +1,12 @@
+/******************************************************************************
+ * mt6575_vibrator.c - MT6575 Android Linux Vibrator Device Driver
+ * 
+ * Copyright 2009-2010 MediaTek Co.,Ltd.
+ * 
+ * DESCRIPTION:
+ *     This file provid the other drivers vibrator relative functions
+ *
+ ******************************************************************************/
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -27,8 +36,14 @@
 #define VIB_DEVICE	        			"mtk_vibrator"
 
 
+/******************************************************************************
+Error Code No.
+******************************************************************************/
 #define RSUCCESS        0
 
+/******************************************************************************
+Debug Message Settings
+******************************************************************************/
 
 /* Debug message event */
 #define DBG_EVT_NONE		0x00000000	/* No event */
@@ -54,6 +69,9 @@ do {	\
 #endif
 
 
+/******************************************************************************
+Global Definations
+******************************************************************************/
 static struct workqueue_struct *vibrator_queue;
 static struct work_struct vibrator_work;
 static struct hrtimer vibe_timer;
@@ -185,6 +203,9 @@ static void vib_shutdown(struct platform_device *pdev)
 	}
 	spin_unlock_irqrestore(&vibe_lock, flags);
 }
+/******************************************************************************
+Device driver structure
+*****************************************************************************/
 static struct platform_driver vibrator_driver = 
 {
     .probe		= vib_probe,
@@ -220,6 +241,22 @@ static ssize_t store_vibr_on(struct device *dev,struct device_attribute *attr, c
 
 static DEVICE_ATTR(vibr_on, 0220, NULL, store_vibr_on);
 
+/******************************************************************************
+ * vib_mod_init
+ * 
+ * DESCRIPTION:
+ *   Register the vibrator device driver ! 
+ * 
+ * PARAMETERS: 
+ *   None
+ * 
+ * RETURNS: 
+ *   None
+ * 
+ * NOTES: 
+ *   RSUCCESS : Success
+ * 
+ ******************************************************************************/
 
 static int vib_mod_init(void)
 {	
@@ -267,6 +304,22 @@ static int vib_mod_init(void)
     return RSUCCESS;
 }
 
+/******************************************************************************
+ * vib_mod_exit
+ * 
+ * DESCRIPTION: 
+ *   Free the device driver ! 
+ * 
+ * PARAMETERS: 
+ *   None
+ * 
+ * RETURNS: 
+ *   None
+ * 
+ * NOTES: 
+ *   None
+ * 
+ ******************************************************************************/
  
 static void vib_mod_exit(void)
 {

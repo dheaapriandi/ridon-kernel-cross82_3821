@@ -77,9 +77,7 @@
 
 #define MT_LTE_TRX_MAX_PKT_CNT		(32)
 
-//#define MT_LTE_TRX_MAX_PKT_SIZE		DEV_MAX_PKT_SIZE 
-/* Saperate MT_LTE_TRX_MAX_PKT_SIZE for DEV_MAX_PKT_SIZE */
-#define MT_LTE_TRX_MAX_PKT_SIZE		(4096)
+#define MT_LTE_TRX_MAX_PKT_SIZE		DEV_MAX_PKT_SIZE 
 
 // MT_LTE_TRX_MAX_PKT_CNT * (pkt_size + (tx header or rx legacy ) + rx tailor)
 #define MT_LTE_SDIO_DATA_BUFF_LEN_UNALIGN (MT_LTE_TRX_MAX_PKT_CNT*(MT_LTE_TRX_MAX_PKT_SIZE+MT_LTE_TX_HEADER_LENGTH)+MT_LTE_RX_TAILOR_PRESPACE+MT_LTE_RX_TAILOR_LENGTH)
@@ -438,10 +436,7 @@ KAL_INT32 mtlte_hif_enable_interrupt_at_probe(void);
 
 KAL_INT32 mtlte_hif_sdio_probe(void) ;
 
-//KAL_INT32 mtlte_hif_sdio_remove(void) ;
-
-KAL_INT32 mtlte_hif_sdio_remove_phase1(void) ;
-KAL_INT32 mtlte_hif_sdio_remove_phase2(void) ;
+KAL_INT32 mtlte_hif_sdio_remove(void) ;
 
 KAL_INT32 mtlte_hif_sdio_init(void) ;
 

@@ -335,28 +335,28 @@ static long APDS9930_enable_ps(struct i2c_client *client, int enable)
 			}
 			/*fix bug*/
 			databuf[0] = APDS9930_CMM_INT_LOW_THD_LOW;	
-			databuf[1] = (u8)(750 & 0x00FF);
+			databuf[1] = (u8)((atomic_read(&obj->ps_thd_val_low)) & 0x00FF);
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
 				goto EXIT_ERR;
 			}
 			databuf[0] = APDS9930_CMM_INT_LOW_THD_HIGH;	
-			databuf[1] = (u8)((750 & 0xFF00) >> 8);
+			databuf[1] = (u8)(((atomic_read(&obj->ps_thd_val_low)) & 0xFF00) >> 8);
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
 				goto EXIT_ERR;
 			}
 			databuf[0] = APDS9930_CMM_INT_HIGH_THD_LOW;	
-			databuf[1] = (u8)(900 & 0x00FF);
+			databuf[1] = (u8)((atomic_read(&obj->ps_thd_val_high)) & 0x00FF);
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
 				goto EXIT_ERR;
 			}
 			databuf[0] = APDS9930_CMM_INT_HIGH_THD_HIGH;	
-			databuf[1] = (u8)((900 & 0xFF00) >> 8);;
+			databuf[1] = (u8)(((atomic_read(&obj->ps_thd_val_high)) & 0xFF00) >> 8);;
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
@@ -553,7 +553,7 @@ static int APDS9930_init_client(struct i2c_client *client)
 	}
 	
 	databuf[0] = APDS9930_CMM_ATIME;    
-	databuf[1] = 0xF6;
+	databuf[1] = 0xDB;
 	res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 	if(res <= 0)
 	{
@@ -569,7 +569,7 @@ static int APDS9930_init_client(struct i2c_client *client)
 	}
 
 	databuf[0] = APDS9930_CMM_WTIME;    
-	databuf[1] = 0xFC;
+	databuf[1] = 0xFF;
 	res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 	if(res <= 0)
 	{
@@ -612,28 +612,28 @@ static int APDS9930_init_client(struct i2c_client *client)
 		else
 		{
 			databuf[0] = APDS9930_CMM_INT_LOW_THD_LOW;	
-			databuf[1] = (u8)(750 & 0x00FF);
+			databuf[1] = (u8)((atomic_read(&obj->ps_thd_val_low)) & 0x00FF);
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
 				goto EXIT_ERR;
 			}
 			databuf[0] = APDS9930_CMM_INT_LOW_THD_HIGH;	
-			databuf[1] = (u8)((750 & 0xFF00) >> 8);
+			databuf[1] = (u8)(((atomic_read(&obj->ps_thd_val_low)) & 0xFF00) >> 8);
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
 				goto EXIT_ERR;
 			}
 			databuf[0] = APDS9930_CMM_INT_HIGH_THD_LOW;	
-			databuf[1] = (u8)(900 & 0x00FF);
+			databuf[1] = (u8)((atomic_read(&obj->ps_thd_val_high)) & 0x00FF);
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
 				goto EXIT_ERR;
 			}
 			databuf[0] = APDS9930_CMM_INT_HIGH_THD_HIGH;	
-			databuf[1] = (u8)((900 & 0xFF00) >> 8);;
+			databuf[1] = (u8)(((atomic_read(&obj->ps_thd_val_high)) & 0xFF00) >> 8);;
 			res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res <= 0)
 			{
@@ -643,7 +643,7 @@ static int APDS9930_init_client(struct i2c_client *client)
 		}
 
 		databuf[0] = APDS9930_CMM_Persistence;
-		databuf[1] = 0x20;
+		databuf[1] = 0x00;
 		res = APDS9930_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 		if(res <= 0)
 		{
@@ -696,6 +696,147 @@ EXIT_ERR:
 	return res;
 }
 
+
+/*#ifdef APDS9930_WHITE_PANEL
+#define APDS9930_GA		309	
+#define APDS9930_COE_B		175	
+#define APDS9930_COE_C		64	
+#define APDS9930_COE_D		108	
+#define APDS9930_DF		52
+#endif
+#ifdef APDS9930_BLACK_PANEL
+#define APDS9930_GA		405	
+#define APDS9930_COE_B		178	
+#define APDS9930_COE_C		45	
+#define APDS9930_COE_D		76
+#define APDS9930_DF		52
+#endif*/
+
+int APDS9930_GA, APDS9930_COE_B, APDS9930_COE_C, APDS9930_COE_D, APDS9930_DF;
+
+#define CMD_WORD		0xA0
+static int tp_color_val = 1;   //default black panel
+
+static int LuxCalculation(struct i2c_client *client, int ch0data, int ch1data)
+{
+	int luxValue=0;
+
+	int IAC1=0;
+	int IAC2=0;
+	int IAC=0;
+
+	if(tp_color_val ==2)   //white panel
+	{
+		APDS9930_GA=309;
+		APDS9930_COE_B=175;	
+		APDS9930_COE_C	=64;	
+		APDS9930_COE_D=108;
+		APDS9930_DF=52;
+	}else{
+		APDS9930_GA=405;
+		APDS9930_COE_B=178;	
+		APDS9930_COE_C	=45;	
+		APDS9930_COE_D=76;
+		APDS9930_DF=52;
+	}
+
+	IAC1 = (ch0data - (APDS9930_COE_B*ch1data)/100);			// re-adjust COE_B to avoid 2 decimal point
+	IAC2 = ((APDS9930_COE_C*ch0data)/100 - (APDS9930_COE_D*ch1data)/100); 	// re-adjust COE_C and COE_D to void 2 decimal point
+
+	if (IAC1 > IAC2)
+		IAC = IAC1;
+	else if (IAC1 <= IAC2)
+		IAC = IAC2;
+	else
+		IAC = 0;
+
+	if (IAC1<0 && IAC2<0) {
+		IAC = 0;	// cdata and irdata saturated
+		return -1; 	// don't report first, change gain may help
+	}
+
+	APS_LOG("IAC1=%d, IAC2=%d, IAC=%d ---CYY\n", IAC1, IAC2, IAC);
+
+	luxValue = ((IAC*APDS9930_GA*APDS9930_DF)/100)*4/((10064/100)*16);
+
+
+	return luxValue;
+}
+
+
+static ssize_t APDS9930_show_tp_color(struct device_driver *ddri, char *buf)
+{
+	ssize_t len = 0;
+
+	len = snprintf(buf, PAGE_SIZE, "%d\n", tp_color_val);
+	return len;    
+}
+/*----------------------------------------------------------------------------*/
+static ssize_t APDS9930_store_tp_color(struct device_driver *ddri, char *buf, size_t count)
+{
+	int color;
+
+	APS_LOG("Entry APDS9930_store_tp_color buf string=%s\n", buf);
+	if(1 == sscanf(buf, "%d", &color))
+	{ 
+		APS_LOG("color=%d\n", color);
+		if((color < 1) || (color > 2))
+			tp_color_val = 1;
+		else
+			tp_color_val = color;
+	}
+	else
+	{
+		APS_LOG("invalid content: '%s', length = %d\n", buf, count);
+	}
+	return count;
+}
+
+
+/*----------------------------------------------------------------------------*/
+static DRIVER_ATTR(tp_color,   0666, APDS9930_show_tp_color, APDS9930_store_tp_color);
+
+/*----------------------------------------------------------------------------*/
+static struct device_attribute *apds9930_attr_list[] = {
+    &driver_attr_tp_color,
+};
+/*----------------------------------------------------------------------------*/
+static int APDS9930_create_attr(struct device_driver *driver) 
+{
+	int idx, err = 0;
+	int num = (int)(sizeof(apds9930_attr_list)/sizeof(apds9930_attr_list[0]));
+	if (driver == NULL)
+	{
+		return -EINVAL;
+	}
+
+	for(idx = 0; idx < num; idx++)
+	{
+		if(err = driver_create_file(driver, apds9930_attr_list[idx]))
+		{            
+			APS_ERR("driver_create_file (%s) = %d\n", apds9930_attr_list[idx]->attr.name, err);
+			break;
+		}
+	}    
+	return err;
+}
+/*----------------------------------------------------------------------------*/
+	static int APDS9930_delete_attr(struct device_driver *driver)
+	{
+	int idx ,err = 0;
+	int num = (int)(sizeof(apds9930_attr_list)/sizeof(apds9930_attr_list[0]));
+
+	if (!driver)
+	return -EINVAL;
+
+	for (idx = 0; idx < num; idx++) 
+	{
+		driver_remove_file(driver, apds9930_attr_list[idx]);
+	}
+	
+	return err;
+}
+
 /****************************************************************************** 
  * Function Configuration
 ******************************************************************************/
@@ -707,13 +848,26 @@ int APDS9930_read_als(struct i2c_client *client, u16 *data)
 	u8 buffer[2];
 	u16 atio;
 	int res = 0;
-
+	int ch0data, ch1data;;
+	
 	if(client == NULL)
 	{
 		APS_DBG("CLIENT CANN'T EQUL NULL\n");
 		return -1;
 	}
+
+	/*if(tp_color_val == 2)
+		APS_LOG("White Panel ---CYY\n");
+	else
+		APS_LOG("BLack Panel ---CYY\n");
+	*/
+
+	ch0data = i2c_smbus_read_word_data(client, CMD_WORD|APDS9930_CMM_C0DATA_L);
+	ch1data = i2c_smbus_read_word_data(client, CMD_WORD|APDS9930_CMM_C1DATA_L);
+
+
 	
+	#if 0
 	buffer[0]=APDS9930_CMM_C0DATA_L;
 	res = APDS9930_i2c_master_operate(client, buffer, 0x201, I2C_FLAG_READ);
 	if(res <= 0)
@@ -723,7 +877,7 @@ int APDS9930_read_als(struct i2c_client *client, u16 *data)
 	
 	c0_value = buffer[0] | (buffer[1]<<8);
 	c0_nf = obj->als_modulus*c0_value;
-	//APS_LOG("c0_value=%d, c0_nf=%d, als_modulus=%d\n", c0_value, c0_nf, obj->als_modulus);
+	APS_LOG("c0_value=%d, c0_nf=%d, als_modulus=%d ---CYY\n", c0_value, c0_nf, obj->als_modulus);
 
 	buffer[0]=APDS9930_CMM_C1DATA_L;
 	res = APDS9930_i2c_master_operate(client, buffer, 0x201, I2C_FLAG_READ);
@@ -734,13 +888,14 @@ int APDS9930_read_als(struct i2c_client *client, u16 *data)
 	
 	c1_value = buffer[0] | (buffer[1]<<8);
 	c1_nf = obj->als_modulus*c1_value;	
-	//APS_LOG("c1_value=%d, c1_nf=%d, als_modulus=%d\n", c1_value, c1_nf, obj->als_modulus);
-	
+	APS_LOG("c1_value=%d, c1_nf=%d, als_modulus=%d ---CYY\n", c1_value, c1_nf, obj->als_modulus);
+
+
 	if((c0_value > c1_value) &&(c0_value < 50000))
 	{  	/*Lenovo-sw chenlj2 add 2011-06-03,add {*/
 		atio = (c1_nf*100)/c0_nf;
 
-	//APS_LOG("atio = %d\n", atio);
+	APS_LOG("atio = %d ---CYY\n", atio);
 	if(atio<30)
 	{
 		*data = (13*c0_nf - 24*c1_nf)/10000;
@@ -774,10 +929,13 @@ int APDS9930_read_als(struct i2c_client *client, u16 *data)
 		APS_DBG("APDS9930_read_als als_value is invalid!!\n");
 		return -1;
 	}	
+	#endif
 
-	//APS_LOG("APDS9930_read_als als_value_lux = %d\n", *data);
+	APS_LOG("ch0data=%d, ch1data=%d ---CYY\n", ch0data, ch1data);
+	*data = LuxCalculation(client, ch0data, ch1data);
+	APS_LOG("APDS9930_read_als als_value_lux = %d  ---CYY\n", *data);
 	return 0;	 
-
+	
 	
 	
 EXIT_ERR:
@@ -868,12 +1026,12 @@ static int APDS9930_get_als_value(struct APDS9930_priv *obj, u16 als)
 		APS_DBG("ALS: %d [%d, %d] => %d [%d, %d] \n", als, level_low, level_high, value, value_low, value_high);
 		return value;
 #endif			        
-		//APS_ERR("ALS: %05d => %05d\n", als, obj->hw->als_value[idx]);	
+		APS_ERR("ALS: %05d => %05d\n", als, obj->hw->als_value[idx]);	
 		return obj->hw->als_value[idx];
 	}
 	else
 	{
-		//APS_ERR("ALS: %05d => %05d (-1)\n", als, obj->hw->als_value[idx]);    
+		APS_ERR("ALS: %05d => %05d (-1)\n", als, obj->hw->als_value[idx]);    
 		return -1;
 	}
 }
@@ -1014,7 +1172,8 @@ static void APDS9930_eint_work(struct work_struct *work)
 		APDS9930_read_ps(obj->client, &obj->ps);
 		APDS9930_read_als_ch0(obj->client, &obj->als);
 		APS_LOG("APDS9930_eint_work rawdata ps=%d als_ch0=%d!\n",obj->ps,obj->als);
-		APS_LOG("APDS9930 int top half time = %lld\n", int_top_time);
+		//APS_LOG("APDS9930 int top half time = %lld\n", int_top_time);
+		APS_LOG("APDS9930_get_ps_value(obj, obj->ps)= %d  --cyy\n", APDS9930_get_ps_value(obj, obj->ps));
 
 		if(obj->als > 40000)
 			{
@@ -1050,6 +1209,8 @@ static void APDS9930_eint_work(struct work_struct *work)
 		}
 		APS_LOG("APDS9930_eint_work APDS9930_CMM_INT_HIGH_THD_LOW before databuf[0]=%d databuf[1]=%d!\n",databuf[0],databuf[1]);
 #endif
+
+#if 0
 /*singal interrupt function add*/
 		if(intr_flag_value){
 						databuf[0] = APDS9930_CMM_INT_LOW_THD_LOW;	
@@ -1118,7 +1279,7 @@ static void APDS9930_eint_work(struct work_struct *work)
 							goto EXIT_ERR;
 						}
 				}
-				
+	#endif
 		//let up layer to know
 		#ifdef DEBUG_APDS9930
 		databuf[0] = APDS9930_CMM_INT_LOW_THD_LOW;
@@ -1671,6 +1832,7 @@ int APDS9930_ps_operate(void* self, uint32_t command, void* buff_in, int size_in
 				sensor_data = (hwm_sensor_data *)buff_out;	
 				APDS9930_read_ps(obj->client, &obj->ps);
 				APDS9930_read_als_ch0(obj->client, &obj->als);
+				APS_ERR("APDS9930_ps_operate ps data=%d!\n",obj->ps);
 				APS_ERR("APDS9930_ps_operate als data=%d!\n",obj->als);
 				sensor_data->values[0] = APDS9930_get_ps_value(obj, obj->ps);
 				sensor_data->value_divide = 1;
@@ -1856,13 +2018,13 @@ static int APDS9930_i2c_probe(struct i2c_client *client, const struct i2c_device
 		APS_ERR("APDS9930_device register failed\n");
 		goto exit_misc_device_register_failed;
 	}
-/*
+
 	if(err = APDS9930_create_attr(&APDS9930_alsps_driver.driver))
 	{
 		APS_ERR("create attribute err = %d\n", err);
 		goto exit_create_attr_failed;
 	}
-*/
+
 	obj_ps.self = APDS9930_obj;
 	
 	obj_ps.sensor_operate = APDS9930_ps_operate;
@@ -1909,12 +2071,12 @@ static int APDS9930_i2c_probe(struct i2c_client *client, const struct i2c_device
 static int APDS9930_i2c_remove(struct i2c_client *client)
 {
 	int err;	
-/*	
-	if(err = APDS9930_delete_attr(&APDS9930_i2c_driver.driver))
+	
+	if(err = APDS9930_delete_attr(&APDS9930_alsps_driver.driver))
 	{
 		APS_ERR("APDS9930_delete_attr fail: %d\n", err);
 	} 
-*/
+
 	if((err = misc_deregister(&APDS9930_device)))
 	{
 		APS_ERR("misc_deregister fail: %d\n", err);    

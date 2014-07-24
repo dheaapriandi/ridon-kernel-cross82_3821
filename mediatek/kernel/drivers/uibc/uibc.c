@@ -313,7 +313,6 @@ int uibc_registered = 0;
 
 static long uibc_kbd_dev_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
     void __user *uarg = (void __user *)arg;
-    short value;
     static short XValue = 0;
     static short YValue = 0;
     short keycode;
@@ -326,6 +325,18 @@ static long uibc_kbd_dev_ioctl(struct file *file, unsigned int cmd, unsigned lon
         uibc_input_dev->keycodemax = ARRAY_SIZE(uibc_keycode);
         for (i = 0; i < ARRAY_SIZE(uibckbd->keymap); i++)
             __set_bit(uibckbd->keymap[i], uibc_input_dev->keybit);
+        err = input_register_device(uibc_input_dev);
+        if (err) {
+            xlog_printk(ANDROID_LOG_ERROR, UIBC_TAG, "register input device failed (%d)\n", err);
+            input_free_device(uibc_input_dev);
+            return err;
+        }
+        uibc_registered = 1;
+        break;
+    }
+    case UIBC_MOUSE: {
+        __set_bit(BTN_LEFT, uibc_input_dev->keybit);
+        __set_bit(BTN_TOUCH, uibc_input_dev->keybit);
         err = input_register_device(uibc_input_dev);
         if (err) {
             xlog_printk(ANDROID_LOG_ERROR, UIBC_TAG, "register input device failed (%d)\n", err);
@@ -424,12 +435,12 @@ static long uibc_kbd_dev_ioctl(struct file *file, unsigned int cmd, unsigned lon
 }
 
 static int uibc_kbd_dev_open(struct inode *inode, struct file *file) {
-    int i;
+    int TPD_RES_X, TPD_RES_Y;
+
     xlog_printk(ANDROID_LOG_INFO, UIBC_TAG, "*** uibckeyboard uibc_kbd_dev_open ***\n");
 
-    int TPD_RES_X = simple_strtoul(LCM_WIDTH, NULL, 0);
-    int TPD_RES_Y = simple_strtoul(LCM_HEIGHT, NULL, 0);
-
+    TPD_RES_X = simple_strtoul(LCM_WIDTH, NULL, 0);
+    TPD_RES_Y = simple_strtoul(LCM_HEIGHT, NULL, 0);
 
     uibckbd = kzalloc(sizeof(struct uibckeyboard), GFP_KERNEL);
     uibc_input_dev = input_allocate_device();

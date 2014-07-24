@@ -42,7 +42,7 @@ obj-y   +=  rtc/
 endif
 obj-y   +=  ccci/
 obj-y   +=  dual_ccci/
-obj-y   +=  eccci/
+#obj-y   +=  eccci/
 
 ifeq ($(CONFIG_MTK_EEMCS_DEVICES), y)
 obj-y   +=  eemcs/
@@ -151,3 +151,4 @@ obj-$(CONFIG_MTK_SCHED_CMP_POWER_AWARE_CONTROLLER) +=  pa/
 obj-y   += selinux_warning/
 # MTK PASR SW flow
 obj-$(CONFIG_MTKPASR)	+= mtkpasr/
+obj-y   +=  debug_util/

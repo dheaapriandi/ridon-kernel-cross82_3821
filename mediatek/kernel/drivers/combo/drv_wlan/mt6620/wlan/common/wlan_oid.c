@@ -1,26 +1,1091 @@
+/*
+** $Id: //Department/DaVinci/BRANCHES/MT6620_WIFI_DRIVER_V2_3/common/wlan_oid.c#5 $
+*/
+
+/*! \file wlanoid.c
+    \brief This file contains the WLAN OID processing routines of Windows driver for
+           MediaTek Inc. 802.11 Wireless LAN Adapters.
+*/
 
 
 
+/*
+** $Log: wlan_oid.c $
+**
+** 01 21 2013 cp.wu
+** [ALPS00438894] ?wifi?????????CTIA?wifi?????
+** reject scan request when disabling online scan facility
+**
+** 07 19 2012 yuche.tsai
+** NULL
+** Code update for JB.
+ *
+ * 07 17 2012 yuche.tsai
+ * NULL
+ * Let netdev bring up.
+ *
+ * 07 17 2012 yuche.tsai
+ * NULL
+ * Compile no error before trial run.
+ *
+ * 03 02 2012 terry.wu
+ * NULL
+ * Sync CFG80211 modification from branch 2,2.
+ *
+ * 01 06 2012 wh.su
+ * [WCXRP00001153] [MT6620 Wi-Fi][Driver] Adding the get_ch_list and set_tx_power proto type function
+ * using the wlanSendSetQueryCmd to set the tx power control cmd.
+ *
+ * 01 06 2012 wh.su
+ * [WCXRP00001153] [MT6620 Wi-Fi][Driver] Adding the get_ch_list and set_tx_power proto type function
+ * change the set tx power cmd name.
+ *
+ * 01 05 2012 wh.su
+ * [WCXRP00001153] [MT6620 Wi-Fi][Driver] Adding the get_ch_list and set_tx_power proto type function
+ * Adding the related ioctl / wlan oid function to set the Tx power cfg.
+ *
+ * 12 20 2011 cp.wu
+ * [WCXRP00001144] [MT6620 Wi-Fi][Driver][Firmware] Add RF_FUNC_ID for exposing device and related version information
+ * add driver implementations for RF_AT_FUNCID_FW_INFO & RF_AT_FUNCID_DRV_INFO
+ * to expose version information
+ *
+ * 12 05 2011 cp.wu
+ * [WCXRP00001131] [MT6620 Wi-Fi][Driver][AIS] Implement connect-by-BSSID path
+ * add CONNECT_BY_BSSID policy
+ *
+ * 11 22 2011 cp.wu
+ * [WCXRP00001120] [MT6620 Wi-Fi][Driver] Modify roaming to AIS state transition from synchronous to asynchronous approach to avoid incomplete state termination
+ * 1. change RDD related compile option brace position.
+ * 2. when roaming is triggered, ask AIS to transit immediately only when AIS is in Normal TR state without join timeout timer ticking
+ * 3. otherwise, insert AIS_REQUEST into pending request queue
+ *
+ * 11 21 2011 cp.wu
+ * [WCXRP00001118] [MT6620 Wi-Fi][Driver] Corner case protections to pass Monkey testing
+ * 1. wlanoidQueryBssIdList might be passed with a non-zero length but a NULL pointer of buffer
+ * add more checking for such cases
+ *
+ * 2. kalSendComplete() might be invoked with a packet belongs to P2P network right after P2P is unregistered.
+ * add some tweaking to protect such cases because that net device has become invalid.
+ *
+ * 11 15 2011 cm.chang
+ * NULL
+ * Fix compiling warning
+ *
+ * 11 11 2011 wh.su
+ * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
+ * modify the xlog related code.
+ *
+ * 11 11 2011 tsaiyuan.hsu
+ * [WCXRP00001083] [MT6620 Wi-Fi][DRV]] dump debug counter or frames when debugging is triggered
+ * add debug counters of bb and ar for xlog.
+ *
+ * 11 10 2011 wh.su
+ * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
+ * change the debug module level.
+ *
+ * 11 09 2011 george.huang
+ * [WCXRP00000871] [MT6620 Wi-Fi][FW] Include additional wakeup condition, which is by consequent DTIM unicast indication
+ * add XLOG for Set PS mode entry
+ *
+ * 11 08 2011 tsaiyuan.hsu
+ * [WCXRP00001083] [MT6620 Wi-Fi][DRV]] dump debug counter or frames when debugging is triggered
+ * check if CFG_SUPPORT_SWCR is defined to aoid compiler error.
+ *
+ * 11 07 2011 tsaiyuan.hsu
+ * [WCXRP00001083] [MT6620 Wi-Fi][DRV]] dump debug counter or frames when debugging is triggered
+ * add debug counters and periodically dump counters for debugging.
+ *
+ * 11 03 2011 wh.su
+ * [WCXRP00001078] [MT6620 Wi-Fi][Driver] Adding the mediatek log improment support : XLOG
+ * change the DBGLOG for "\n" and "\r\n". LABEL to LOUD for XLOG
+ *
+ * 11 02 2011 chinghwa.yu
+ * [WCXRP00000612] [MT6620 Wi-Fi] [FW] CSD update SWRDD algorithm
+ * Add RDD certification features.
+ *
+ * 10 21 2011 eddie.chen
+ * [WCXRP00001051] [MT6620 Wi-Fi][Driver/Fw] Adjust the STA aging timeout
+ * Add switch to ignore the STA aging timeout.
+ *
+ * 10 12 2011 wh.su
+ * [WCXRP00001036] [MT6620 Wi-Fi][Driver][FW] Adding the 802.11w code for MFP
+ * adding the 802.11w related function and define .
+ *
+ * 09 15 2011 tsaiyuan.hsu
+ * [WCXRP00000938] [MT6620 Wi-Fi][FW] add system config for CTIA
+ * correct fifo full control from query to set operation for CTIA.
+ *
+ * 08 31 2011 cm.chang
+ * [WCXRP00000969] [MT6620 Wi-Fi][Driver][FW] Channel list for 5G band based on country code
+ * .
+ *
+ * 08 17 2011 tsaiyuan.hsu
+ * [WCXRP00000938] [MT6620 Wi-Fi][FW] add system config for CTIA
+ * add system config for CTIA.
+ *
+ * 08 15 2011 george.huang
+ * [MT6620 Wi-Fi][FW] handle TSF drift for connection detection
+ * .
+ *
+ * 07 28 2011 chinghwa.yu
+ * [WCXRP00000063] Update BCM CoEx design and settings
+ * Add BWCS cmd and event.
+ *
+ * 07 18 2011 chinghwa.yu
+ * [WCXRP00000063] Update BCM CoEx design and settings[WCXRP00000612] [MT6620 Wi-Fi] [FW] CSD update SWRDD algorithm
+ * Add CMD/Event for RDD and BWCS.
+ *
+ * 07 11 2011 wh.su
+ * [WCXRP00000849] [MT6620 Wi-Fi][Driver] Remove some of the WAPI define for make sure the value is initialize, for customer not enable WAPI
+ * For make sure wapi initial value is set.
+ *
+ * 06 23 2011 cp.wu
+ * [WCXRP00000812] [MT6620 Wi-Fi][Driver] not show NVRAM when there is no valid MAC address in NVRAM content
+ * check with firmware for valid MAC address.
+ *
+ * 05 02 2011 eddie.chen
+ * [WCXRP00000373] [MT6620 Wi-Fi][FW] SW debug control
+ * Fix compile warning.
+ *
+ * 04 29 2011 george.huang
+ * [WCXRP00000684] [MT6620 Wi-Fi][Driver] Support P2P setting ARP filter
+ * .
+ *
+ * 04 27 2011 george.huang
+ * [WCXRP00000684] [MT6620 Wi-Fi][Driver] Support P2P setting ARP filter
+ * add more debug message
+ *
+ * 04 26 2011 eddie.chen
+ * [WCXRP00000373] [MT6620 Wi-Fi][FW] SW debug control
+ * Add rx path profiling.
+ *
+ * 04 12 2011 eddie.chen
+ * [WCXRP00000617] [MT6620 Wi-Fi][DRV/FW] Fix for sigma
+ * Fix the sta index in processing security frame
+ * Simple flow control for TC4 to avoid mgt frames for PS STA to occupy the TC4
+ * Add debug message.
+ *
+ * 04 08 2011 george.huang
+ * [WCXRP00000621] [MT6620 Wi-Fi][Driver] Support P2P supplicant to set power mode
+ * separate settings of P2P and AIS
+ *
+ * 03 31 2011 puff.wen
+ * NULL
+ * .
+ *
+ * 03 29 2011 puff.wen
+ * NULL
+ * Add chennel switch for stress test
+ *
+ * 03 29 2011 cp.wu
+ * [WCXRP00000604] [MT6620 Wi-Fi][Driver] Surpress Klockwork Warning
+ * surpress klock warning with code path rewritten
+ *
+ * 03 24 2011 wh.su
+ * [WCXRP00000595] [MT6620 Wi-Fi][Driver] at CTIA indicate disconnect to make the ps profile can apply
+ * use disconnect event instead of ais abort for CTIA testing.
+ *
+ * 03 23 2011 george.huang
+ * [WCXRP00000586] [MT6620 Wi-Fi][FW] Modify for blocking absence request right after connected
+ * revise for CTIA power mode setting
+ *
+ * 03 22 2011 george.huang
+ * [WCXRP00000504] [MT6620 Wi-Fi][FW] Support Sigma CAPI for power saving related command
+ * link with supplicant commands
+ *
+ * 03 17 2011 chinglan.wang
+ * [WCXRP00000570] [MT6620 Wi-Fi][Driver] Add Wi-Fi Protected Setup v2.0 feature
+ * .
+ *
+ * 03 17 2011 yarco.yang
+ * [WCXRP00000569] [MT6620 Wi-Fi][F/W][Driver] Set multicast address support current network usage
+ * .
+ *
+ * 03 15 2011 george.huang
+ * [WCXRP00000557] [MT6620 Wi-Fi] Support current consumption test mode commands
+ * Support current consumption measurement mode command
+ *
+ * 03 15 2011 eddie.chen
+ * [WCXRP00000554] [MT6620 Wi-Fi][DRV] Add sw control debug counter
+ * Add sw debug counter for QM.
+ *
+ * 03 10 2011 cp.wu
+ * [WCXRP00000532] [MT6620 Wi-Fi][Driver] Migrate NVRAM configuration procedures from MT6620 E2 to MT6620 E3
+ * deprecate configuration used by MT6620 E2
+ *
+ * 03 07 2011 terry.wu
+ * [WCXRP00000521] [MT6620 Wi-Fi][Driver] Remove non-standard debug message
+ * Toggle non-standard debug messages to comments.
+ *
+ * 03 04 2011 cp.wu
+ * [WCXRP00000515] [MT6620 Wi-Fi][Driver] Surpress compiler warning which is identified by GNU compiler collection
+ * surpress compile warning occured when compiled by GNU compiler collection.
+ *
+ * 03 03 2011 wh.su
+ * [WCXRP00000510] [MT6620 Wi-Fi] [Driver] Fixed the CTIA enter test mode issue
+ * fixed the enter ctia test mode issue.
+ *
+ * 03 02 2011 george.huang
+ * [WCXRP00000504] [MT6620 Wi-Fi][FW] Support Sigma CAPI for power saving related command
+ * Update sigma CAPI for U-APSD setting
+ *
+ * 03 02 2011 george.huang
+ * [WCXRP00000504] [MT6620 Wi-Fi][FW] Support Sigma CAPI for power saving related command
+ * Support UAPSD/OppPS/NoA parameter setting
+ *
+ * 03 02 2011 cp.wu
+ * [WCXRP00000503] [MT6620 Wi-Fi][Driver] Take RCPI brought by association response as initial RSSI right after connection is built.
+ * use RCPI brought by ASSOC-RESP after connection is built as initial RCPI to avoid using a uninitialized MAC-RX RCPI.
+ *
+ * 01 27 2011 george.huang
+ * [WCXRP00000400] [MT6620 Wi-Fi] support CTIA power mode setting
+ * Support CTIA power mode setting.
+ *
+ * 01 26 2011 wh.su
+ * [WCXRP00000396] [MT6620 Wi-Fi][Driver] Support Sw Ctrl ioctl at linux
+ * adding the SW cmd ioctl support, use set/get structure ioctl.
+ *
+ * 01 25 2011 cp.wu
+ * [WCXRP00000394] [MT6620 Wi-Fi][Driver] Count space needed for generating error message in scanning list into buffer size checking
+ * when doing size prechecking, check illegal MAC address as well
+ *
+ * 01 20 2011 eddie.chen
+ * [WCXRP00000374] [MT6620 Wi-Fi][DRV] SW debug control
+ * Add Oid for sw control debug command
+ *
+ * 01 15 2011 puff.wen
+ * NULL
+ * Add Stress test
+ *
+ * 01 12 2011 cp.wu
+ * [WCXRP00000358] [MT6620 Wi-Fi][Driver] Provide concurrent information for each module
+ * check if allow to switch to IBSS mode via concurrent module before setting to IBSS mode
+ *
+ * 01 12 2011 cm.chang
+ * [WCXRP00000354] [MT6620 Wi-Fi][Driver][FW] Follow NVRAM bandwidth setting
+ * User-defined bandwidth is for 2.4G and 5G individually
+ *
+ * 01 04 2011 cp.wu
+ * [WCXRP00000342] [MT6620 Wi-Fi][Driver] show error code in scanning list when MAC address is not correctly configured in NVRAM
+ * show error code 0x10 when MAC address in NVRAM is not configured correctly.
+ *
+ * 01 04 2011 cp.wu
+ * [WCXRP00000338] [MT6620 Wi-Fi][Driver] Separate kalMemAlloc into kmalloc and vmalloc implementations to ease physically continous memory demands
+ * separate kalMemAlloc() into virtually-continous and physically-continous type to ease slab system pressure
+ *
+ * 12 28 2010 george.huang
+ * [WCXRP00000232] [MT5931 Wi-Fi][FW] Modifications for updated HW power on sequence and related design
+ * support WMM-PS U-APSD AC assignment.
+ *
+ * 12 28 2010 cp.wu
+ * [WCXRP00000269] [MT6620 Wi-Fi][Driver][Firmware] Prepare for v1.1 branch release
+ * report EEPROM used flag via NIC_CAPABILITY
+ *
+ * 12 28 2010 cp.wu
+ * [WCXRP00000269] [MT6620 Wi-Fi][Driver][Firmware] Prepare for v1.1 branch release
+ * integrate with 'EEPROM used' flag for reporting correct capability to Engineer Mode/META and other tools
+ *
+ * 12 16 2010 cp.wu
+ * [WCXRP00000268] [MT6620 Wi-Fi][Driver] correction for WHQL failed items
+ * correction for OID_802_11_NETWORK_TYPES_SUPPORTED handlers
+ *
+ * 12 13 2010 cp.wu
+ * [WCXRP00000256] [MT6620 Wi-Fi][Driver] Eliminate potential issues which is identified by Klockwork
+ * suppress warning reported by Klockwork.
+ *
+ * 12 07 2010 cm.chang
+ * [WCXRP00000239] MT6620 Wi-Fi][Driver][FW] Merge concurrent branch back to maintrunk
+ * 1. BSSINFO include RLM parameter
+ * 2. free all sta records when network is disconnected
+ *
+ * 12 07 2010 cm.chang
+ * [WCXRP00000238] MT6620 Wi-Fi][Driver][FW] Support regulation domain setting from NVRAM and supplicant
+ * 1. Country code is from NVRAM or supplicant
+ * 2. Change band definition in CMD/EVENT.
+ *
+ * 11 30 2010 cp.wu
+ * [WCXRP00000213] [MT6620 Wi-Fi][Driver] Implement scanning with specified SSID for wpa_supplicant with ap_scan=1
+ * .
+ *
+ * 11 26 2010 cp.wu
+ * [WCXRP00000209] [MT6620 Wi-Fi][Driver] Modify NVRAM checking mechanism to warning only with necessary data field checking
+ * 1. NVRAM error is now treated as warning only, thus normal operation is still available but extra scan result used to indicate user is attached
+ * 2. DPD and TX-PWR are needed fields from now on, if these 2 fields are not availble then warning message is shown
+ *
+ * 11 25 2010 cp.wu
+ * [WCXRP00000208] [MT6620 Wi-Fi][Driver] Add scanning with specified SSID to AIS FSM
+ * add scanning with specified SSID facility to AIS-FSM
+ *
+ * 11 21 2010 wh.su
+ * [WCXRP00000192] [MT6620 Wi-Fi][Driver] Fixed fail trying to build connection with Security AP while enable WAPI message check
+ * Not set the wapi mode while the wapi assoc info set non-wapi ie.
+ *
+ * 11 05 2010 wh.su
+ * [WCXRP00000165] [MT6620 Wi-Fi] [Pre-authentication] Assoc req rsn ie use wrong pmkid value
+ * fixed the.pmkid value mismatch issue
+ *
+ * 11 01 2010 cp.wu
+ * [WCXRP00000056] [MT6620 Wi-Fi][Driver] NVRAM implementation with Version Check[WCXRP00000150] [MT6620 Wi-Fi][Driver] Add implementation for querying current TX rate from firmware auto rate module
+ * 1) Query link speed (TX rate) from firmware directly with buffering mechanism to reduce overhead
+ * 2) Remove CNM CH-RECOVER event handling
+ * 3) cfg read/write API renamed with kal prefix for unified naming rules.
+ *
+ * 10 26 2010 cp.wu
+ * [WCXRP00000056] [MT6620 Wi-Fi][Driver] NVRAM implementation with Version Check[WCXRP00000137] [MT6620 Wi-Fi] [FW] Support NIC capability query command
+ * 1) update NVRAM content template to ver 1.02
+ * 2) add compile option for querying NIC capability (default: off)
+ * 3) modify AIS 5GHz support to run-time option, which could be turned on by registry or NVRAM setting
+ * 4) correct auto-rate compiler error under linux (treat warning as error)
+ * 5) simplify usage of NVRAM and REG_INFO_T
+ * 6) add version checking between driver and firmware
+ *
+ * 10 22 2010 cp.wu
+ * [WCXRP00000122] [MT6620 Wi-Fi][Driver] Preparation for YuSu source tree integration
+ * dos2unix conversion.
+ *
+ * 10 20 2010 cp.wu
+ * [WCXRP00000117] [MT6620 Wi-Fi][Driver] Add logic for suspending driver when MT6620 is not responding anymore
+ * use OID_CUSTOM_TEST_MODE as indication for driver reset
+ * by dropping pending TX packets
+ *
+ * 10 18 2010 cp.wu
+ * [WCXRP00000056] [MT6620 Wi-Fi][Driver] NVRAM implementation with Version Check[WCXRP00000086] [MT6620 Wi-Fi][Driver] The mac address is all zero at android
+ * complete implementation of Android NVRAM access
+ *
+ * 10 06 2010 yuche.tsai
+ * NULL
+ * Update SLT 5G Test Channel Set.
+ *
+ * 10 06 2010 cp.wu
+ * [WCXRP00000052] [MT6620 Wi-Fi][Driver] Eliminate Linux Compile Warning
+ * code reorganization to improve isolation between GLUE and CORE layers.
+ *
+ * 10 06 2010 yuche.tsai
+ * NULL
+ * Update For SLT 5G Test Channel Selection Rule.
+ *
+ * 10 05 2010 cp.wu
+ * [WCXRP00000075] [MT6620 Wi-Fi][Driver] Fill query buffer for OID_802_11_BSSID_LIST in 4-bytes aligned form
+ * Query buffer size needs to be enlarged due to result is filled in 4-bytes alignment boundary
+ *
+ * 10 05 2010 cp.wu
+ * [WCXRP00000056] [MT6620 Wi-Fi][Driver] NVRAM implementation with Version Check
+ * 1) add NVRAM access API
+ * 2) fake scanning result when NVRAM doesn't exist and/or version mismatch. (off by compiler option)
+ * 3) add OID implementation for NVRAM read/write service
+ *
+ * 10 04 2010 cp.wu
+ * [WCXRP00000077] [MT6620 Wi-Fi][Driver][FW] Eliminate use of ENUM_NETWORK_TYPE_T and replaced by ENUM_NETWORK_TYPE_INDEX_T only
+ * remove ENUM_NETWORK_TYPE_T definitions
+ *
+ * 10 04 2010 cp.wu
+ * [WCXRP00000075] [MT6620 Wi-Fi][Driver] Fill query buffer for OID_802_11_BSSID_LIST in 4-bytes aligned form
+ * Extend result length to multiples of 4-bytes
+ *
+ * 09 24 2010 cp.wu
+ * [WCXRP00000052] [MT6620 Wi-Fi][Driver] Eliminate Linux Compile Warning
+ * eliminate unused variables which lead gcc to argue
+ *
+ * 09 24 2010 cp.wu
+ * [WCXRP00000057] [MT6620 Wi-Fi][Driver] Modify online scan to a run-time switchable feature
+ * Modify online scan as a run-time adjustable option (for Windows, in registry)
+ *
+ * 09 23 2010 cp.wu
+ * [WCXRP00000051] [MT6620 Wi-Fi][Driver] WHQL test fail in MAC address changed item
+ * use firmware reported mac address right after wlanAdapterStart() as permanent address
+ *
+ * 09 23 2010 cp.wu
+ * [WCXRP00000056] [MT6620 Wi-Fi][Driver] NVRAM implementation with Version Check
+ * add skeleton for NVRAM integration
+ *
+ * 09 08 2010 cp.wu
+ * NULL
+ * use static memory pool for storing IEs of scanning result.
+ *
+ * 09 07 2010 yuche.tsai
+ * NULL
+ * Update SLT due to API change of SCAN module.
+ *
+ * 09 06 2010 cp.wu
+ * NULL
+ * Androi/Linux: return current operating channel information
+ *
+ * 09 06 2010 cp.wu
+ * NULL
+ * 1) initialize for correct parameter even for disassociation.
+ * 2) AIS-FSM should have a limit on trials to build connection
+ *
+ * 09 03 2010 yuche.tsai
+ * NULL
+ * Refine SLT IO control handler.
+ *
+ * 09 03 2010 kevin.huang
+ * NULL
+ * Refine #include sequence and solve recursive/nested #include issue
+ *
+ * 09 01 2010 wh.su
+ * NULL
+ * adding the wapi support for integration test.
+ *
+ * 08 30 2010 chinglan.wang
+ * NULL
+ * Modify the rescan condition.
+ *
+ * 08 29 2010 yuche.tsai
+ * NULL
+ * Finish SLT TX/RX & Rate Changing Support.
+ *
+ * 08 27 2010 chinglan.wang
+ * NULL
+ * Update configuration for MT6620_E1_PRE_ALPHA_1832_0827_2010
+ *
+ * 08 25 2010 george.huang
+ * NULL
+ * update OID/ registry control path for PM related settings
+ *
+ * 08 24 2010 cp.wu
+ * NULL
+ * 1) initialize variable for enabling short premable/short time slot.
+ * 2) add compile option for disabling online scan
+ *
+ * 08 16 2010 george.huang
+ * NULL
+ * .
+ *
+ * 08 16 2010 george.huang
+ * NULL
+ * upate params defined in CMD_SET_NETWORK_ADDRESS_LIST
+ *
+ * 08 04 2010 cp.wu
+ * NULL
+ * fix for check build WHQL testing:
+ * 1) do not assert query buffer if indicated buffer length is zero
+ * 2) sdio.c has bugs which cause freeing same pointer twice
+ *
+ * 08 04 2010 cp.wu
+ * NULL
+ * revert changelist #15371, efuse read/write access will be done by RF test approach
+ *
+ * 08 04 2010 cp.wu
+ * NULL
+ * add OID definitions for EFUSE read/write access.
+ *
+ * 08 04 2010 george.huang
+ * NULL
+ * handle change PS mode OID/ CMD
+ *
+ * 08 04 2010 cp.wu
+ * NULL
+ * add an extra parameter to rftestQueryATInfo 'cause it's necessary to pass u4FuncData for query request.
+ *
+ * 08 04 2010 cp.wu
+ * NULL
+ * bypass u4FuncData for RF-Test query request as well.
+ *
+ * 08 04 2010 yarco.yang
+ * NULL
+ * Add TX_AMPDU and ADDBA_REJECT command
+ *
+ * 08 03 2010 cp.wu
+ * NULL
+ * surpress compilation warning.
+ *
+ * 08 02 2010 george.huang
+ * NULL
+ * add WMM-PS test related OID/ CMD handlers
+ *
+ * 07 29 2010 cp.wu
+ * NULL
+ * eliminate u4FreqInKHz usage, combined into rConnections.ucAdHoc*
+ *
+ * 07 28 2010 cp.wu
+ * NULL
+ * 1) eliminate redundant variable eOPMode in prAdapter->rWlanInfo
+ * 2) change nicMediaStateChange() API prototype
+ *
+ * 07 26 2010 cp.wu
+ *
+ * re-commit code logic being overwriten.
+ *
+ * 07 24 2010 wh.su
+ *
+ * .support the Wi-Fi RSN
+ *
+ * 07 21 2010 cp.wu
+ *
+ * 1) change BG_SCAN to ONLINE_SCAN for consistent term
+ * 2) only clear scanning result when scan is permitted to do
+ *
+ * 07 20 2010 cp.wu
+ *
+ * 1) [AIS] when new scan is issued, clear currently available scanning result except the connected one
+ * 2) refine disconnection behaviour when issued during BG-SCAN process
+ *
+ * 07 19 2010 wh.su
+ *
+ * modify the auth and encry status variable.
+ *
+ * 07 16 2010 cp.wu
+ *
+ * remove work-around in case SCN is not available.
+ *
+ * 07 08 2010 cp.wu
+ *
+ * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
+ *
+ * 07 05 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 1) change fake BSS_DESC from channel 6 to channel 1 due to channel switching is not done yet.
+ * 2) after MAC address is queried from firmware, all related variables in driver domain should be updated as well
+ *
+ * 07 01 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * AIS-FSM integration with CNM channel request messages
+ *
+ * 07 01 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * implementation of DRV-SCN and related mailbox message handling.
+ *
+ * 06 29 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 1) sync to. CMD/EVENT document v0.03
+ * 2) simplify DTIM period parsing in scan.c only, bss.c no longer parses it again.
+ * 3) send command packet to indicate FW-PM after
+ *     a) 1st beacon is received after AIS has connected to an AP
+ *     b) IBSS-ALONE has been created
+ *     c) IBSS-MERGE has occured
+ *
+ * 06 25 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * add API in que_mgt to retrieve sta-rec index for security frames.
+ *
+ * 06 24 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 802.1x and bluetooth-over-Wi-Fi security frames are now delievered to firmware via command path instead of data path.
+ *
+ * 06 23 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 1) add SCN compilation option.
+ * 2) when SCN is not turned on, BSSID_SCAN will generate a fake entry for 1st connection
+ *
+ * 06 23 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * implement SCAN-REQUEST oid as mailbox message dispatching.
+ *
+ * 06 23 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * integrate .
+ *
+ * 06 22 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 1) add command warpper for STA-REC/BSS-INFO sync.
+ * 2) enhance command packet sending procedure for non-oid part
+ * 3) add command packet definitions for STA-REC/BSS-INFO sync.
+ *
+ * 06 21 2010 wh.su
+ * [WPD00003840][MT6620 5931] Security migration
+ * remove duplicate variable for migration.
+ *
+ * 06 21 2010 wh.su
+ * [WPD00003840][MT6620 5931] Security migration
+ * adding the compiling flag for oid pmkid.
+ *
+ * 06 21 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * enable RX management frame handling.
+ *
+ * 06 18 2010 wh.su
+ * [WPD00003840][MT6620 5931] Security migration
+ * migration the security related function from firmware.
+ *
+ * 06 11 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 1) migrate assoc.c.
+ * 2) add ucTxSeqNum for tracking frames which needs TX-DONE awareness
+ * 3) add configuration options for CNM_MEM and RSN modules
+ * 4) add data path for management frames
+ * 5) eliminate rPacketInfo of MSDU_INFO_T
+ *
+ * 06 10 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 1) eliminate CFG_CMD_EVENT_VERSION_0_9
+ * 2) when disconnected, indicate nic directly (no event is needed)
+ *
+ * 06 07 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * merge wlan_def.h.
+ *
+ * 06 07 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * merge wifi_var.h, precomp.h, cnm_timer.h (data type only)
+ *
+ * 06 06 2010 kevin.huang
+ * [WPD00003832][MT6620 5931] Create driver base
+ * [MT6620 5931] Create driver base
+ *
+ * 06 03 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * move timer callback to glue layer.
+ *
+ * 05 28 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * simplify cmd packet sending for RF test and MCR access OIDs
+ *
+ * 05 27 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * disable radio even when STA is not associated.
+ *
+ * 05 27 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * correct 2 OID behaviour to meet WHQL requirement.
+ *
+ * 05 26 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * 1) Modify set mac address code
+ * 2) remove power managment macro
+ *
+ * 05 25 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * correct BSSID_LIST oid when radio if turned off.
+ *
+ * 05 24 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) when acquiring LP-own, write for clr-own with lower frequency compared to read poll
+ * 2) correct address list parsing
+ *
+ * 05 24 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * disable wlanoidSetNetworkAddress() temporally.
+ *
+ * 05 22 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * some OIDs should be DRIVER_CORE instead of GLUE_EXTENSION
+ *
+ * 05 22 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) disable NETWORK_LAYER_ADDRESSES handling temporally.
+ * 2) finish statistics OIDs
+ *
+ * 05 22 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * change OID behavior to meet WHQL requirement.
+ *
+ * 05 20 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) integrate OID_GEN_NETWORK_LAYER_ADDRESSES with CMD_ID_SET_IP_ADDRESS
+ * 2) buffer statistics data for 2 seconds
+ * 3) use default value for adhoc parameters instead of 0
+ *
+ * 05 19 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) do not take timeout mechanism for power mode oids
+ * 2) retrieve network type from connection status
+ * 3) after disassciation, set radio state to off
+ * 4) TCP option over IPv6 is supported
+ *
+ * 05 18 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * implement Wakeup-on-LAN except firmware integration part
+ *
+ * 05 17 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * correct wlanoidSet802dot11PowerSaveProfile implementation.
+ *
+ * 05 17 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) enable CMD/EVENT ver 0.9 definition.
+ * 2) abandon use of ENUM_MEDIA_STATE
+ *
+ * 05 17 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * correct OID_802_11_DISASSOCIATE handling.
+ *
+ * 05 17 2010 cp.wu
+ * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
+ * 1) add timeout handler mechanism for pending command packets
+ * 2) add p2p add/removal key
+ *
+ * 05 14 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * Add dissassocation support for wpa supplicant
+ *
+ * 05 14 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * correct return value.
+ *
+ * 05 13 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * add NULL OID implementation for WOL-related OIDs.
+ *
+ * 05 06 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * for disassociation, still use parameter with current setting.
+ *
+ * 05 06 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * for disassociation, generate a WZC-compatible invalid SSID.
+ *
+ * 05 06 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * associate to illegal SSID when handling OID_802_11_DISASSOCIATE
+ *
+ * 04 27 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * reserve field of privacy filter and RTS threshold setting.
+ *
+ * 04 23 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * surpress compiler warning
+ *
+ * 04 23 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * .
+ *
+ * 04 22 2010 cp.wu
+ * [WPD00003830]add OID_802_11_PRIVACY_FILTER support
+ * enable RX filter OID
+ *
+ * 04 19 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * Add ioctl of power management
+ *
+ * 04 14 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * information buffer for query oid/ioctl is now buffered in prCmdInfo
+ *  * instead of glue-layer variable to improve multiple oid/ioctl capability
+ *
+ * 04 13 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support
+ * add framework for BT-over-Wi-Fi support.
+ *  *  *  * 1) prPendingCmdInfo is replaced by queue for multiple handler capability
+ *  *  *  * 2) command sequence number is now increased atomically
+ *  *  *  * 3) private data could be hold and taken use for other purpose
+ *
+ * 04 12 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * correct OID_802_11_CONFIGURATION query for infrastructure mode.
+ *
+ * 04 09 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * 1) remove unused spin lock declaration
+ *
+ * 04 07 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * finish non-glue layer access to glue variables
+ *
+ * 04 07 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * rWlanInfo should be placed at adapter rather than glue due to most operations
+ *  * are done in adapter layer.
+ *
+ * 04 07 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * (1)improve none-glue code portability
+ * (2) disable set Multicast address during atomic context
+ *
+ * 04 07 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * eliminate direct access to prGlueInfo->eParamMediaStateIndicated from non-glue layer
+ *
+ * 04 06 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * ePowerCtrl is not necessary as a glue variable.
+ *
+ * 04 06 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * eliminate direct access to prGlueInfo->rWlanInfo.eLinkAttr.ucMediaStreamMode from non-glue layer.
+ *
+ * 04 06 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * improve none-glue code portability
+ *
+ * 04 06 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * code refine: fgTestMode should be at adapter rather than glue due to the device/fw is also involved
+ *
+ * 04 01 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * .
+ *
+ * 03 31 2010 wh.su
+ * [WPD00003816][MT6620 Wi-Fi] Adding the security support
+ * modify the wapi related code for new driver's design.
+ *
+ * 03 30 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * statistics information OIDs are now handled by querying from firmware domain
+ *
+ * 03 28 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * improve glue code portability
+ *
+ * 03 26 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * indicate media stream mode after set is done
+ *
+ * 03 26 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * add a temporary flag for integration with CMD/EVENT v0.9.
+ *
+ * 03 25 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) correct OID_802_11_CONFIGURATION with frequency setting behavior.
+ * the frequency is used for adhoc connection only
+ * 2) update with SD1 v0.9 CMD/EVENT documentation
+ *
+ * 03 24 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * [WPD00003826] Initial import for Linux port
+ * initial import for Linux port
+ *
+ * 03 24 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * initial import for Linux port
+ *
+ * 03 24 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * generate information for OID_GEN_RCV_OK & OID_GEN_XMIT_OK
+ *
+ *
+ * 03 22 2010 cp.wu
+ * [WPD00003824][MT6620 Wi-Fi][New Feature] Add support of large scan list
+ * Implement feature needed by CR: WPD00003824: refining association command by pasting scanning result
+ *
+ * 03 19 2010 wh.su
+ * [WPD00003820][MT6620 Wi-Fi] Modify the code for meet the WHQL test
+ * adding the check for pass WHQL test item.
+ *
+ * 03 19 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) add ACPI D0/D3 state switching support
+ *  * 2) use more formal way to handle interrupt when the status is retrieved from enhanced RX response
+ *
+* 03 16 2010 wh.su
+ * [WPD00003820][MT6620 Wi-Fi] Modify the code for meet the WHQL test
+ * fixed some whql pre-test fail case.
+ *
+ * 03 03 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * implement custom OID: EEPROM read/write access
+ *
+ * 03 03 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * implement OID_802_3_MULTICAST_LIST oid handling
+ *
+ * 03 02 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) the use of prPendingOid revised, all accessing are now protected by spin lock
+ *  * 2) ensure wlanReleasePendingOid will clear all command queues
+ *
+ * 02 25 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * send CMD_ID_INFRASTRUCTURE when handling OID_802_11_INFRASTRUCTURE_MODE set.
+ *
+ * 02 24 2010 wh.su
+ * [WPD00003820][MT6620 Wi-Fi] Modify the code for meet the WHQL test
+ * Don't needed to check the auth mode, WHQL testing not specific at auth wpa2.
+ *
+ * 02 23 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * do not check SSID validity anymore.
+ *
+ * 02 23 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * add checksum offloading support.
+ *
+ * 02 09 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1. Permanent and current MAC address are now retrieved by CMD/EVENT packets instead of hard-coded address
+ *  * 2. follow MSDN defined behavior when associates to another AP
+ *  * 3. for firmware download, packet size could be up to 2048 bytes
+ *
+ * 02 09 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * move ucCmdSeqNum as instance variable
+ *
+ * 02 04 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * when OID_CUSTOM_OID_INTERFACE_VERSION is queried, do modify connection states
+ *
+ * 01 27 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) implement timeout mechanism when OID is pending for longer than 1 second
+ *  * 2) allow OID_802_11_CONFIGURATION to be executed when RF test mode is turned on
+ *
+ * 01 27 2010 wh.su
+ * [WPD00003816][MT6620 Wi-Fi] Adding the security support
+ * .
+ *
+ * 01 27 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1. eliminate improper variable in rHifInfo
+ *  * 2. block TX/ordinary OID when RF test mode is engaged
+ *  * 3. wait until firmware finish operation when entering into and leaving from RF test mode
+ *  * 4. correct some HAL implementation
+ *
+ * 01 22 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * implement following 802.11 OIDs:
+ * OID_802_11_RSSI,
+ * OID_802_11_RSSI_TRIGGER,
+ * OID_802_11_STATISTICS,
+ * OID_802_11_DISASSOCIATE,
+ * OID_802_11_POWER_MODE
+ *
+ * 01 21 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * implement OID_802_11_MEDIA_STREAM_MODE
+ *
+ * 01 21 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * implement OID_802_11_SUPPORTED_RATES / OID_802_11_DESIRED_RATES
+ *
+ * 01 21 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * do not fill ucJoinOnly currently
+ *
+ * 01 14 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * enable to connect to ad-hoc network
+ *
+ * 01 07 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * .implement Set/Query BeaconInterval/AtimWindow
+ *
+ * 01 07 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * .Set/Get AT Info is not blocked even when driver is not in fg test mode
+ *
+ * 12 30 2009 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) According to CMD/EVENT documentation v0.8,
+ * OID_CUSTOM_TEST_RX_STATUS & OID_CUSTOM_TEST_TX_STATUS is no longer used,
+ * and result is retrieved by get ATInfo instead
+ * 2) add 4 counter for recording aggregation statistics
+ *
+ * 12 28 2009 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * eliminate redundant variables for connection_state
+**  \main\maintrunk.MT6620WiFiDriver_Prj\32 2009-12-16 22:13:36 GMT mtk02752
+**  change hard-coded MAC address to match with FW (temporally)
+**  \main\maintrunk.MT6620WiFiDriver_Prj\31 2009-12-10 16:49:50 GMT mtk02752
+**  code clean
+**  \main\maintrunk.MT6620WiFiDriver_Prj\30 2009-12-08 17:38:49 GMT mtk02752
+**  + add OID for RF test
+**  * MCR RD/WR are modified to match with cmd/event definition
+**  \main\maintrunk.MT6620WiFiDriver_Prj\29 2009-12-08 11:32:20 GMT mtk02752
+**  add skeleton for RF test implementation
+**  \main\maintrunk.MT6620WiFiDriver_Prj\28 2009-12-03 16:43:24 GMT mtk01461
+**  Modify query SCAN list oid by adding prEventScanResult
+**
+**  \main\maintrunk.MT6620WiFiDriver_Prj\27 2009-12-03 16:39:27 GMT mtk01461
+**  Sync CMD data structure in set ssid oid
+**  \main\maintrunk.MT6620WiFiDriver_Prj\26 2009-12-03 16:28:22 GMT mtk01461
+**  Add invalid check of set SSID oid and fix query scan list oid
+**  \main\maintrunk.MT6620WiFiDriver_Prj\25 2009-11-30 17:33:08 GMT mtk02752
+**  implement wlanoidSetInfrastructureMode/wlanoidQueryInfrastructureMode
+**  \main\maintrunk.MT6620WiFiDriver_Prj\24 2009-11-30 10:53:49 GMT mtk02752
+**  1st DW of WIFI_CMD_T is shared with HIF_TX_HEADER_T
+**  \main\maintrunk.MT6620WiFiDriver_Prj\23 2009-11-30 09:22:48 GMT mtk02752
+**  correct wifi cmd length mismatch
+**  \main\maintrunk.MT6620WiFiDriver_Prj\22 2009-11-25 21:34:33 GMT mtk02752
+**  sync EVENT_SCAN_RESULT_T with firmware
+**  \main\maintrunk.MT6620WiFiDriver_Prj\21 2009-11-25 21:03:27 GMT mtk02752
+**  implement wlanoidQueryBssidList()
+**  \main\maintrunk.MT6620WiFiDriver_Prj\20 2009-11-25 18:17:17 GMT mtk02752
+**  refine GL_WLAN_INFO_T for buffering scan result
+**  \main\maintrunk.MT6620WiFiDriver_Prj\19 2009-11-23 20:28:51 GMT mtk02752
+**  some OID will be set to WLAN_STATUS_PENDING until it is sent via wlanSendCommand()
+**  \main\maintrunk.MT6620WiFiDriver_Prj\18 2009-11-23 17:56:36 GMT mtk02752
+**  implement wlanoidSetBssidListScan(), wlanoidSetBssid() and wlanoidSetSsid()
+**
+**  \main\maintrunk.MT6620WiFiDriver_Prj\17 2009-11-13 17:20:53 GMT mtk02752
+**  add Set BSSID/SSID path but disabled temporally due to FW is not ready yet
+**  \main\maintrunk.MT6620WiFiDriver_Prj\16 2009-11-13 12:28:58 GMT mtk02752
+**  add wlanoidSetBssidListScan -> cmd_info path
+**  \main\maintrunk.MT6620WiFiDriver_Prj\15 2009-11-09 22:48:07 GMT mtk01084
+**  modify test cases entry
+**  \main\maintrunk.MT6620WiFiDriver_Prj\14 2009-11-04 14:10:58 GMT mtk01084
+**  add new test interfaces
+**  \main\maintrunk.MT6620WiFiDriver_Prj\13 2009-10-30 18:17:10 GMT mtk01084
+**  fix compiler warning
+**  \main\maintrunk.MT6620WiFiDriver_Prj\12 2009-10-29 19:46:26 GMT mtk01084
+**  add test functions
+**  \main\maintrunk.MT6620WiFiDriver_Prj\11 2009-10-23 16:07:56 GMT mtk01084
+**  include new file
+**  \main\maintrunk.MT6620WiFiDriver_Prj\10 2009-10-13 21:58:29 GMT mtk01084
+**  modify for new HW architecture
+**  \main\maintrunk.MT6620WiFiDriver_Prj\9 2009-10-02 13:48:49 GMT mtk01725
+**  \main\maintrunk.MT6620WiFiDriver_Prj\8 2009-09-09 17:26:04 GMT mtk01084
+**  \main\maintrunk.MT6620WiFiDriver_Prj\7 2009-04-21 12:09:50 GMT mtk01461
+**  Update for MCR Write OID
+**  \main\maintrunk.MT6620WiFiDriver_Prj\6 2009-04-21 09:35:18 GMT mtk01461
+**  Update wlanoidQueryMcrRead() for composing CMD_INFO_T
+**  \main\maintrunk.MT6620WiFiDriver_Prj\5 2009-04-17 18:09:51 GMT mtk01426
+**  Remove kalIndicateStatusAndComplete() in wlanoidQueryOidInterfaceVersion()
+**  \main\maintrunk.MT6620WiFiDriver_Prj\4 2009-04-14 15:51:50 GMT mtk01426
+**  Add MCR read/write support
+**  \main\maintrunk.MT6620WiFiDriver_Prj\3 2009-03-19 18:32:40 GMT mtk01084
+**  update for basic power management functions
+**  \main\maintrunk.MT6620WiFiDriver_Prj\2 2009-03-10 20:06:31 GMT mtk01426
+**  Init for develop
+**
+*/
 
+/******************************************************************************
+*                         C O M P I L E R   F L A G S
+*******************************************************************************
+*/
 
-
+/******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+*******************************************************************************
+*/
 #include "precomp.h"
 #include "mgmt/rsn.h"
 
 #include <stddef.h>
 
+/******************************************************************************
+*                              C O N S T A N T S
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                             D A T A   T Y P E S
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                            P U B L I C   D A T A
+*******************************************************************************
+*/
 #if DBG
 extern UINT_8  aucDebugModule[DBG_MODULE_NUM];
 extern UINT_32 u4DebugModule;
 UINT_32 u4DebugModuleTemp;
 #endif /* DBG */
 
+/******************************************************************************
+*                           P R I V A T E   D A T A
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                                 M A C R O S
+*******************************************************************************
+*/
 
+/******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+*******************************************************************************
+*/
 extern int sprintf(char * buf, const char * fmt, ...);
 
+/******************************************************************************
+*                              F U N C T I O N S
+*******************************************************************************
+*/
 #if CFG_ENABLE_STATISTICS_BUFFERING
 static BOOLEAN
 IsBufferedStatisticsUsable(
@@ -38,6 +1103,22 @@ IsBufferedStatisticsUsable(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the supported physical layer network
+*        type that can be used by the driver.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryNetworkTypesSupported (
@@ -97,6 +1178,22 @@ wlanoidQueryNetworkTypesSupported (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the current physical layer network
+*        type used by the driver.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*             the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                             bytes written into the query buffer. If the
+*                             call failed due to invalid length of the query
+*                             buffer, returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryNetworkTypeInUse (
@@ -143,6 +1240,22 @@ wlanoidQueryNetworkTypeInUse (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set the physical layer network type used
+*        by the driver.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns the
+*                          amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS The given network type is supported and accepted.
+* \retval WLAN_STATUS_INVALID_DATA The given network type is not in the
+*                                  supported list.
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetNetworkTypeInUse (
@@ -213,6 +1326,21 @@ wlanoidSetNetworkTypeInUse (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the current BSSID.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                             bytes written into the query buffer. If the call
+*                             failed due to invalid length of the query buffer,
+*                             returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryBssid (
@@ -261,6 +1389,23 @@ wlanoidQueryBssid (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the list of all BSSIDs detected by
+*        the driver.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                             bytes written into the query buffer. If the call
+*                             failed due to invalid length of the query buffer,
+*                             returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryBssidList (
@@ -359,6 +1504,22 @@ wlanoidQueryBssidList (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to request the driver to perform
+*        scanning.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetBssidListScan (
@@ -432,6 +1593,22 @@ wlanoidSetBssidListScan (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to request the driver to perform
+*        scanning with attaching information elements(IEs) specified from user space
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetBssidListScanExt (
@@ -514,6 +1691,23 @@ wlanoidSetBssidListScanExt (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine will initiate the join procedure to attempt to associate
+*        with the specified BSSID.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetBssid (
@@ -611,6 +1805,24 @@ wlanoidSetBssid (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine will initiate the join procedure to attempt
+*        to associate with the new SSID. If the previous scanning
+*        result is aged, we will scan the channels at first.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetSsid (
@@ -759,6 +1971,21 @@ wlanoidSetSsid (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the currently associated SSID.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer Pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                             bytes written into the query buffer. If the call
+*                             failed due to invalid length of the query buffer,
+*                             returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQuerySsid (
@@ -811,6 +2038,21 @@ wlanoidQuerySsid (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the current 802.11 network type.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer Pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                             bytes written into the query buffer. If the call
+*                             failed due to invalid length of the query buffer,
+*                             returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryInfrastructureMode (
@@ -860,6 +2102,22 @@ wlanoidQueryInfrastructureMode (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set mode to infrastructure or
+*        IBSS, or automatic switch between the two.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*             bytes read from the set buffer. If the call failed due to invalid
+*             length of the set buffer, returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetInfrastructureMode (
@@ -946,6 +2204,22 @@ wlanoidSetInfrastructureMode (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the current 802.11 authentication
+*        mode.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryAuthMode (
@@ -1015,6 +2289,24 @@ wlanoidQueryAuthMode (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set the IEEE 802.11 authentication mode
+*        to the driver.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_NOT_ACCEPTED
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetAuthMode (
@@ -1190,6 +2482,21 @@ wlanoidSetAuthMode (
 
 #if 0
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the current 802.11 privacy filter
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryPrivacyFilter (
@@ -1234,6 +2541,24 @@ wlanoidQueryPrivacyFilter (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set the IEEE 802.11 privacy filter
+*        to the driver.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_NOT_ACCEPTED
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetPrivacyFilter (
@@ -1287,6 +2612,22 @@ wlanoidSetPrivacyFilter (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to reload the available default settings for
+*        the specified type field.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_INVALID_DATA
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetReloadDefaults (
@@ -1405,6 +2746,23 @@ wlanoidSetReloadDefaults (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set a WEP key to the driver.
+*
+* \param[in]  prAdapter Pointer to the Adapter structure.
+* \param[in]  pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in]  u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 #ifdef LINUX
 UINT_8        keyBuffer[sizeof(PARAM_KEY_T) + 16 /* LEGACY_KEY_MAX_LEN*/];
@@ -1520,6 +2878,23 @@ wlanoidSetAddWep (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to request the driver to remove the WEP key
+*          at the specified key index.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetRemoveWep (
@@ -1587,6 +2962,24 @@ wlanoidSetRemoveWep (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set a key to the driver.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+*
+* \note The setting buffer PARAM_KEY_T, which is set by NDIS, is unpacked.
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetAddKey (
@@ -1795,6 +3188,23 @@ wlanoidSetAddKey (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to request the driver to remove the key at
+*        the specified key index.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetRemoveKey (
@@ -1922,6 +3332,20 @@ wlanoidSetRemoveKey (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the current encryption status.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryEncryptionStatus (
@@ -1998,6 +3422,21 @@ wlanoidQueryEncryptionStatus (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set the encryption status to the driver.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_NOT_SUPPORTED
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetEncryptionStatus (
@@ -2088,6 +3527,21 @@ wlanoidSetEncryptionStatus (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to test the driver.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetTest (
@@ -2150,6 +3604,21 @@ wlanoidSetTest (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the driver's WPA2 status.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryCapability (
@@ -2264,6 +3733,21 @@ wlanoidQueryCapability (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the PMKID in the PMK cache.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                             bytes written into the query buffer. If the call
+*                             failed due to invalid length of the query buffer,
+*                             returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryPmkid (
@@ -2314,6 +3798,21 @@ wlanoidQueryPmkid (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set the PMKID to the PMK cache in the driver.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+* \retval WLAN_STATUS_INVALID_DATA
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetPmkid (
@@ -2406,6 +3905,22 @@ wlanoidSetPmkid (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the set of supported data rates that
+*          the radio is capable of running
+*
+* \param[in] prAdapter Pointer to the Adapter structure
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query
+* \param[in] u4QueryBufferLen The length of the query buffer
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number
+*                             of bytes written into the query buffer. If the
+*                             call failed due to invalid length of the query
+*                             buffer, returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQuerySupportedRates (
@@ -2451,6 +3966,21 @@ wlanoidQuerySupportedRates (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query current desired rates.
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryDesiredRates (
@@ -2485,6 +4015,23 @@ wlanoidQueryDesiredRates (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to Set the desired rates.
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetDesiredRates (
@@ -2539,6 +4086,22 @@ wlanoidSetDesiredRates (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the maximum frame size in bytes,
+*        not including the header.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the
+*                               call failed due to invalid length of the query
+*                               buffer, returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryMaxFrameSize (
@@ -2571,6 +4134,22 @@ wlanoidQueryMaxFrameSize (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the maximum total packet length
+*        in bytes.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryMaxTotalSize (
@@ -2601,6 +4180,21 @@ wlanoidQueryMaxTotalSize (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the vendor ID of the NIC.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryVendorId (
@@ -2640,6 +4234,20 @@ wlanoidQueryVendorId (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the current RSSI value.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer Pointer to the buffer that holds the result of the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*   bytes written into the query buffer. If the call failed due to invalid length of
+*   the query buffer, returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryRssi (
@@ -2715,6 +4323,19 @@ wlanoidQueryRssi (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the current RSSI trigger value.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer Pointer to the buffer that holds the result of the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*   bytes written into the query buffer. If the call failed due to invalid length of
+*   the query buffer, returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryRssiTrigger (
@@ -2752,6 +4373,20 @@ wlanoidQueryRssiTrigger (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set a trigger value of the RSSI event.
+*
+* \param[in] prAdapter Pointer to the Adapter structure
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns the
+*                          amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetRssiTrigger (
@@ -2799,6 +4434,22 @@ wlanoidSetRssiTrigger (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set a suggested value for the number of
+*        bytes of received packet data that will be indicated to the protocol
+*        driver. We just accept the set and ignore this value.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetCurrentLookahead (
@@ -2825,6 +4476,23 @@ wlanoidSetCurrentLookahead (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the number of frames that the driver
+*        receives but does not indicate to the protocols due to errors.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryRcvError (
@@ -2889,6 +4557,22 @@ wlanoidQueryRcvError (
 
 
 /*----------------------------------------------------------------------------*/
+/*! \brief This routine is called to query the number of frames that the NIC
+*          cannot receive due to lack of NIC receive buffer space.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure
+* \param[in] pvQueryBuf A pointer to the buffer that holds the result of the
+*                          query buffer
+* \param[in] u4QueryBufLen The length of the query buffer
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS If success;
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryRcvNoBuffer (
@@ -2952,6 +4636,22 @@ wlanoidQueryRcvNoBuffer (
 
 
 /*----------------------------------------------------------------------------*/
+/*! \brief This routine is called to query the number of frames that the NIC
+*          received and it is CRC error.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure
+* \param[in] pvQueryBuf A pointer to the buffer that holds the result of the
+*                          query buffer
+* \param[in] u4QueryBufLen The length of the query buffer
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS If success;
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryRcvCrcError (
@@ -3014,6 +4714,20 @@ wlanoidQueryRcvCrcError (
 
 
 /*----------------------------------------------------------------------------*/
+/*! \brief  This routine is called to query the current 802.11 statistics.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure
+* \param[in] pvQueryBuf A pointer to the buffer that holds the result of the
+*                          query buffer
+* \param[in] u4QueryBufLen The length of the query buffer
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryStatistics (
@@ -3124,6 +4838,19 @@ wlanoidQueryStatistics (
 
 
 /*----------------------------------------------------------------------------*/
+/*! \brief  This routine is called to query current media streaming status.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure
+* \param[in] pvQueryBuf A pointer to the buffer that holds the result of the
+*                          query buffer
+* \param[in] u4QueryBufLen The length of the query buffer
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryMediaStreamMode(
@@ -3157,6 +4884,19 @@ wlanoidQueryMediaStreamMode(
 }   /* wlanoidQueryMediaStreamMode */
 
 /*----------------------------------------------------------------------------*/
+/*! \brief  This routine is called to enter media streaming mode or exit media streaming mode
+*
+* \param[in] pvAdapter Pointer to the Adapter structure
+* \param[in] pvQueryBuf A pointer to the buffer that holds the result of the
+*                          query buffer
+* \param[in] u4QueryBufLen The length of the query buffer
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetMediaStreamMode(
@@ -3203,6 +4943,19 @@ wlanoidSetMediaStreamMode(
 }   /* wlanoidSetMediaStreamMode */
 
 /*----------------------------------------------------------------------------*/
+/*! \brief  This routine is called to query the permanent MAC address of the NIC.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure
+* \param[in] pvQueryBuf A pointer to the buffer that holds the result of the
+*                          query buffer
+* \param[in] u4QueryBufLen The length of the query buffer
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryPermanentAddr (
@@ -3233,6 +4986,20 @@ wlanoidQueryPermanentAddr (
 
 
 /*----------------------------------------------------------------------------*/
+/*! \brief  This routine is called to query the MAC address the NIC is currently using.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure
+* \param[in] pvQueryBuf A pointer to the buffer that holds the result of the
+*                          query buffer
+* \param[in] u4QueryBufLen The length of the query buffer
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryCurrentAddr (
@@ -3276,6 +5043,21 @@ wlanoidQueryCurrentAddr (
 
 
 /*----------------------------------------------------------------------------*/
+/*! \brief  This routine is called to query NIC link speed.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure
+* \param[in] pvQueryBuf A pointer to the buffer that holds the result of the
+*                          query buffer
+* \param[in] u4QueryBufLen The length of the query buffer
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryLinkSpeed(
@@ -3327,6 +5109,21 @@ wlanoidQueryLinkSpeed(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query MCR value.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryMcrRead (
@@ -3399,6 +5196,20 @@ wlanoidQueryMcrRead (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to write MCR and enable specific function.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetMcrWrite (
@@ -3716,6 +5527,21 @@ wlanoidSetMcrWrite (
 }   /* wlanoidSetMcrWrite */
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query SW CTRL
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQuerySwCtrlRead (
@@ -3802,6 +5628,20 @@ wlanoidQuerySwCtrlRead (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to write SW CTRL
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetSwCtrlWrite (
@@ -4208,6 +6048,21 @@ wlanoidSetSwCtrlWrite (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query EEPROM value.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryEepromRead (
@@ -4256,6 +6111,20 @@ wlanoidQueryEepromRead (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to write EEPROM value.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetEepromWrite (
@@ -4305,6 +6174,22 @@ wlanoidSetEepromWrite (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the number of the successfully transmitted
+*        packets.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryXmitOk (
@@ -4368,6 +6253,22 @@ wlanoidQueryXmitOk (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the number of the successfully received
+*        packets.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryRcvOk (
@@ -4431,6 +6332,22 @@ wlanoidQueryRcvOk (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the number of frames that the driver
+*        fails to transmit.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryXmitError (
@@ -4494,6 +6411,22 @@ wlanoidQueryXmitError (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the number of frames successfully
+*        transmitted after exactly one collision.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryXmitOneCollision (
@@ -4559,6 +6492,22 @@ wlanoidQueryXmitOneCollision (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the number of frames successfully
+*        transmitted after more than one collision.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryXmitMoreCollisions (
@@ -4622,6 +6571,22 @@ wlanoidQueryXmitMoreCollisions (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the number of frames
+*                not transmitted due to excessive collisions.
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryXmitMaxCollisions (
@@ -4686,6 +6651,21 @@ wlanoidQueryXmitMaxCollisions (
 
 #define MTK_CUSTOM_OID_INTERFACE_VERSION     0x00006620    // for WPDWifi DLL
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query current the OID interface version,
+*        which is the interface between the application and driver.
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryOidInterfaceVersion (
@@ -4713,6 +6693,21 @@ wlanoidQueryOidInterfaceVersion (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query current Multicast Address List.
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryMulticastList(
@@ -4748,6 +6743,22 @@ wlanoidQueryMulticastList(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set Multicast Address List.
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_MULTICAST_FULL
+*/
 /*----------------------------------------------------------------------------*/
  WLAN_STATUS
  wlanoidSetMulticastList(
@@ -4815,6 +6826,22 @@ wlanoidQueryMulticastList(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set Packet Filter.
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_NOT_SUPPORTED
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetCurrentPacketFilter (
@@ -4912,6 +6939,20 @@ wlanoidSetCurrentPacketFilter (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query current packet filter.
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryCurrentPacketFilter (
@@ -4936,6 +6977,20 @@ wlanoidQueryCurrentPacketFilter (
 }   /* wlanoidQueryCurrentPacketFilter */
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query ACPI device power state.
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryAcpiDevicePowerState (
@@ -4988,6 +7043,19 @@ wlanoidQueryAcpiDevicePowerState (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set ACPI device power state.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetAcpiDevicePowerState (
@@ -5036,6 +7104,21 @@ wlanoidSetAcpiDevicePowerState (
 } /* end of wlanoidSetAcpiDevicePowerState() */
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the current fragmentation threshold.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryFragThreshold (
@@ -5068,6 +7151,22 @@ wlanoidQueryFragThreshold (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set a new fragmentation threshold to the
+*        driver.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetFragThreshold (
@@ -5090,6 +7189,21 @@ wlanoidSetFragThreshold (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the current RTS threshold.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuffer A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufferLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryRtsThreshold (
@@ -5122,6 +7236,21 @@ wlanoidQueryRtsThreshold (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set a new RTS threshold to the driver.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetRtsThreshold (
@@ -5150,6 +7279,20 @@ wlanoidSetRtsThreshold (
 } /* wlanoidSetRtsThreshold */
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is used to turn radio off.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetDisassociate (
@@ -5211,6 +7354,20 @@ wlanoidSetDisassociate (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is used to query the power save profile.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \return WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQuery802dot11PowerSaveProfile (
@@ -5244,6 +7401,20 @@ wlanoidQuery802dot11PowerSaveProfile (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is used to set the power save profile.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSet802dot11PowerSaveProfile (
@@ -5317,6 +7488,21 @@ wlanoidSet802dot11PowerSaveProfile (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query current status of AdHoc Mode.
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryAdHocMode (
@@ -5331,6 +7517,21 @@ wlanoidQueryAdHocMode (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set AdHoc Mode.
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetAdHocMode (
@@ -5345,6 +7546,21 @@ wlanoidSetAdHocMode (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query RF frequency.
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryFrequency (
@@ -5385,6 +7601,22 @@ wlanoidQueryFrequency (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set RF frequency by User Settings.
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetFrequency (
@@ -5420,6 +7652,22 @@ wlanoidSetFrequency (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set 802.11 channel of the radio frequency.
+*        This is a proprietary function call to Lunux currently.
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetChannel (
@@ -5436,6 +7684,21 @@ wlanoidSetChannel (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the Beacon Interval from User Settings.
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryBeaconInterval (
@@ -5483,6 +7746,21 @@ wlanoidQueryBeaconInterval (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set the Beacon Interval to User Settings.
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetBeaconInterval (
@@ -5524,6 +7802,21 @@ wlanoidSetBeaconInterval (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query the ATIM window from User Settings.
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryAtimWindow (
@@ -5561,6 +7854,21 @@ wlanoidQueryAtimWindow (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set the ATIM window to User Settings.
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetAtimWindow (
@@ -5592,6 +7900,22 @@ wlanoidSetAtimWindow (
 } /* end of wlanoidSetAtimWindow() */
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to Set the MAC address which is currently used by the NIC.
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetCurrentAddr (
@@ -5609,6 +7933,21 @@ wlanoidSetCurrentAddr (
 
 #if CFG_TCP_IP_CHKSUM_OFFLOAD
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Setting the checksum offload function.
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer    Pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetCSUMOffload (
@@ -5681,6 +8020,21 @@ wlanoidSetCSUMOffload (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Setting the IP address for pattern search function.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \return WLAN_STATUS_SUCCESS
+* \return WLAN_STATUS_ADAPTER_NOT_READY
+* \return WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetNetworkAddress(
@@ -5789,6 +8143,23 @@ wlanoidSetNetworkAddress(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Set driver to switch into RF test mode
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set,
+*                        should be NULL
+* \param[in] u4SetBufferLen The length of the set buffer, should be 0
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \return WLAN_STATUS_SUCCESS
+* \return WLAN_STATUS_ADAPTER_NOT_READY
+* \return WLAN_STATUS_INVALID_DATA
+* \return WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidRftestSetTestMode (
@@ -5840,6 +8211,23 @@ wlanoidRftestSetTestMode (
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Set driver to switch into normal operation mode from RF test mode
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set
+*                        should be NULL
+* \param[in] u4SetBufferLen The length of the set buffer, should be 0
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \return WLAN_STATUS_SUCCESS
+* \return WLAN_STATUS_ADAPTER_NOT_READY
+* \return WLAN_STATUS_INVALID_DATA
+* \return WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidRftestSetAbortTestMode (
@@ -5892,6 +8280,23 @@ wlanoidRftestSetAbortTestMode (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief query for RF test parameter
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_BUFFER_TOO_SHORT
+* \retval WLAN_STATUS_NOT_SUPPORTED
+* \retval WLAN_STATUS_NOT_ACCEPTED
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidRftestQueryAutoTest (
@@ -5931,6 +8336,21 @@ wlanoidRftestQueryAutoTest (
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Set RF test parameter
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \return WLAN_STATUS_SUCCESS
+* \return WLAN_STATUS_ADAPTER_NOT_READY
+* \return WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidRftestSetAutoTest (
@@ -6142,6 +8562,21 @@ rftestSetFrequency(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief command packet generation utility
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] ucCID              Command ID
+* \param[in] fgSetQuery         Set or Query
+* \param[in] fgNeedResp         Need for response
+* \param[in] pfCmdDoneHandler   Function pointer when command is done
+* \param[in] u4SetQueryInfoLen  The length of the set/query buffer
+* \param[in] pucInfoBuffer      Pointer to set/query buffer
+*
+*
+* \retval WLAN_STATUS_PENDING
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanSendSetQueryCmd (
@@ -6216,6 +8651,22 @@ wlanSendSetQueryCmd (
 
 #if CFG_SUPPORT_WAPI
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called by WAPI ui to set wapi mode, which is needed to info the the driver
+*          to operation at WAPI mode while driver initialize.
+*
+* \param[in] prAdapter Pointer to the Adapter structure
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set
+* \param[in] u4SetBufferLen The length of the set buffer
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*   bytes read from the set buffer. If the call failed due to invalid length of
+*   the set buffer, returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA If new setting value is wrong.
+* \retval WLAN_STATUS_INVALID_LENGTH
+*
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetWapiMode (
@@ -6296,6 +8747,22 @@ wlanoidSetWapiMode (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called by WAPI to set the assoc info, which is needed to add to
+*          Association request frame while join WAPI AP.
+*
+* \param[in] prAdapter Pointer to the Adapter structure
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set
+* \param[in] u4SetBufferLen The length of the set buffer
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*   bytes read from the set buffer. If the call failed due to invalid length of
+*   the set buffer, returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA If new setting value is wrong.
+* \retval WLAN_STATUS_INVALID_LENGTH
+*
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetWapiAssocInfo (
@@ -6410,6 +8877,24 @@ wlanoidSetWapiAssocInfo (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set the wpi key to the driver.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_ADAPTER_NOT_READY
+* \retval WLAN_STATUS_INVALID_LENGTH
+* \retval WLAN_STATUS_INVALID_DATA
+*
+* \note The setting buffer P_PARAM_WPI_KEY, which is set by NDIS, is unpacked.
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetWapiKey (
@@ -6565,6 +9050,22 @@ wlanoidSetWapiKey (
 
 #if CFG_SUPPORT_WPS2
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called by WSC to set the assoc info, which is needed to add to
+*          Association request frame while join WPS AP.
+*
+* \param[in] prAdapter Pointer to the Adapter structure
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set
+* \param[in] u4SetBufferLen The length of the set buffer
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*   bytes read from the set buffer. If the call failed due to invalid length of
+*   the set buffer, returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_DATA If new setting value is wrong.
+* \retval WLAN_STATUS_INVALID_LENGTH
+*
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetWSCAssocInfo (
@@ -6731,6 +9232,19 @@ wlanoidSetEnableWakeup (
 #endif
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to configure PS related settings for WMM-PS test.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetWiFiWmmPsTest (
@@ -6798,6 +9312,19 @@ wlanoidSetWiFiWmmPsTest (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to configure enable/disable TX A-MPDU feature.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetTxAmpdu (
@@ -6845,6 +9372,19 @@ wlanoidSetTxAmpdu (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to configure reject/accept ADDBA Request.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetAddbaReject(
@@ -7256,6 +9796,21 @@ wlanoidUpdateSLTMode (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query NVRAM value.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryNvramRead (
@@ -7314,6 +9869,20 @@ wlanoidQueryNvramRead (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to write NVRAM value.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetNvramWrite (
@@ -7359,6 +9928,20 @@ wlanoidSetNvramWrite (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to get the config data source type.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryCfgSrcType(
@@ -7384,6 +9967,20 @@ wlanoidQueryCfgSrcType(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to get the config data source type.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryEepromType(
@@ -7412,6 +10009,20 @@ wlanoidQueryEepromType(
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to get the config data source type.
+*
+* \param[in] prAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                           bytes read from the set buffer. If the call failed
+*                           due to invalid length of the set buffer, returns
+*                           the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_FAILURE
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetCountryCode (
@@ -7602,6 +10213,22 @@ wlanoidSetUApsdParam (
 #endif
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set BT profile or BT information and the
+*        driver will set the built-in PTA configuration into chip.
+*
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetBT (
@@ -7660,6 +10287,21 @@ wlanoidSetBT (
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to query current BT profile and BTCR values
+*
+* \param[in] prAdapter          Pointer to the Adapter structure.
+* \param[in] pvQueryBuffer      Pointer to the buffer that holds the result of
+*                               the query.
+* \param[in] u4QueryBufferLen   The length of the query buffer.
+* \param[out] pu4QueryInfoLen   If the call is successful, returns the number of
+*                               bytes written into the query buffer. If the call
+*                               failed due to invalid length of the query buffer,
+*                               returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryBT (
@@ -7877,6 +10519,21 @@ wlanoidSetPta (
 #endif
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to set Tx power profile.
+*
+*
+* \param[in] prAdapter      Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetTxPower (
@@ -8004,6 +10661,21 @@ wlanSendMemDumpCmd (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is called to dump memory.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[out] pvQueryBuf A pointer to the buffer that holds the result of
+*                           the query.
+* \param[in] u4QueryBufLen The length of the query buffer.
+* \param[out] pu4QueryInfoLen If the call is successful, returns the number of
+*                            bytes written into the query buffer. If the call
+*                            failed due to invalid length of the query buffer,
+*                            returns the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidQueryMemDump (
@@ -8043,6 +10715,20 @@ wlanoidQueryMemDump (
 
 #if CFG_ENABLE_WIFI_DIRECT
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief This routine is used to set the p2p mode.
+*
+* \param[in] pvAdapter Pointer to the Adapter structure.
+* \param[in] pvSetBuffer A pointer to the buffer that holds the data to be set.
+* \param[in] u4SetBufferLen The length of the set buffer.
+* \param[out] pu4SetInfoLen If the call is successful, returns the number of
+*                          bytes read from the set buffer. If the call failed
+*                          due to invalid length of the set buffer, returns
+*                          the amount of storage needed.
+*
+* \retval WLAN_STATUS_SUCCESS
+* \retval WLAN_STATUS_INVALID_LENGTH
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 wlanoidSetP2pMode (

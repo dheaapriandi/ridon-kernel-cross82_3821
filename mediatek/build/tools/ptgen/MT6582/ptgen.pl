@@ -102,7 +102,7 @@ $PL_MODE=$ENV{PL_MODE};
 $YAML_SUPPORT=$ENV{MTK_YAML_SCATTER_FILE_SUPPORT};
 &InitGlobalValue();
 
-my $PART_TABLE_FILENAME   = "mediatek/build/tools/ptgen/$PLATFORM/partition_table_${PROJECT}.xls"; # excel file name
+my $PART_TABLE_FILENAME   = "mediatek/build/tools/ptgen/$PLATFORM/partition_table_${PLATFORM}.xls"; # excel file name
 my $REGION_TABLE_FILENAME = "mediatek/build/tools/emigen/$PLATFORM/MemoryDeviceList_${PLATFORM}.xls";  #eMMC region information
 my $CUSTOM_MEMORYDEVICE_H_NAME  = "mediatek/custom/$PROJECT/preloader/inc/custom_MemoryDevice.h";
 
@@ -330,7 +330,7 @@ sub GetMBRStartAddress(){
 			}
 			#print "\$Min_user_region=$Min_user_region\n";
 		}else{
-			$MAX_address = 6*1024; #default Fix me!!!
+			$MAX_address = 20*1024; #default Fix me!!!
 			my $error_msg="ERROR:Ptgen CAN NOT find $part_num in $REGION_TABLE_FILENAME, we set MAB addr $MAX_address as default value\n";
 			print $error_msg;
 #			die $error_msg;
@@ -1243,6 +1243,40 @@ sub error_handler()
 sub copyright_file_header_for_c()
 {
     my $template = <<"__TEMPLATE";
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2012. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
 __TEMPLATE
 
    return $template;

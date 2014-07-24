@@ -1,9 +1,104 @@
+/*
+** $Id: @(#) gl_p2p_cfg80211.c@@
+*/
+
+/*! \file   gl_p2p_cfg80211.c
+    \brief  Main routines of Linux driver interface for Wi-Fi Direct
+            using cfg80211 interface
+
+    This file contains the main routines of Linux driver for MediaTek Inc. 802.11
+    Wireless LAN Adapters.
+*/
 
 
 
+/*
+** $Log: gl_p2p_cfg80211.c $
+**
+** 05 21 2013 yuche.tsai
+** [ALPS00625499] [GN_WIFI]wifi????????
+** Fix compile warning.
+**
+** 01 30 2013 yuche.tsai
+** [ALPS00455459] [GN_WIFI]??wifi direct???????????
+** Fix possible race condition under GO mode.
+** 
+** 09 12 2012 wcpadmin
+** [ALPS00276400] Remove MTK copyright and legal header on GPL/LGPL related packages
+** .
+** 
+** 09 05 2012 wh.su
+** [ALPS00351547] [6577JB][WiFi direct]The 3rd device fail to establish p2p connection with GO sometimes
+** sync with the ICS code.
+** 
+** 08 31 2012 yuche.tsai
+** [ALPS00349585] [6577JB][WiFi direct][KE]Establish p2p connection while both device have connected to AP previously,one device reboots automatically with KE
+** Fix possible KE when concurrent & disconnect.
+** 
+** 08 21 2012 yuche.tsai
+** NULL
+** Fix compile warning.
+** 
+** 08 20 2012 yuche.tsai
+** NULL
+** Fix possible KE issue.
+** 
+** 08 17 2012 yuche.tsai
+** NULL
+** Fix compile warning.
+** 
+** 08 16 2012 yuche.tsai
+** NULL
+** Fix compile warning.
+** 
+** 08 14 2012 yuche.tsai
+** NULL
+** Fix p2p bug find on ALPS.JB trunk.
+**
+** 07 26 2012 yuche.tsai
+** [ALPS00324337] [ALPS.JB][Hot-Spot] Driver update for Hot-Spot
+** Update driver code of ALPS.JB for hot-spot.
+**
+** 07 19 2012 yuche.tsai
+** NULL
+** Code update for JB.
+ *
+ * 07 17 2012 yuche.tsai
+ * NULL
+ * Fix compile error for JB.
+ *
+ * 07 17 2012 yuche.tsai
+ * NULL
+ * Compile no error before trial run.
+ *
+ * 09 21 2010 kevin.huang
+ * [WCXRP00000054] [MT6620 Wi-Fi][Driver] Restructure driver for second Interface
+ * Isolate P2P related function for Hardware Software Bundle
+ *
+ * 07 08 2010 cp.wu
+ *
+ * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
+ *
+ * 06 06 2010 kevin.huang
+ * [WPD00003832][MT6620 5931] Create driver base
+ * [MT6620 5931] Create driver base
+ *
+ * 05 31 2010 cp.wu
+ * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
+ * add cfg80211 interface, which is to replace WE, for further extension
+ *
+**
+*/
 
+/*******************************************************************************
+*                         C O M P I L E R   F L A G S
+********************************************************************************
+*/
 
-
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 
 #include "config.h"
 
@@ -23,11 +118,35 @@
 #pragma GCC diagnostic ignored "-Wformat"
 #endif
 
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                             D A T A   T Y P E S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 
 
 BOOLEAN
@@ -38,6 +157,10 @@ mtk_p2p_cfg80211func_channel_format_switch(
     IN P_ENUM_CHNL_EXT_T prChnlSco
     );
 
+/*******************************************************************************
+*                              F U N C T I O N S
+********************************************************************************
+*/
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 32)
 int mtk_p2p_cfg80211_add_key(
@@ -801,6 +924,25 @@ mtk_p2p_cfg80211_change_beacon (
                             MSG_SEND_METHOD_BUF);
 
 ////////////////////////////
+/**
+ * struct cfg80211_beacon_data - beacon data
+ * @head: head portion of beacon (before TIM IE)
+ *     or %NULL if not changed
+ * @tail: tail portion of beacon (after TIM IE)
+ *     or %NULL if not changed
+ * @head_len: length of @head
+ * @tail_len: length of @tail
+ * @beacon_ies: extra information element(s) to add into Beacon frames or %NULL
+ * @beacon_ies_len: length of beacon_ies in octets
+ * @proberesp_ies: extra information element(s) to add into Probe Response
+ *      frames or %NULL
+ * @proberesp_ies_len: length of proberesp_ies in octets
+ * @assocresp_ies: extra information element(s) to add into (Re)Association
+ *      Response frames or %NULL
+ * @assocresp_ies_len: length of assocresp_ies in octets
+ * @probe_resp_len: length of probe response template (@probe_resp)
+ * @probe_resp: probe response template (AP mode only)
+ */
 //struct cfg80211_beacon_data {
 //        const u8 *head, *tail;
 //        const u8 *beacon_ies;

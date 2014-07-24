@@ -1,16 +1,140 @@
+/*
+** $Id: //Department/DaVinci/BRANCHES/MT6620_WIFI_DRIVER_V2_3/include/wlan_bow.h#1 $
+*/
+
+/*! \file   "wlan_bow.h"
+    \brief This file contains the declairations of 802.11 PAL 
+           command processing routines for 
+           MediaTek Inc. 802.11 Wireless LAN Adapters.
+*/
 
 
 
-
+/*
+** $Log: wlan_bow.h $
+ *
+ * 05 25 2011 terry.wu
+ * [WCXRP00000735] [MT6620 Wi-Fi][BoW][FW/Driver] Protect BoW connection establishment
+ * Add BoW Cancel Scan Request and Turn On deactive network function.
+ *
+ * 05 23 2011 terry.wu
+ * [WCXRP00000735] [MT6620 Wi-Fi][BoW][FW/Driver] Protect BoW connection establishment
+ * Add some BoW error handling.
+ *
+ * 05 21 2011 terry.wu
+ * [WCXRP00000735] [MT6620 Wi-Fi][BoW][FW/Driver] Protect BoW connection establishment
+ * Protect BoW connection establishment.
+ *
+ * 05 17 2011 terry.wu
+ * [WCXRP00000730] [MT6620 Wi-Fi][BoW] Send deauth while disconnecting
+ * Send deauth while disconnecting BoW link.
+ *
+ * 05 06 2011 terry.wu
+ * [WCXRP00000707] [MT6620 Wi-Fi][Driver] Fix BoW Multiple Physical Link connect/disconnect issue
+ * Fix BoW Multiple Physical Link connect/disconnect issue.
+ *
+ * 04 15 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Add BOW short range mode.
+ *
+ * 03 27 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Support multiple physical link.
+ *
+ * 03 10 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Add BOW table.
+ *
+ * 02 16 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Add bowNotifyAllLinkDisconnected  interface and change channel grant procedure for bow starting..
+ *
+ * 02 15 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Update bowString and channel grant.
+ *
+ * 01 11 2011 chinghwa.yu
+ * [WCXRP00000065] Update BoW design and settings
+ * Update BOW Activity Report structure and bug fix.
+ *
+ * 09 27 2010 chinghwa.yu
+ * [WCXRP00000063] Update BCM CoEx design and settings[WCXRP00000065] Update BoW design and settings
+ * Update BCM/BoW design and settings.
+ *
+ * 09 14 2010 chinghwa.yu
+ * NULL
+ * Add bowRunEventAAAComplete.
+ *
+ * 08 24 2010 chinghwa.yu
+ * NULL
+ * Update BOW for the 1st time.
+ *
+ * 07 30 2010 cp.wu
+ * NULL
+ * 1) BoW wrapper: use definitions instead of hard-coded constant for error code
+ * 2) AIS-FSM: eliminate use of desired RF parameters, use prTargetBssDesc instead
+ * 3) add handling for RX_PKT_DESTINATION_HOST_WITH_FORWARD for GO-broadcast frames
+ *
+ * 07 15 2010 cp.wu
+ * 
+ * sync. bluetooth-over-Wi-Fi interface to driver interface document v0.2.6.
+ *
+ * 07 08 2010 cp.wu
+ * 
+ * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
+ *
+ * 06 06 2010 kevin.huang
+ * [WPD00003832][MT6620 5931] Create driver base 
+ * [MT6620 5931] Create driver base
+ *
+ * 05 17 2010 cp.wu
+ * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support 
+ * 1) add timeout handler mechanism for pending command packets
+ * 2) add p2p add/removal key
+ *
+ * 05 13 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support 
+ * 1) all BT physical handles shares the same RSSI/Link Quality.
+ * 2) simplify BT command composing
+ *
+ * 04 28 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support 
+ * change prefix for data structure used to communicate with 802.11 PAL
+ * to avoid ambiguous naming with firmware interface
+ *
+ * 04 27 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support 
+ * add multiple physical link support
+ *
+ * 04 13 2010 cp.wu
+ * [WPD00003823][MT6620 Wi-Fi] Add Bluetooth-over-Wi-Fi support 
+ * add framework for BT-over-Wi-Fi support.
+ *  *  *  *  *  *  *  *  *  *  *  * 1) prPendingCmdInfo is replaced by queue for multiple handler capability
+ *  *  *  *  *  *  *  *  *  *  *  * 2) command sequence number is now increased atomically 
+ *  *  *  *  *  *  *  *  *  *  *  * 3) private data could be hold and taken use for other purpose
+**
+*/
 
 #ifndef _WLAN_BOW_H
 #define _WLAN_BOW_H
 
+/*******************************************************************************
+*                         C O M P I L E R   F L A G S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 #include "nic/bow.h"
 #include "nic/cmd_buf.h"
 
 #if CFG_ENABLE_BT_OVER_WIFI
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 #define BOWCMD_STATUS_SUCCESS       0
 #define BOWCMD_STATUS_FAILURE       1
 #define BOWCMD_STATUS_UNACCEPTED    2
@@ -29,6 +153,10 @@
 #define BOW_INITIATOR                   0
 #define BOW_RESPONDER                  1
 
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/
 
 typedef struct _BOW_TABLE_T {
     UINT_8                      ucAcquireID;
@@ -53,6 +181,12 @@ typedef struct _BOW_EVENT_ACTIVITY_REPORT_T {
 	UINT_8	aucPeerAddress[6];
 } BOW_EVENT_ACTIVITY_REPORT_T, *P_BOW_EVENT_ACTIVITY_REPORT_T;
 
+/*
+ucReason:	0: success
+	1: general failure
+	2: too much time (> 2/3 second totally) requested for scheduling.
+	Others: reserved.
+*/
 
 typedef struct _BOW_EVENT_SYNC_TSF_T {
     UINT_64     u4TsfTime;
@@ -74,8 +208,20 @@ typedef struct _BOW_ACTIVITY_REPORT_T {
     BOW_ACTIVITY_REPORT_BODY_T arBowActivityReportBody[MAX_ACTIVITY_REPORT];
     } BOW_ACTIVITY_REPORT_T, *P_BOW_ACTIVITY_REPORT_T;
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 /*--------------------------------------------------------------*/
 /* Firmware Command Packer                                      */
 /*--------------------------------------------------------------*/
@@ -391,6 +537,10 @@ bowSetBowTableContent(
     IN P_BOW_TABLE_T      prBowTable
     );
 
+/*******************************************************************************
+*                              F U N C T I O N S
+********************************************************************************
+*/
 
 #endif
 #endif /* _WLAN_BOW_H */

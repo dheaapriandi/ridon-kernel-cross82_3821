@@ -323,8 +323,16 @@ static int zram_bvec_write(struct zram *zram, struct bio_vec *bvec, u32 index,
 
 	handle = zs_malloc(meta->mem_pool, clen);
 	if (!handle) {
-		pr_info("Error allocating memory for compressed "
-			"page: %u, size=%zu\n", index, clen);
+#ifdef CONFIG_MTKPASR
+		if (unlikely(current->flags & PF_MTKPASR)) {
+			/* No warning during suspend PASR stage */
+		} else {
+#endif
+			pr_info("Error allocating memory for compressed "
+				"page: %u, size=%zu\n", index, clen);
+#ifdef CONFIG_MTKPASR
+		}
+#endif
 		ret = -ENOMEM;
 		goto out;
 	}
@@ -534,6 +542,7 @@ struct zram_meta *zram_meta_alloc(u64 disksize)
 {
 	size_t num_pages;
 	struct zram_meta *meta = kmalloc(sizeof(*meta), GFP_KERNEL);
+
 	if (!meta)
 		goto out;
 
@@ -557,7 +566,7 @@ struct zram_meta *zram_meta_alloc(u64 disksize)
 		goto free_buffer;
 	}
 
-	meta->mem_pool = zs_create_pool("zram", GFP_NOIO | __GFP_HIGHMEM);
+	meta->mem_pool = zs_create_pool("zram", GFP_NOIO | __GFP_HIGHMEM | GFP_NO_MTKPASR);
 	if (!meta->mem_pool) {
 		pr_err("Error creating memory pool\n");
 		goto free_table;

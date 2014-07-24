@@ -12,8 +12,6 @@
 #include <linux/mmc/card.h>
 #include "eemcs_debug.h"
 #include "eemcs_kal.h"
-#include "eemcs_ccci.h"
-
 
 KAL_UINT64 g_eemcs_dbg_m[DBG_MODULE_NUM];
 struct dentry* g_eemcs_dbg_dentry;
@@ -110,11 +108,11 @@ static void eemcs_debug_level_init(void){
     g_eemcs_dbg_m[DBG_INIT_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR|DBG_LEVEL_STA|DBG_LEVEL_INF);
     g_eemcs_dbg_m[DBG_MSDC_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR);
     g_eemcs_dbg_m[DBG_SDIO_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR);
-    g_eemcs_dbg_m[DBG_CCCI_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR|DBG_LEVEL_INF);
+    g_eemcs_dbg_m[DBG_CCCI_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR);
     g_eemcs_dbg_m[DBG_FUNC_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR);
     g_eemcs_dbg_m[DBG_NETD_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR);
     g_eemcs_dbg_m[DBG_CHAR_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR|DBG_LEVEL_INF);
-    g_eemcs_dbg_m[DBG_IPCD_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR|DBG_LEVEL_INF);
+    g_eemcs_dbg_m[DBG_IPCD_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR);
     g_eemcs_dbg_m[DBG_BOOT_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR|DBG_LEVEL_STA|DBG_LEVEL_INF);
     g_eemcs_dbg_m[DBG_FSUT_IDX]=0xFF;
     g_eemcs_dbg_m[DBG_RPCD_IDX]=(DBG_LEVEL_ERR|DBG_LEVEL_WAR);

@@ -1,4 +1,38 @@
 /*****************************************************************************
+*  Copyright Statement:
+*  --------------------
+*  This software is protected by Copyright and the information contained
+*  herein is confidential. The software may not be copied and the information
+*  contained herein may not be used or disclosed except with the written
+*  permission of MediaTek Inc. (C) 2008
+*
+*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
+*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
+*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
+*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+*
+*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
+*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
+*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+*
+*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
+*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
+*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
+*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
+*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
+*
+*****************************************************************************/
+/*****************************************************************************
  *
  * Filename:
  * ---------
@@ -36,68 +70,41 @@
 #include "imx135mipiraw_Camera_Sensor_para.h"
 #include "imx135mipiraw_CameraCustomized.h"
 
-kal_bool IMX135MIPI_MPEG4_encode_mode = KAL_FALSE;
+#define IMX135_USE_OTP
+
+#ifdef IMX135_USE_OTP
+#define IMX135_USE_AWB_OTP
+#define IMX135_USE_LENC_OTP
+static uint16_t used_otp = 0;
+extern update_lens();
+extern update_awb_gain();
+extern update_otp_lenc();
+extern update_otp_wb();
+extern get_sensor_customer_id();
+#endif
+
+kal_bool  IMX135MIPI_MPEG4_encode_mode = KAL_FALSE;
 kal_bool IMX135MIPI_Auto_Flicker_mode = KAL_FALSE;
 
 
 kal_uint8 IMX135MIPI_sensor_write_I2C_address = IMX135MIPI_WRITE_ID;
 kal_uint8 IMX135MIPI_sensor_read_I2C_address = IMX135MIPI_READ_ID;
 
-#define IMX135_TEST_PATTERN_CHECKSUM (0x51905ccf)
 
-#if 0//ndef IMX135_CAPTURE_24FPS
+	
+
 static struct IMX135MIPI_sensor_STRUCT IMX135MIPI_sensor={IMX135MIPI_WRITE_ID,IMX135MIPI_READ_ID,KAL_TRUE,KAL_FALSE,KAL_TRUE,KAL_FALSE,
 KAL_FALSE,KAL_FALSE,KAL_FALSE,231270000,231270000,259200000,0,0,0,64,64,64,IMX135MIPI_PV_LINE_LENGTH_PIXELS,
 IMX135MIPI_PV_FRAME_LENGTH_LINES,IMX135MIPI_VIDEO_LINE_LENGTH_PIXELS,IMX135MIPI_VIDEO_FRAME_LENGTH_LINES,IMX135MIPI_FULL_LINE_LENGTH_PIXELS,IMX135MIPI_FULL_FRAME_LENGTH_LINES,0,0,0,0,0,0,30};
-#else
-static struct IMX135MIPI_sensor_STRUCT IMX135MIPI_sensor=
-{
-	IMX135MIPI_WRITE_ID,											//kal_uint16 i2c_write_id;                                                 
-	IMX135MIPI_READ_ID,                       //kal_uint16 i2c_read_id;                                                  
-	KAL_TRUE,                                 //kal_bool first_init;                                                     
-	KAL_FALSE,                                //kal_bool fix_video_fps;                                                  
-	KAL_TRUE,                                 //kal_bool pv_mode;                                                        
-	KAL_FALSE,                                //kal_bool video_mode; 				                                             
-	KAL_FALSE,                                //kal_bool capture_mode; 				//True: Preview Mode; False: Capture Mode  
-	KAL_FALSE,                                //kal_bool night_mode;				//True: Night Mode; False: Auto Mode         
-	KAL_FALSE,                                //kal_uint8 mirror_flip;                                                   
-	231270000,								  //kal_uint32 pv_pclk; 			//Preview Pclk								   
-	231270000,								  //kal_uint32 video_pclk;				//video Pclk							   
-#if defined(IMX135_CAPTURE_24FPS)
-	348000000,								  //kal_uint32 cp_pclk; 			//Capture Pclk								   
-#else
-	259200000,                                //kal_uint32 cp_pclk;				//Capture Pclk                                 
-#endif
-	0,                                        //kal_uint32 pv_shutter;		                                               
-	0,                                        //kal_uint32 video_shutter;		                                             
-	0,                                        //kal_uint32 cp_shutter;                                                   
-	64,                                       //kal_uint32 pv_gain;                                                      
-	64,                                       //kal_uint32 video_gain;                                                   
-	64,                                       //kal_uint32 cp_gain;                                                      
-	IMX135MIPI_PV_LINE_LENGTH_PIXELS,         //kal_uint32 pv_line_length;                                               
-	IMX135MIPI_PV_FRAME_LENGTH_LINES,         //kal_uint32 pv_frame_length;                                              
-	IMX135MIPI_VIDEO_LINE_LENGTH_PIXELS,      //kal_uint32 video_line_length;                                            
-	IMX135MIPI_VIDEO_FRAME_LENGTH_LINES,      //kal_uint32 video_frame_length;                                           
-	IMX135MIPI_FULL_LINE_LENGTH_PIXELS,       //kal_uint32 cp_line_length;                                               
-	IMX135MIPI_FULL_FRAME_LENGTH_LINES,       //kal_uint32 cp_frame_length;                                              
-	0,                                        //kal_uint16 pv_dummy_pixels;		   //Dummy Pixels:must be 12s              
-	0,                                        //kal_uint16 pv_dummy_lines;		   //Dummy Lines                           
-	0,                                        //kal_uint16 video_dummy_pixels;		   //Dummy Pixels:must be 12s          
-	0,                                        //kal_uint16 video_dummy_lines;		   //Dummy Lines                         
-	0,                                        //kal_uint16 cp_dummy_pixels;		   //Dummy Pixels:must be 12s              
-	0,                                        //kal_uint16 cp_dummy_lines;		   //Dummy Lines			                     
-	30                                        //kal_uint16 video_current_frame_rate;                                     
-};
-
-#endif
-MSDK_SCENARIO_ID_ENUM CurrentScenarioId = MSDK_SCENARIO_ID_CAMERA_PREVIEW;
+static MSDK_SCENARIO_ID_ENUM CurrentScenarioId = MSDK_SCENARIO_ID_CAMERA_PREVIEW;
 
 
+kal_uint16  IMX135MIPI_sensor_gain_base=0x0;
 /* MAX/MIN Explosure Lines Used By AE Algorithm */
 kal_uint16 IMX135MIPI_MAX_EXPOSURE_LINES = IMX135MIPI_PV_FRAME_LENGTH_LINES-5;
 kal_uint8  IMX135MIPI_MIN_EXPOSURE_LINES = 2;
 kal_uint32 IMX135MIPI_isp_master_clock;
-static DEFINE_SPINLOCK(imx135_drv_lock);
+static DEFINE_SPINLOCK(imx111_drv_lock);
 
 #define SENSORDB(fmt, arg...) printk( "[IMX135MIPIRaw] "  fmt, ##arg)
 #define RETAILMSG(x,...)
@@ -111,6 +118,7 @@ kal_uint16 IMX135MIPI_sensor_flip_value;
 
 #define IMX135MIPI_MaxGainIndex (71)
 kal_uint16 IMX135MIPI_sensorGainMapping[IMX135MIPI_MaxGainIndex][2] ={
+	#if 1
 	{71  ,25 },
 	{76  ,42 },
 	{83  ,59 },
@@ -149,7 +157,7 @@ kal_uint16 IMX135MIPI_sensorGainMapping[IMX135MIPI_MaxGainIndex][2] ={
 	{320 ,205},
 	{328 ,206},
 	{336 ,207},
-	{344 ,208},
+	{344 ,208},//334
 	{352 ,209},
 	{360 ,210},
 	{368 ,211},
@@ -182,6 +190,8 @@ kal_uint16 IMX135MIPI_sensorGainMapping[IMX135MIPI_MaxGainIndex][2] ={
 	{910 ,238},
 	{963 ,239},
 	{1024,240} 
+	#endif
+
 };
 
 
@@ -203,11 +213,12 @@ kal_uint16 IMX135MIPI_read_cmos_sensor(kal_uint32 addr)
 
 void IMX135MIPI_write_shutter(kal_uint16 shutter)
 {
+ //  return ; 
 	kal_uint32 frame_length = 0,line_length=0;
     kal_uint32 extra_lines = 0;
 	kal_uint32 max_exp_shutter = 0;
 	unsigned long flags;
-//	SENSORDB("IMX135MIPI_write_shutter shutter = %d\n",shutter);
+	SENSORDB("IMX135MIPI_write_shutter shutter = %d\n",shutter);
     if (IMX135MIPI_sensor.pv_mode == KAL_TRUE) 
 	 {
 	   max_exp_shutter = IMX135MIPI_PV_FRAME_LENGTH_LINES + IMX135MIPI_sensor.pv_dummy_lines-4;
@@ -229,28 +240,28 @@ void IMX135MIPI_write_shutter(kal_uint16 shutter)
 	 {
        frame_length =IMX135MIPI_PV_FRAME_LENGTH_LINES+ IMX135MIPI_sensor.pv_dummy_lines + extra_lines;
 	   line_length = IMX135MIPI_PV_LINE_LENGTH_PIXELS+ IMX135MIPI_sensor.pv_dummy_pixels;
-	   spin_lock_irqsave(&imx135_drv_lock,flags);
+	   spin_lock_irqsave(&imx111_drv_lock,flags);
 	   IMX135MIPI_sensor.pv_line_length = line_length;
 	   IMX135MIPI_sensor.pv_frame_length = frame_length;
-	   spin_unlock_irqrestore(&imx135_drv_lock,flags);
+	   spin_unlock_irqrestore(&imx111_drv_lock,flags);
 	 }
 	 else if (IMX135MIPI_sensor.video_mode== KAL_TRUE) 
      {
 	    frame_length = IMX135MIPI_VIDEO_FRAME_LENGTH_LINES+ IMX135MIPI_sensor.video_dummy_lines + extra_lines;
 		line_length =IMX135MIPI_VIDEO_LINE_LENGTH_PIXELS + IMX135MIPI_sensor.video_dummy_pixels;
-		spin_lock_irqsave(&imx135_drv_lock,flags);
+		spin_lock_irqsave(&imx111_drv_lock,flags);
 		IMX135MIPI_sensor.video_line_length = line_length;
 	    IMX135MIPI_sensor.video_frame_length = frame_length;
-		spin_unlock_irqrestore(&imx135_drv_lock,flags);
+		spin_unlock_irqrestore(&imx111_drv_lock,flags);
 	 } 
 	 else
 	 	{
 	    frame_length = IMX135MIPI_FULL_FRAME_LENGTH_LINES+ IMX135MIPI_sensor.cp_dummy_lines + extra_lines;
 		line_length =IMX135MIPI_FULL_LINE_LENGTH_PIXELS + IMX135MIPI_sensor.cp_dummy_pixels;
-		spin_lock_irqsave(&imx135_drv_lock,flags);
+		spin_lock_irqsave(&imx111_drv_lock,flags);
 		IMX135MIPI_sensor.cp_line_length = line_length;
 	    IMX135MIPI_sensor.cp_frame_length = frame_length;
-		spin_unlock_irqrestore(&imx135_drv_lock,flags);
+		spin_unlock_irqrestore(&imx111_drv_lock,flags);
 	 }
     IMX135MIPI_write_cmos_sensor(0x0104, 1);        
 	IMX135MIPI_write_cmos_sensor(0x0340, (frame_length >>8) & 0xFF);
@@ -259,9 +270,10 @@ void IMX135MIPI_write_shutter(kal_uint16 shutter)
     IMX135MIPI_write_cmos_sensor(0x0202, (shutter >> 8) & 0xFF);
     IMX135MIPI_write_cmos_sensor(0x0203, shutter  & 0xFF);
     IMX135MIPI_write_cmos_sensor(0x0104, 0);    
-	SENSORDB("IMX135MIPI_write_shutter frame_length = %d;shutter = %d\n",frame_length,shutter);
+
 
 }   /* write_IMX135MIPI_shutter */
+
 
 static kal_uint16 IMX135MIPIReg2Gain(const kal_uint8 iReg)
 {
@@ -288,7 +300,7 @@ static kal_uint8 IMX135MIPIGain2Reg(const kal_uint16 iGain)
     }
     if(iGain != IMX135MIPI_sensorGainMapping[iI][0])
     {
-         SENSORDB("[IMX135MIPIGain2Reg] Gain mapping don't correctly:%d %d \n", iGain, IMX135MIPI_sensorGainMapping[iI][0]);
+         printk("[IMX111MIPIGain2Reg] Gain mapping don't correctly:%d %d \n", iGain, IMX135MIPI_sensorGainMapping[iI][0]);
     }
     return IMX135MIPI_sensorGainMapping[iI][1];
 }
@@ -312,10 +324,11 @@ static kal_uint8 IMX135MIPIGain2Reg(const kal_uint16 iGain)
 *************************************************************************/
 void IMX135MIPI_SetGain(UINT16 iGain)
 {
+//return;
     kal_uint8 iReg;
-//	SENSORDB("[IMX135MIPI_SetGain] SetGain=%d\n",  iGain);
+	SENSORDB("[IMX135MIPI_SetGain] SetGain=%d\n",  iGain);
     iReg = IMX135MIPIGain2Reg(iGain);
-//	SENSORDB("[IMX135MIPI_SetGain ] RegisterGain:%d\n", iReg);
+	SENSORDB("[IMX135MIPI_SetGain ] RegisterGain:%d\n", iReg);
 	
 	IMX135MIPI_write_cmos_sensor(0x0104, 1);
     IMX135MIPI_write_cmos_sensor(0x0205, (kal_uint8)iReg);
@@ -392,16 +405,16 @@ void IMX135MIPI_sensor_to_camera_para(void)
     for(i=0; 0xFFFFFFFF!=IMX135MIPISensorReg[i].Addr; i++)
     {
 		temp_data=IMX135MIPI_read_cmos_sensor(IMX135MIPISensorReg[i].Addr);
-		spin_lock(&imx135_drv_lock);
+		spin_lock(&imx111_drv_lock);
 		IMX135MIPISensorReg[i].Para = temp_data;
-		spin_unlock(&imx135_drv_lock);
+		spin_unlock(&imx111_drv_lock);
     }
     for(i=ENGINEER_START_ADDR; 0xFFFFFFFF!=IMX135MIPISensorReg[i].Addr; i++)
     {
     	temp_data=IMX135MIPI_read_cmos_sensor(IMX135MIPISensorReg[i].Addr);
-         spin_lock(&imx135_drv_lock);
+         spin_lock(&imx111_drv_lock);
         IMX135MIPISensorReg[i].Para = temp_data;
-		spin_unlock(&imx135_drv_lock);
+		spin_unlock(&imx111_drv_lock);
     }
 
 }
@@ -485,9 +498,9 @@ void IMX135MIPI_get_sensor_item_info(kal_uint16 group_idx,kal_uint16 item_idx, M
               default:
                  SENSORDB("[IMX105MIPI][Error]get_sensor_item_info error!!!\n");
           }
-           	spin_lock(&imx135_drv_lock);    
+           	spin_lock(&imx111_drv_lock);    
             temp_para=IMX135MIPISensorCCT[temp_addr].Para;	
-			spin_unlock(&imx135_drv_lock);
+			spin_unlock(&imx111_drv_lock);
             temp_gain = IMX135MIPIReg2Gain(temp_para);
             temp_gain=(temp_gain*1000)/BASEGAIN;
             info_ptr->ItemValue=temp_gain;
@@ -587,6 +600,11 @@ void IMX135MIPI_get_sensor_item_info(kal_uint16 group_idx,kal_uint16 item_idx, M
     }
 }
 
+//void IMX135MIPI_set_isp_driving_current(kal_uint8 current)
+//{
+
+//}
+
 kal_bool IMX135MIPI_set_sensor_item_info(kal_uint16 group_idx, kal_uint16 item_idx, kal_int32 ItemValue)
 {
 //   kal_int16 temp_reg;
@@ -616,11 +634,14 @@ kal_bool IMX135MIPI_set_sensor_item_info(kal_uint16 group_idx, kal_uint16 item_i
                  SENSORDB("[IMX135MIPI][Error]set_sensor_item_info error!!!\n");
           }
             temp_para = IMX135MIPIGain2Reg(ItemValue);
-            spin_lock(&imx135_drv_lock);    
+            spin_lock(&imx111_drv_lock);    
             IMX135MIPISensorCCT[temp_addr].Para = temp_para;
-			spin_unlock(&imx135_drv_lock);
+			spin_unlock(&imx111_drv_lock);
             IMX135MIPI_write_cmos_sensor(IMX135MIPISensorCCT[temp_addr].Addr,temp_para);
 			temp_para=read_IMX135MIPI_gain();	
+            spin_lock(&imx111_drv_lock);    
+            IMX135MIPI_sensor_gain_base=temp_para;
+			spin_unlock(&imx111_drv_lock);
 
             break;
         case CMMCLK_CURRENT:
@@ -629,27 +650,31 @@ kal_bool IMX135MIPI_set_sensor_item_info(kal_uint16 group_idx, kal_uint16 item_i
                 case 0:
                     if(ItemValue==2)
                     {			
-                    spin_lock(&imx135_drv_lock);    
+                    spin_lock(&imx111_drv_lock);    
                         IMX135MIPISensorReg[CMMCLK_CURRENT_INDEX].Para = ISP_DRIVING_2MA;
-					spin_unlock(&imx135_drv_lock);
+					spin_unlock(&imx111_drv_lock);
+                        //IMX135MIPI_set_isp_driving_current(ISP_DRIVING_2MA);
                     }
                     else if(ItemValue==3 || ItemValue==4)
                     {
-                    	spin_lock(&imx135_drv_lock);    
+                    	spin_lock(&imx111_drv_lock);    
                         IMX135MIPISensorReg[CMMCLK_CURRENT_INDEX].Para = ISP_DRIVING_4MA;
-						spin_unlock(&imx135_drv_lock);
+						spin_unlock(&imx111_drv_lock);
+                        //IMX135MIPI_set_isp_driving_current(ISP_DRIVING_4MA);
                     }
                     else if(ItemValue==5 || ItemValue==6)
                     {
-                    	spin_lock(&imx135_drv_lock);    
+                    	spin_lock(&imx111_drv_lock);    
                         IMX135MIPISensorReg[CMMCLK_CURRENT_INDEX].Para = ISP_DRIVING_6MA;
-						spin_unlock(&imx135_drv_lock);
+						spin_unlock(&imx111_drv_lock);
+                        //IMX135MIPI_set_isp_driving_current(ISP_DRIVING_6MA);
                     }
                     else
                     {
-                    	spin_lock(&imx135_drv_lock);    
+                    	spin_lock(&imx111_drv_lock);    
                         IMX135MIPISensorReg[CMMCLK_CURRENT_INDEX].Para = ISP_DRIVING_8MA;
-						spin_unlock(&imx135_drv_lock);
+						spin_unlock(&imx111_drv_lock);
+                        //IMX135MIPI_set_isp_driving_current(ISP_DRIVING_8MA);
                     }
                     break;
                 default:
@@ -663,9 +688,9 @@ kal_bool IMX135MIPI_set_sensor_item_info(kal_uint16 group_idx, kal_uint16 item_i
             switch (item_idx)
             {
                 case 0:
-					spin_lock(&imx135_drv_lock);    
+					spin_lock(&imx111_drv_lock);    
                     IMX135MIPI_FAC_SENSOR_REG=ItemValue;
-					spin_unlock(&imx135_drv_lock);
+					spin_unlock(&imx111_drv_lock);
                     break;
                 case 1:
                     IMX135MIPI_write_cmos_sensor(IMX135MIPI_FAC_SENSOR_REG,ItemValue);
@@ -683,38 +708,39 @@ kal_bool IMX135MIPI_set_sensor_item_info(kal_uint16 group_idx, kal_uint16 item_i
 static void IMX135MIPI_SetDummy(const kal_uint16 iPixels, const kal_uint16 iLines)
 {
   kal_uint32 frame_length = 0, line_length = 0;
+//return;
    if(IMX135MIPI_sensor.pv_mode == KAL_TRUE)
    	{
-   	 spin_lock(&imx135_drv_lock);    
+   	 spin_lock(&imx111_drv_lock);    
    	 IMX135MIPI_sensor.pv_dummy_pixels = iPixels;
 	 IMX135MIPI_sensor.pv_dummy_lines = iLines;
    	 IMX135MIPI_sensor.pv_line_length = IMX135MIPI_PV_LINE_LENGTH_PIXELS + iPixels;
 	 IMX135MIPI_sensor.pv_frame_length = IMX135MIPI_PV_FRAME_LENGTH_LINES + iLines;
-	 spin_unlock(&imx135_drv_lock);
+	 spin_unlock(&imx111_drv_lock);
 	 line_length = IMX135MIPI_sensor.pv_line_length;
 	 frame_length = IMX135MIPI_sensor.pv_frame_length;
 	 	
    	}
    else if(IMX135MIPI_sensor.video_mode == KAL_TRUE)
    	{
-   	 spin_lock(&imx135_drv_lock);    
+   	 spin_lock(&imx111_drv_lock);    
    	 IMX135MIPI_sensor.video_dummy_pixels = iPixels;
 	 IMX135MIPI_sensor.video_dummy_lines = iLines;
    	 IMX135MIPI_sensor.video_line_length = IMX135MIPI_VIDEO_LINE_LENGTH_PIXELS + iPixels;
 	 IMX135MIPI_sensor.video_frame_length = IMX135MIPI_VIDEO_FRAME_LENGTH_LINES + iLines;
-	 spin_unlock(&imx135_drv_lock);
+	 spin_unlock(&imx111_drv_lock);
 	 line_length = IMX135MIPI_sensor.video_line_length;
 	 frame_length = IMX135MIPI_sensor.video_frame_length;
    	}
 
 	else
 		{
-	  spin_lock(&imx135_drv_lock);	
+	  spin_lock(&imx111_drv_lock);	
    	  IMX135MIPI_sensor.cp_dummy_pixels = iPixels;
 	  IMX135MIPI_sensor.cp_dummy_lines = iLines;
 	  IMX135MIPI_sensor.cp_line_length = IMX135MIPI_FULL_LINE_LENGTH_PIXELS + iPixels;
 	  IMX135MIPI_sensor.cp_frame_length = IMX135MIPI_FULL_FRAME_LENGTH_LINES + iLines;
-	   spin_unlock(&imx135_drv_lock);
+	   spin_unlock(&imx111_drv_lock);
 	  line_length = IMX135MIPI_sensor.cp_line_length;
 	  frame_length = IMX135MIPI_sensor.cp_frame_length;
     }
@@ -728,13 +754,13 @@ static void IMX135MIPI_SetDummy(const kal_uint16 iPixels, const kal_uint16 iLine
 
       IMX135MIPI_write_cmos_sensor(0x0104, 0);
 
-	  SENSORDB("IMX135MIPI_SetDummy,dumy_pixel=%d,dumy_line=%d,\n",iPixels,iLines);
+	  SENSORDB("[IMX135MIPI]%s(),dumy_pixel=%d,dumy_line=%d,\n",__FUNCTION__,iPixels,iLines);
   
 }   /*  IMX135MIPI_SetDummy */
 
 static void IMX135MIPI_Sensor_Init(void)
 {
-    SENSORDB("IMX135MIPI_Sensor_Init enter:\n");
+	//IMX135MIPI_write_cmos_sensor(0x0100,0x00);// STREAM STop
 	IMX135MIPI_write_cmos_sensor(0x0101, 0x00);//
 	IMX135MIPI_write_cmos_sensor(0x0105, 0x01);//
 	IMX135MIPI_write_cmos_sensor(0x0110, 0x00);//
@@ -765,7 +791,11 @@ static void IMX135MIPI_Sensor_Init(void)
 	IMX135MIPI_write_cmos_sensor(0x3494, 0x1E);//
 	IMX135MIPI_write_cmos_sensor(0x3511, 0x8F);//
 	IMX135MIPI_write_cmos_sensor(0x364F, 0x2D);//
-
+#ifdef IMX135_USE_OTP
+	#ifdef IMX135_USE_LENC_OTP
+	update_lens();
+	#endif
+#endif
 //quality
 
 	//defect forrection recommended setting
@@ -868,20 +898,31 @@ static void IMX135MIPI_Sensor_Init(void)
 	//shading setting
 	IMX135MIPI_write_cmos_sensor(0x4500, 0x1F);//
 	
-	SENSORDB("IMX135MIPI_Sensor_Init exit\n");
 
+	//function enable settting
+#if 0
+	IMX135MIPI_write_cmos_sensor(0x0700, 0x00);//   lense shading correction  enalbe 0:disable,1:enable
+	IMX135MIPI_write_cmos_sensor(0x3A63, 0x00);//   lense shading correction  enalbe 0:disable,1:enable
+	IMX135MIPI_write_cmos_sensor(0x4100, 0x00);//   lense shading correction  enalbe 0:disable,1:enable
+	IMX135MIPI_write_cmos_sensor(0x4203, 0x00);//   lense shading correction  enalbe 0:disable,1:enable
+	IMX135MIPI_write_cmos_sensor(0x441C, 0x00);//   lense shading correction  enalbe 0:disable,1:enable
+	IMX135MIPI_write_cmos_sensor(0x4344, 0x00);//   lense shading correction  enalbe 0:disable,1:enable
+ #endif 
+	//IMX135MIPI_write_cmos_sensor(0x0100,0x01);// STREAM START
     // The register only need to enable 1 time.    
-    spin_lock(&imx135_drv_lock);  
+    spin_lock(&imx111_drv_lock);  
     IMX135MIPI_Auto_Flicker_mode = KAL_FALSE;     // reset the flicker status    
-	spin_unlock(&imx135_drv_lock);
+	spin_unlock(&imx111_drv_lock);
 }   /*  IMX135MIPI_Sensor_Init  */
-void VideoFullSizeSetting(void)//16:9   6M
+static void VideoFullSizeSetting(void)//16:9   6M
 
 {	
-	SENSORDB("VideoFullSizeSetting enter:\n");
+
+#if 1
 
  //PLL setting 
 	IMX135MIPI_write_cmos_sensor(0x0100,0x00);// STREAM STop
+	IMX135MIPI_write_cmos_sensor(0x0104,0x01);
 
 	//PLL setting
     IMX135MIPI_write_cmos_sensor(0x011E,0x18);//   
@@ -915,18 +956,18 @@ void VideoFullSizeSetting(void)//16:9   6M
 	IMX135MIPI_write_cmos_sensor(0x7006,0x04);//
 
 	//Optionnal function setting
-	IMX135MIPI_write_cmos_sensor(0x0700,0x00);//   
-	IMX135MIPI_write_cmos_sensor(0x3A63,0x00);//
+	//IMX135MIPI_write_cmos_sensor(0x0700,0x00);//
+	//IMX135MIPI_write_cmos_sensor(0x3A63,0x00);//
 	IMX135MIPI_write_cmos_sensor(0x4100,0xF8);//   
 	IMX135MIPI_write_cmos_sensor(0x4203,0xFF);//   
 	IMX135MIPI_write_cmos_sensor(0x4344,0x00);//   
 	IMX135MIPI_write_cmos_sensor(0x441C,0x01);//
 
 	//Size setting
-	IMX135MIPI_write_cmos_sensor(0x0340,(IMX135MIPI_VIDEO_FRAME_LENGTH_LINES>>8)&0xFF);//   
-	IMX135MIPI_write_cmos_sensor(0x0341,(IMX135MIPI_VIDEO_FRAME_LENGTH_LINES>>0)&0xFF);//	
-	IMX135MIPI_write_cmos_sensor(0x0342,(IMX135MIPI_VIDEO_LINE_LENGTH_PIXELS>>8)&0xFF);// 
-	IMX135MIPI_write_cmos_sensor(0x0343,(IMX135MIPI_VIDEO_LINE_LENGTH_PIXELS>>0)&0xFF);//
+	IMX135MIPI_write_cmos_sensor(0x0340,0x06);//   0A
+	IMX135MIPI_write_cmos_sensor(0x0341,0x68);//   40
+	IMX135MIPI_write_cmos_sensor(0x0342,0x11);// 
+	IMX135MIPI_write_cmos_sensor(0x0343,0xDC);//
 	IMX135MIPI_write_cmos_sensor(0x0344,0x00);//
 	IMX135MIPI_write_cmos_sensor(0x0345,0x00);//
 	IMX135MIPI_write_cmos_sensor(0x0346,0x00);//
@@ -987,6 +1028,11 @@ void VideoFullSizeSetting(void)//16:9   6M
 	IMX135MIPI_write_cmos_sensor(0x0213,0x00);//   
 	IMX135MIPI_write_cmos_sensor(0x0214,0x01);//   
 	IMX135MIPI_write_cmos_sensor(0x0215,0x00);//
+#ifdef IMX135_USE_OTP
+	#ifdef IMX135_USE_AWB_OTP
+	update_awb_gain();
+	#endif
+#endif
 
 #if 0
 	//hdr setting
@@ -1008,16 +1054,22 @@ void VideoFullSizeSetting(void)//16:9   6M
 
 	#endif
 	
+	IMX135MIPI_write_cmos_sensor(0x0104,0x00);
 	IMX135MIPI_write_cmos_sensor(0x0100,0x01);// STREAM START
 
-    SENSORDB("VideoFullSizeSetting exit\n");
+
+#endif
+
+    SENSORDB("[IMX135MIPIRaw] Set video setting  End\n"); 
 }
 
 
-void PreviewSetting(void)
+static void PreviewSetting(void)
 {	
 
-   SENSORDB("PreviewSetting enter:\n");
+
+#if 1   // 4 lane
+
   //PLL setting 
 	IMX135MIPI_write_cmos_sensor(0x0100,0x00);// STREAM STop
 
@@ -1053,18 +1105,18 @@ void PreviewSetting(void)
 	IMX135MIPI_write_cmos_sensor(0x7006,0x04);//
 
 	//Optionnal function setting
-	IMX135MIPI_write_cmos_sensor(0x0700,0x00);//   
-	IMX135MIPI_write_cmos_sensor(0x3A63,0x00);//
+	//IMX135MIPI_write_cmos_sensor(0x0700,0x00);//   
+	//IMX135MIPI_write_cmos_sensor(0x3A63,0x00);//   
 	IMX135MIPI_write_cmos_sensor(0x4100,0xF8);//   
 	IMX135MIPI_write_cmos_sensor(0x4203,0xFF);//   
 	IMX135MIPI_write_cmos_sensor(0x4344,0x00);//   
 	IMX135MIPI_write_cmos_sensor(0x441C,0x01);//
 
 	//Size setting
-	IMX135MIPI_write_cmos_sensor(0x0340,(IMX135MIPI_PV_FRAME_LENGTH_LINES>>8)&0xFF);//   
-	IMX135MIPI_write_cmos_sensor(0x0341,(IMX135MIPI_PV_FRAME_LENGTH_LINES>>0)&0xFF);//   
-	IMX135MIPI_write_cmos_sensor(0x0342,(IMX135MIPI_PV_LINE_LENGTH_PIXELS>>8)&0xFF);//
-	IMX135MIPI_write_cmos_sensor(0x0343,(IMX135MIPI_PV_LINE_LENGTH_PIXELS>>0)&0xFF);//
+	IMX135MIPI_write_cmos_sensor(0x0340,0x06);//   0A
+	IMX135MIPI_write_cmos_sensor(0x0341,0x68);//   40
+	IMX135MIPI_write_cmos_sensor(0x0342,0x11);// 
+	IMX135MIPI_write_cmos_sensor(0x0343,0xDC);//
 	IMX135MIPI_write_cmos_sensor(0x0344,0x00);//
 	IMX135MIPI_write_cmos_sensor(0x0345,0x00);//
 	IMX135MIPI_write_cmos_sensor(0x0346,0x00);//
@@ -1125,6 +1177,11 @@ void PreviewSetting(void)
 	IMX135MIPI_write_cmos_sensor(0x0213,0x00);//   
 	IMX135MIPI_write_cmos_sensor(0x0214,0x01);//   
 	IMX135MIPI_write_cmos_sensor(0x0215,0x00);//
+#ifdef IMX135_USE_OTP
+	#ifdef IMX135_USE_AWB_OTP
+	update_awb_gain();
+	#endif
+#endif
 
 #if 0
 	//hdr setting
@@ -1145,143 +1202,21 @@ void PreviewSetting(void)
 	IMX135MIPI_write_cmos_sensor(0x3800,0X00);//
 
 	#endif
-	
+
+	IMX135MIPI_write_cmos_sensor(0x0104,0x00);
 	IMX135MIPI_write_cmos_sensor(0x0100,0x01);// STREAM START
 
+#endif
 
-     SENSORDB("PreviewSetting exit\n");
+    SENSORDB("[IMX135MIPIRaw] Set preview setting  End\n"); 
 }
 
 void IMX135MIPI_set_13M(void)
 {	
 
-	SENSORDB("IMX135MIPI_set_13M Capture setting enter:\n");
-
 	IMX135MIPI_write_cmos_sensor(0x0100,0x00);// STREAM STop
-#if defined(IMX135_CAPTURE_24FPS)
-	//ClockSetting
-	IMX135MIPI_write_cmos_sensor(0x011E,0x18);
-	IMX135MIPI_write_cmos_sensor(0x011F,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0301,0x05);
-	IMX135MIPI_write_cmos_sensor(0x0303,0x01);
-	IMX135MIPI_write_cmos_sensor(0x0305,0x0C);
-	IMX135MIPI_write_cmos_sensor(0x0309,0x05);
-	IMX135MIPI_write_cmos_sensor(0x030B,0x01);
-	IMX135MIPI_write_cmos_sensor(0x030C,0x01);
-	IMX135MIPI_write_cmos_sensor(0x030D,0xB3);
-	IMX135MIPI_write_cmos_sensor(0x030E,0x01);
-	IMX135MIPI_write_cmos_sensor(0x3A06,0x11);
-	
-	//Modesetting
-	IMX135MIPI_write_cmos_sensor(0x0108,0x03);
-	IMX135MIPI_write_cmos_sensor(0x0112,0x0A);
-	IMX135MIPI_write_cmos_sensor(0x0113,0x0A);
-	IMX135MIPI_write_cmos_sensor(0x0381,0x01);
-	IMX135MIPI_write_cmos_sensor(0x0383,0x01);
-	IMX135MIPI_write_cmos_sensor(0x0385,0x01);
-	IMX135MIPI_write_cmos_sensor(0x0387,0x01);
-	IMX135MIPI_write_cmos_sensor(0x0390,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0391,0x11);
-	IMX135MIPI_write_cmos_sensor(0x0392,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0401,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0404,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0405,0x10);
-	IMX135MIPI_write_cmos_sensor(0x4082,0x01);
-	IMX135MIPI_write_cmos_sensor(0x4083,0x01);
-	IMX135MIPI_write_cmos_sensor(0x7006,0x04);
-	
-	//OptionnalFunctionsetting
-	IMX135MIPI_write_cmos_sensor(0x0700,0x00);//   
-	IMX135MIPI_write_cmos_sensor(0x3A63,0x00);//
-	IMX135MIPI_write_cmos_sensor(0x4100,0xF8);
-	IMX135MIPI_write_cmos_sensor(0x4203,0xFF);
-	IMX135MIPI_write_cmos_sensor(0x4344,0x00);
-	IMX135MIPI_write_cmos_sensor(0x441C,0x01);
-	
-	//Sizesetting
-	IMX135MIPI_write_cmos_sensor(0x0340,(IMX135MIPI_FULL_FRAME_LENGTH_LINES>>8)&0xFF);//   
-	IMX135MIPI_write_cmos_sensor(0x0341,(IMX135MIPI_FULL_FRAME_LENGTH_LINES>>0)&0xFF);//   
-	IMX135MIPI_write_cmos_sensor(0x0342,(IMX135MIPI_FULL_LINE_LENGTH_PIXELS>>8)&0xFF);//
-	IMX135MIPI_write_cmos_sensor(0x0343,(IMX135MIPI_FULL_LINE_LENGTH_PIXELS>>0)&0xFF);//
-	IMX135MIPI_write_cmos_sensor(0x0344,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0345,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0346,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0347,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0348,0x10);
-	IMX135MIPI_write_cmos_sensor(0x0349,0x6F);
-	IMX135MIPI_write_cmos_sensor(0x034A,0x0C);
-	IMX135MIPI_write_cmos_sensor(0x034B,0x2F);
-	IMX135MIPI_write_cmos_sensor(0x034C,0x10);
-	IMX135MIPI_write_cmos_sensor(0x034D,0x70);
-	IMX135MIPI_write_cmos_sensor(0x034E,0x0C);
-	IMX135MIPI_write_cmos_sensor(0x034F,0x30);
-	IMX135MIPI_write_cmos_sensor(0x0350,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0351,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0352,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0353,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0354,0x10);
-	IMX135MIPI_write_cmos_sensor(0x0355,0x70);
-	IMX135MIPI_write_cmos_sensor(0x0356,0x0C);
-	IMX135MIPI_write_cmos_sensor(0x0357,0x30);
-	IMX135MIPI_write_cmos_sensor(0x301D,0x30);
-	IMX135MIPI_write_cmos_sensor(0x3310,0x10);
-	IMX135MIPI_write_cmos_sensor(0x3311,0x70);
-	IMX135MIPI_write_cmos_sensor(0x3312,0x0C);
-	IMX135MIPI_write_cmos_sensor(0x3313,0x30);
-	IMX135MIPI_write_cmos_sensor(0x331C,0x01);
-	IMX135MIPI_write_cmos_sensor(0x331D,0x68);
-	IMX135MIPI_write_cmos_sensor(0x4084,0x00);
-	IMX135MIPI_write_cmos_sensor(0x4085,0x00);
-	IMX135MIPI_write_cmos_sensor(0x4086,0x00);
-	IMX135MIPI_write_cmos_sensor(0x4087,0x00);
-	IMX135MIPI_write_cmos_sensor(0x4400,0x00);
-	
-	//GlobalTimingSetting
-	IMX135MIPI_write_cmos_sensor(0x0830,0x7F);
-	IMX135MIPI_write_cmos_sensor(0x0831,0x37);
-	IMX135MIPI_write_cmos_sensor(0x0832,0x67);
-	IMX135MIPI_write_cmos_sensor(0x0833,0x3F);
-	IMX135MIPI_write_cmos_sensor(0x0834,0x3F);
-	IMX135MIPI_write_cmos_sensor(0x0835,0x47);
-	IMX135MIPI_write_cmos_sensor(0x0836,0xDF);
-	IMX135MIPI_write_cmos_sensor(0x0837,0x47);
-	IMX135MIPI_write_cmos_sensor(0x0839,0x1F);
-	IMX135MIPI_write_cmos_sensor(0x083A,0x17);
-	IMX135MIPI_write_cmos_sensor(0x083B,0x02);
-	
-	//IntegrationTimeSetting
-	IMX135MIPI_write_cmos_sensor(0x0202,0x0C);
-	IMX135MIPI_write_cmos_sensor(0x0203,0x46);
-	
-	//GainSetting
-	IMX135MIPI_write_cmos_sensor(0x0205,0x00);
-	IMX135MIPI_write_cmos_sensor(0x020E,0x01);
-	IMX135MIPI_write_cmos_sensor(0x020F,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0210,0x01);
-	IMX135MIPI_write_cmos_sensor(0x0211,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0212,0x01);
-	IMX135MIPI_write_cmos_sensor(0x0213,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0214,0x01);
-	IMX135MIPI_write_cmos_sensor(0x0215,0x00);
-	
-	//HDRSetting
-#if 0
-	IMX135MIPI_write_cmos_sensor(0x0230,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0231,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0233,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0234,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0235,0x40);
-	IMX135MIPI_write_cmos_sensor(0x0238,0x00);
-	IMX135MIPI_write_cmos_sensor(0x0239,0x04);
-	IMX135MIPI_write_cmos_sensor(0x023B,0x00);
-	IMX135MIPI_write_cmos_sensor(0x023C,0x01);
-	IMX135MIPI_write_cmos_sensor(0x33B0,0x04);
-	IMX135MIPI_write_cmos_sensor(0x33B1,0x00);
-	IMX135MIPI_write_cmos_sensor(0x33B3,0x00);
-	IMX135MIPI_write_cmos_sensor(0x33B4,0x01);
-	IMX135MIPI_write_cmos_sensor(0x3800,0x00);
-#endif//HDRSetting
-#else
+	IMX135MIPI_write_cmos_sensor(0x0104,0x01);
+
 	//PLL setting
 	IMX135MIPI_write_cmos_sensor(0x011E,0x18);//   
 	IMX135MIPI_write_cmos_sensor(0x011F,0x00);//   
@@ -1314,18 +1249,18 @@ void IMX135MIPI_set_13M(void)
 	IMX135MIPI_write_cmos_sensor(0x7006,0x04);//
 
 	//Optionnal function setting
-	IMX135MIPI_write_cmos_sensor(0x0700,0x00);//   
-	IMX135MIPI_write_cmos_sensor(0x3A63,0x00);//
+	//IMX135MIPI_write_cmos_sensor(0x0700,0x00);//
+	//IMX135MIPI_write_cmos_sensor(0x3A63,0x00);//
 	IMX135MIPI_write_cmos_sensor(0x4100,0xF8);//   
 	IMX135MIPI_write_cmos_sensor(0x4203,0xFF);//   
 	IMX135MIPI_write_cmos_sensor(0x4344,0x00);//   
 	IMX135MIPI_write_cmos_sensor(0x441C,0x01);//
 
 	//Size setting
-	IMX135MIPI_write_cmos_sensor(0x0340,(IMX135MIPI_FULL_FRAME_LENGTH_LINES>>8)&0xFF);//   
-	IMX135MIPI_write_cmos_sensor(0x0341,(IMX135MIPI_FULL_FRAME_LENGTH_LINES>>0)&0xFF);//   
-	IMX135MIPI_write_cmos_sensor(0x0342,(IMX135MIPI_FULL_LINE_LENGTH_PIXELS>>8)&0xFF);//
-	IMX135MIPI_write_cmos_sensor(0x0343,(IMX135MIPI_FULL_LINE_LENGTH_PIXELS>>0)&0xFF);//
+	IMX135MIPI_write_cmos_sensor(0x0340,0x0C);//   
+	IMX135MIPI_write_cmos_sensor(0x0341,0x4A);//   
+	IMX135MIPI_write_cmos_sensor(0x0342,0x15);//    //0x11
+	IMX135MIPI_write_cmos_sensor(0x0343,0x50);//    //DC
 	IMX135MIPI_write_cmos_sensor(0x0344,0x00);//
 	IMX135MIPI_write_cmos_sensor(0x0345,0x00);//
 	IMX135MIPI_write_cmos_sensor(0x0346,0x00);//
@@ -1386,6 +1321,11 @@ void IMX135MIPI_set_13M(void)
 	IMX135MIPI_write_cmos_sensor(0x0213,0x00);//   
 	IMX135MIPI_write_cmos_sensor(0x0214,0x01);//   
 	IMX135MIPI_write_cmos_sensor(0x0215,0x00);//
+#ifdef IMX135_USE_OTP
+	#ifdef IMX135_USE_AWB_OTP
+	update_awb_gain();
+	#endif
+#endif
 #if 0
 	//hdr setting
 	IMX135MIPI_write_cmos_sensor(0x0230,0x00);//   
@@ -1404,10 +1344,11 @@ void IMX135MIPI_set_13M(void)
 	IMX135MIPI_write_cmos_sensor(0x33B4,0X01);//
 	IMX135MIPI_write_cmos_sensor(0x3800,0X00);//
 
-#endif	
-#endif//IMX135_CAPTURE_24FPS
+#endif
+
+	IMX135MIPI_write_cmos_sensor(0x0104,0x00);
 	IMX135MIPI_write_cmos_sensor(0x0100,0x01);//STREAM START
-   SENSORDB("IMX135MIPI_set_13M Capture setting exit\n");
+    SENSORDB("[IMX135MIPIRaw] Set 13M End\n"); 
 }
 
 
@@ -1434,20 +1375,36 @@ void IMX135MIPI_set_13M(void)
 
 UINT32 IMX135MIPIOpen(void)
 {
+#ifdef IMX135_USE_OTP
+    if(0 == used_otp){
+	printk("before otp............................................\n");
+	printk("before otp............................................\n");
+	printk("before otp............................................\n");
+
+	#ifdef IMX135_USE_LENC_OTP
+	update_otp_lenc();
+	#endif
+	#ifdef IMX135_USE_AWB_OTP
+	update_otp_wb();
+	#endif
+
+	used_otp =1;
+	printk("after otp............................................\n");
+	printk("after otp............................................\n");
+	printk("after otp............................................\n");
+    }
+#endif
     int  retry = 0; 
-	kal_uint16 sensorid; 
     // check if sensor ID correct
     retry = 3; 
-	SENSORDB("IMX135MIPIOpen enter:\n"); 
+	SENSORDB("IMX135MIPIOpen enter:"); 
+	kal_uint16 sensorid; 
     do {
-       SENSORDB("Read ID in the Open function\n"); 
+       SENSORDB("Read ID in the Open function"); 
 	   sensorid=(kal_uint16)((IMX135MIPI_read_cmos_sensor(0x0016)<<8) | IMX135MIPI_read_cmos_sensor(0x0017));  
-//Debug
-//sensorid = IMX135MIPI_SENSOR_ID;
-
-	   spin_lock(&imx135_drv_lock);    
+	   spin_lock(&imx111_drv_lock);    
 	   IMX135MIPI_sensor_id =sensorid;  
-	   spin_unlock(&imx135_drv_lock);
+	   spin_unlock(&imx111_drv_lock);
 		if (IMX135MIPI_sensor_id == IMX135MIPI_SENSOR_ID)
 		break; 
 		SENSORDB("Read Sensor ID Fail = 0x%04x\n", IMX135MIPI_sensor_id); 
@@ -1458,10 +1415,12 @@ UINT32 IMX135MIPIOpen(void)
     if (IMX135MIPI_sensor_id != IMX135MIPI_SENSOR_ID)
         return ERROR_SENSOR_CONNECT_FAIL;
     IMX135MIPI_Sensor_Init();
-	spin_lock(&imx135_drv_lock);    
-	   IMX135MIPI_sensor.capture_mode=KAL_FALSE;
-	   spin_unlock(&imx135_drv_lock);
-	SENSORDB("IMX135MIPIOpen exit:\n"); 
+	sensorid=read_IMX135MIPI_gain();
+	spin_lock(&imx111_drv_lock);	
+    IMX135MIPI_sensor_gain_base = sensorid;
+	 IMX135MIPI_sensor.capture_mode=KAL_FALSE; 
+	spin_unlock(&imx111_drv_lock);
+	SENSORDB("IMX135MIPIOpen exit:"); 
     return ERROR_NONE;
 }
 
@@ -1484,20 +1443,33 @@ UINT32 IMX135MIPIOpen(void)
 UINT32 IMX135MIPIGetSensorID(UINT32 *sensorID) 
 {
     int  retry = 3; 
+    kal_uint16 sensorIDH = 0;
+    kal_uint16 sensorIDL = 0;
+    int customer_otp_id;
+    UINT32 sensor_id;
     // check if sensor ID correct
     SENSORDB("IMX135MIPIGetSensorID\n"); 
     do {		
-	  *sensorID =(kal_uint16)((IMX135MIPI_read_cmos_sensor(0x0016)<<8) | IMX135MIPI_read_cmos_sensor(0x0017));   
-	  SENSORDB("GetSensorID = 0x%04x\n", *sensorID); 
-        if (*sensorID == IMX135MIPI_SENSOR_ID)
-            break;
+	  // *sensorID =(kal_uint16)((IMX135MIPI_read_cmos_sensor(0x0000)<<8) | IMX135MIPI_read_cmos_sensor(0x0001)); 
+	   sensorIDH = (IMX135MIPI_read_cmos_sensor(0x0016)<<8)&0xFF00;
+	  SENSORDB("sensorIDH =  0x%04x\n", sensorIDH);
+	  
+	   sensorIDL = IMX135MIPI_read_cmos_sensor(0x0017) ;
+	   SENSORDB("sensorIDL =  0x%04x\n", sensorIDL);
+	   sensor_id = sensorIDH | sensorIDL;
+   
+        if (sensor_id == IMX135MIPI_SENSOR_ID)  
+        {
+	     customer_otp_id =get_sensor_customer_id();			 //customer_otp_id 			shunyu:1  truly:2
+	     if(customer_otp_id == 1){
+	            *sensorID = IMX135MIPI_SENSOR_ID;
+	            break;
+	     }
+        }
         SENSORDB("Read Sensor ID Fail = 0x%04x\n", *sensorID); 
         retry--; 
 		
     } while (retry > 0);
-
-//Debug
-//*sensorID = IMX135MIPI_SENSOR_ID;
 
     if (*sensorID != IMX135MIPI_SENSOR_ID) {
         *sensorID = 0xFFFFFFFF; 
@@ -1525,12 +1497,16 @@ UINT32 IMX135MIPIGetSensorID(UINT32 *sensorID)
 *************************************************************************/
 void IMX135MIPI_SetShutter(kal_uint16 iShutter)
 {
-//	 SENSORDB("IMX135MIPI_SetShutter:shutter=%d\n",iShutter);
+	 SENSORDB("[IMX135MIPI]%s():shutter=%d\n",__FUNCTION__,iShutter);
    
     if (iShutter < 1)
         iShutter = 1; 
 	else if(iShutter > 0xffff)
 		iShutter = 0xffff;
+	unsigned long flags;
+	spin_lock_irqsave(&imx111_drv_lock,flags);
+    IMX135MIPI_sensor.pv_shutter = iShutter;	
+	spin_unlock_irqrestore(&imx111_drv_lock,flags);
     IMX135MIPI_write_shutter(iShutter);
 }   /*  IMX135MIPI_SetShutter   */
 
@@ -1637,23 +1613,22 @@ void IMX135MIPISetFlipMirror(kal_int32 imgMirror)
 {
     kal_uint8  iTemp; 
 	
-	iTemp = IMX135MIPI_read_cmos_sensor(0x0101);
-	iTemp&= ~0x03; //Clear the mirror and flip bits.
-	switch (imgMirror)
-	{
-		case IMAGE_NORMAL:
-			IMX135MIPI_write_cmos_sensor(0x0101, iTemp);	//Set normal
-			break;
-		case IMAGE_V_MIRROR:
-			IMX135MIPI_write_cmos_sensor(0x0101, iTemp | 0x02); //Set flip
-			break;
-		case IMAGE_H_MIRROR:
-			IMX135MIPI_write_cmos_sensor(0x0101, iTemp | 0x01); //Set mirror
-			break;
-		case IMAGE_HV_MIRROR:
-			IMX135MIPI_write_cmos_sensor(0x0101, iTemp | 0x03); //Set mirror and flip
-			break;
-	}
+    iTemp = IMX135MIPI_read_cmos_sensor(0x0101) & 0xFB;	//Clear the mirror and flip bits.
+    switch (imgMirror)
+    {
+        case IMAGE_NORMAL:
+            IMX135MIPI_write_cmos_sensor(0x0101, iTemp);	//Set normal
+            break;
+        case IMAGE_V_MIRROR:
+            IMX135MIPI_write_cmos_sensor(0x0101, iTemp | 0x01);	//Set flip
+            break;
+        case IMAGE_H_MIRROR:
+            IMX135MIPI_write_cmos_sensor(0x0101, iTemp | 0x02);	//Set mirror
+            break;
+        case IMAGE_HV_MIRROR:
+            IMX135MIPI_write_cmos_sensor(0x0101, iTemp | 0x03);	//Set mirror and flip
+            break;
+    }
 }
 
 
@@ -1678,20 +1653,20 @@ UINT32 IMX135MIPIPreview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
                                                 MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
 {
     kal_uint16 iStartX = 0, iStartY = 0;
+	//SENSORDB("IMX135MIPIPreview enter:");
     if(sensor_config_data->SensorOperationMode==MSDK_SENSOR_OPERATION_MODE_VIDEO)		// MPEG4 Encode Mode
-    {   
-        SENSORDB("IMX135MIPIVideo enter:\n");
-    	spin_lock(&imx135_drv_lock);    
+    {SENSORDB("IMX135MIPIVideo enter:");
+    	spin_lock(&imx111_drv_lock);    
         IMX135MIPI_MPEG4_encode_mode = KAL_TRUE;  
 		IMX135MIPI_sensor.video_mode=KAL_TRUE;
 		IMX135MIPI_sensor.pv_mode=KAL_FALSE;
 		IMX135MIPI_sensor.capture_mode=KAL_FALSE;
-		spin_unlock(&imx135_drv_lock);
+		spin_unlock(&imx111_drv_lock);
 		VideoFullSizeSetting();
 		
 		iStartX += IMX135MIPI_IMAGE_SENSOR_VIDEO_STARTX;
 		iStartY += IMX135MIPI_IMAGE_SENSOR_VIDEO_STARTY;
-		spin_lock(&imx135_drv_lock);	
+		spin_lock(&imx111_drv_lock);	
 		IMX135MIPI_sensor.cp_dummy_pixels = 0;
 		IMX135MIPI_sensor.cp_dummy_lines = 0;
 		IMX135MIPI_sensor.pv_dummy_pixels = 0;
@@ -1700,32 +1675,34 @@ UINT32 IMX135MIPIPreview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 		IMX135MIPI_sensor.video_dummy_lines = 0;
 		IMX135MIPI_sensor.video_line_length = IMX135MIPI_VIDEO_LINE_LENGTH_PIXELS+IMX135MIPI_sensor.video_dummy_pixels; 
 		IMX135MIPI_sensor.video_frame_length = IMX135MIPI_VIDEO_FRAME_LENGTH_LINES+IMX135MIPI_sensor.video_dummy_lines;
-		spin_unlock(&imx135_drv_lock);
+		spin_unlock(&imx111_drv_lock);
 		
 		IMX135MIPI_SetDummy(IMX135MIPI_sensor.video_dummy_pixels,IMX135MIPI_sensor.video_dummy_lines);
 		IMX135MIPI_SetShutter(IMX135MIPI_sensor.video_shutter);
 		memcpy(&IMX135MIPISensorConfigData, sensor_config_data, sizeof(MSDK_SENSOR_CONFIG_STRUCT));
 		image_window->GrabStartX= iStartX;
 		image_window->GrabStartY= iStartY;
-		SENSORDB("IMX135MIPIVideo exit:\n");
+		SENSORDB("IMX135MIPIVideo exit:");
 	//	image_window->ExposureWindowWidth= IMX135MIPI_IMAGE_SENSOR_PV_WIDTH - 2*iStartX;
 	//	image_window->ExposureWindowHeight= IMX135MIPI_IMAGE_SENSOR_PV_HEIGHT - 2*iStartY;
 
     }
     else
     {
-		SENSORDB("IMX135MIPIPreview enter:\n");
-    	spin_lock(&imx135_drv_lock);    
+		//IMX135MIPI_sensor.pv_dummy_pixels = 0;
+		//IMX135MIPI_sensor.pv_dummy_lines = 0;
+		SENSORDB("IMX135MIPIPreview enter:");
+    	spin_lock(&imx111_drv_lock);    
         IMX135MIPI_MPEG4_encode_mode = KAL_FALSE;
 		IMX135MIPI_sensor.video_mode=KAL_FALSE;
 		IMX135MIPI_sensor.pv_mode=KAL_TRUE;
 		IMX135MIPI_sensor.capture_mode=KAL_FALSE;
-		spin_unlock(&imx135_drv_lock);
+		spin_unlock(&imx111_drv_lock);
         PreviewSetting();
-		//IMX135MIPISetFlipMirror(IMAGE_HV_MIRROR);
+      // VideoFullSizeSetting();
 		iStartX += IMX135MIPI_IMAGE_SENSOR_PV_STARTX;
 		iStartY += IMX135MIPI_IMAGE_SENSOR_PV_STARTY;
-		spin_lock(&imx135_drv_lock);	
+		spin_lock(&imx111_drv_lock);	
 		IMX135MIPI_sensor.cp_dummy_pixels = 0;
 		IMX135MIPI_sensor.cp_dummy_lines = 0;
 		IMX135MIPI_sensor.pv_dummy_pixels = 0;
@@ -1734,7 +1711,7 @@ UINT32 IMX135MIPIPreview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 		IMX135MIPI_sensor.video_dummy_lines = 0;
 		IMX135MIPI_sensor.pv_line_length = IMX135MIPI_PV_LINE_LENGTH_PIXELS+IMX135MIPI_sensor.pv_dummy_pixels; 
 		IMX135MIPI_sensor.pv_frame_length = IMX135MIPI_PV_FRAME_LENGTH_LINES+IMX135MIPI_sensor.pv_dummy_lines;
-		spin_unlock(&imx135_drv_lock);
+		spin_unlock(&imx111_drv_lock);
 		
 		IMX135MIPI_SetDummy(IMX135MIPI_sensor.pv_dummy_pixels,IMX135MIPI_sensor.pv_dummy_lines);
 		IMX135MIPI_SetShutter(IMX135MIPI_sensor.pv_shutter);
@@ -1743,11 +1720,11 @@ UINT32 IMX135MIPIPreview(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
 		image_window->GrabStartY= iStartY;
 		image_window->ExposureWindowWidth= IMX135MIPI_IMAGE_SENSOR_PV_WIDTH - 2*iStartX;
 		image_window->ExposureWindowHeight= IMX135MIPI_IMAGE_SENSOR_PV_HEIGHT - 2*iStartY;
-		SENSORDB("IMX135MIPIPreview exit:\n");
+		SENSORDB("IMX135MIPIPreview enter:");
 
     }
 	
-
+	mdelay(40);
 	return ERROR_NONE;
 }	/* IMX135MIPIPreview() */
 
@@ -1755,40 +1732,57 @@ UINT32 IMX135MIPICapture(MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *image_window,
                                                 MSDK_SENSOR_CONFIG_STRUCT *sensor_config_data)
 {
    
-    //kal_uint16 iStartX = 0, iStartY = 0;
-   if(IMX135MIPI_sensor.capture_mode==KAL_TRUE)
-   	return ERROR_NONE;	
+   
+
+  //  kal_uint32 shutter=IMX135MIPI_sensor.pv_shutter;
+    kal_uint16 iStartX = 0, iStartY = 0;
+
+	   if(IMX135MIPI_sensor.capture_mode==KAL_TRUE)
+                   return ERROR_NONE;
+
+	   
 	SENSORDB("IMX135MIPICapture enter:\n"); 
-	spin_lock(&imx135_drv_lock);	
+	spin_lock(&imx111_drv_lock);	
 	IMX135MIPI_sensor.video_mode=KAL_FALSE;
 	IMX135MIPI_sensor.pv_mode=KAL_FALSE;
 	IMX135MIPI_sensor.capture_mode=KAL_TRUE;
     IMX135MIPI_MPEG4_encode_mode = KAL_FALSE; 
     IMX135MIPI_Auto_Flicker_mode = KAL_FALSE;   
-	spin_unlock(&imx135_drv_lock);
-	spin_lock(&imx135_drv_lock);    
-    IMX135MIPI_sensor.cp_dummy_pixels= 0;
-    IMX135MIPI_sensor.cp_dummy_lines = 0;   
-	spin_unlock(&imx135_drv_lock);
-    IMX135MIPI_set_13M();
+	spin_unlock(&imx111_drv_lock);
+    //SENSORDB("Preview Shutter = %d, Gain = %d\n", shutter, read_IMX135MIPI_gain());     
+
+   // if(sensor_config_data->EnableShutterTansfer==KAL_TRUE)
+       // shutter=sensor_config_data->CaptureShutter;
+		spin_lock(&imx111_drv_lock);    
+      //  IMX135MIPI_sensor.cp_dummy_pixels= 600;
+      //  IMX135MIPI_sensor.cp_dummy_lines = 0;   
+		spin_unlock(&imx111_drv_lock);
+        IMX135MIPI_set_13M();
      
-   // IMX135MIPISetFlipMirror(sensor_config_data->SensorImageMirror); 
-   //IMX135MIPISetFlipMirror(IMAGE_HV_MIRROR);
-	
-	spin_lock(&imx135_drv_lock);    
-    IMX135MIPI_sensor.cp_line_length=IMX135MIPI_FULL_LINE_LENGTH_PIXELS+IMX135MIPI_sensor.cp_dummy_pixels;
-    IMX135MIPI_sensor.cp_frame_length=IMX135MIPI_FULL_FRAME_LENGTH_LINES+IMX135MIPI_sensor.cp_dummy_lines;
-	spin_unlock(&imx135_drv_lock);
-	//iStartX = IMX135MIPI_IMAGE_SENSOR_CAP_STARTX;
-	//iStartY = IMX135MIPI_IMAGE_SENSOR_CAP_STARTY;
-	//image_window->ExposureWindowWidth=IMX135MIPI_IMAGE_SENSOR_FULL_WIDTH -2*iStartX;
-	//image_window->ExposureWindowHeight=IMX135MIPI_IMAGE_SENSOR_FULL_HEIGHT-2*iStartY;  
-	spin_lock(&imx135_drv_lock);	
+        IMX135MIPISetFlipMirror(sensor_config_data->SensorImageMirror); 
+	 spin_lock(&imx111_drv_lock);    
+     IMX135MIPI_sensor.cp_line_length=IMX135MIPI_FULL_LINE_LENGTH_PIXELS+IMX135MIPI_sensor.cp_dummy_pixels;
+     IMX135MIPI_sensor.cp_frame_length=IMX135MIPI_FULL_FRAME_LENGTH_LINES+IMX135MIPI_sensor.cp_dummy_lines;
+	 spin_unlock(&imx111_drv_lock);
+//	shutter = (shutter * IMX135MIPI_sensor.pv_line_length)/IMX135MIPI_sensor.cp_line_length;
+	//SENSORDB("[IMX135MIPI]cp_shutter=%d,cp_length=%d\n",shutter,IMX135MIPI_sensor.cp_line_length); 
+	iStartX = IMX135MIPI_IMAGE_SENSOR_CAP_STARTX;
+	iStartY = IMX135MIPI_IMAGE_SENSOR_CAP_STARTY;
+	//image_window->GrabStartX=iStartX;
+	//image_window->GrabStartY=iStartY;
+	image_window->ExposureWindowWidth=IMX135MIPI_IMAGE_SENSOR_FULL_WIDTH -2*iStartX;
+	image_window->ExposureWindowHeight=IMX135MIPI_IMAGE_SENSOR_FULL_HEIGHT-2*iStartY;
+    //sensor_config_data->Lines = image_window->ExposureWindowHeight;
+//    sensor_config_data->Shutter =shutter;
+ //   IMX135MIPI_SetDummy(IMX135MIPI_sensor.cp_dummy_pixels, IMX135MIPI_sensor.cp_dummy_lines);
+   // IMX135MIPI_write_shutter(shutter);
+   // SENSORDB("Capture Shutter = %d, Gain = %d\n", shutter, read_IMX135MIPI_gain());     
+	spin_lock(&imx111_drv_lock);	
     memcpy(&IMX135MIPISensorConfigData, sensor_config_data, sizeof(MSDK_SENSOR_CONFIG_STRUCT));
-	spin_unlock(&imx135_drv_lock);
+	spin_unlock(&imx111_drv_lock);
 	SENSORDB("IMX135MIPICapture exit:\n"); 
 
-
+	mdelay(40);
     return ERROR_NONE;
 }	/* IMX135MIPICapture() */
 
@@ -1801,7 +1795,7 @@ UINT32 IMX135MIPIGetResolution(MSDK_SENSOR_RESOLUTION_INFO_STRUCT *pSensorResolu
     pSensorResolution->SensorFullHeight		= IMX135MIPI_REAL_CAP_HEIGHT;
     pSensorResolution->SensorVideoWidth		= IMX135MIPI_REAL_VIDEO_WIDTH;
     pSensorResolution->SensorVideoHeight    = IMX135MIPI_REAL_VIDEO_HEIGHT;
-    SENSORDB("IMX135MIPIGetResolution \n");    
+    SENSORDB("IMX135MIPIGetResolution ");    
 
     return ERROR_NONE;
 }   /* IMX135MIPIGetResolution() */
@@ -1828,6 +1822,8 @@ UINT32 IMX135MIPIGetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
 				pSensorInfo->SensorCameraPreviewFrameRate=30;
 			break;
 	}
+//	pSensorInfo->SensorPreviewResolutionX=IMX135MIPI_REAL_CAP_WIDTH;
+   //     pSensorInfo->SensorPreviewResolutionY=IMX135MIPI_REAL_CAP_HEIGHT;
 
     pSensorInfo->SensorVideoFrameRate=30;
     pSensorInfo->SensorStillCaptureFrameRate=15;
@@ -1841,6 +1837,33 @@ UINT32 IMX135MIPIGetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
     pSensorInfo->SensorVsyncPolarity = SENSOR_CLOCK_POLARITY_LOW;
     pSensorInfo->SensorInterruptDelayLines = 1;
     pSensorInfo->SensroInterfaceType=SENSOR_INTERFACE_TYPE_MIPI;
+  /*  pSensorInfo->SensorDriver3D = 0;   // the sensor driver is 2D
+    
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].MaxWidth=CAM_SIZE_2M_WIDTH;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].MaxHeight=CAM_SIZE_2M_HEIGHT;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].ISOSupported=TRUE;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_100_MODE].BinningEnable=FALSE;
+
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_200_MODE].MaxWidth=CAM_SIZE_2M_WIDTH;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_200_MODE].MaxHeight=CAM_SIZE_2M_HEIGHT;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_200_MODE].ISOSupported=TRUE;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_200_MODE].BinningEnable=FALSE;
+
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_400_MODE].MaxWidth=CAM_SIZE_2M_WIDTH;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_400_MODE].MaxHeight=CAM_SIZE_2M_HEIGHT;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_400_MODE].ISOSupported=FALSE;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_400_MODE].BinningEnable=FALSE;
+
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_800_MODE].MaxWidth=CAM_SIZE_05M_WIDTH;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_800_MODE].MaxHeight=CAM_SIZE_1M_HEIGHT;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_800_MODE].ISOSupported=FALSE;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_800_MODE].BinningEnable=TRUE;
+
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].MaxWidth=CAM_SIZE_05M_WIDTH;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].MaxHeight=CAM_SIZE_05M_HEIGHT;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].ISOSupported=FALSE;
+    pSensorInfo->SensorISOBinningInfo.ISOBinningInfo[ISO_1600_MODE].BinningEnable=TRUE;
+*/
     pSensorInfo->CaptureDelayFrame = 2; 
     pSensorInfo->PreviewDelayFrame = 2; 
     pSensorInfo->VideoDelayFrame = 5; 
@@ -1919,11 +1942,11 @@ UINT32 IMX135MIPIGetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
             pSensorInfo->SensorGrabStartY = 1;             
             break;
     }
-	spin_lock(&imx135_drv_lock);	
+	spin_lock(&imx111_drv_lock);	
 
     IMX135MIPIPixelClockDivider=pSensorInfo->SensorPixelClockCount;
 	
-	spin_unlock(&imx135_drv_lock);
+	spin_unlock(&imx111_drv_lock);
     memcpy(pSensorConfigData, &IMX135MIPISensorConfigData, sizeof(MSDK_SENSOR_CONFIG_STRUCT));
 
     return ERROR_NONE;
@@ -1933,16 +1956,18 @@ UINT32 IMX135MIPIGetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
 UINT32 IMX135MIPIControl(MSDK_SCENARIO_ID_ENUM ScenarioId, MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *pImageWindow,
                                                 MSDK_SENSOR_CONFIG_STRUCT *pSensorConfigData)
 {
-		spin_lock(&imx135_drv_lock);	
+		spin_lock(&imx111_drv_lock);	
 		CurrentScenarioId = ScenarioId;
-		spin_unlock(&imx135_drv_lock);
+		spin_unlock(&imx111_drv_lock);
     switch (ScenarioId)
     {
         case MSDK_SCENARIO_ID_CAMERA_PREVIEW:
         case MSDK_SCENARIO_ID_VIDEO_PREVIEW:
+     //   case MSDK_SCENARIO_ID_VIDEO_CAPTURE_MPEG4:
             IMX135MIPIPreview(pImageWindow, pSensorConfigData);
             break;
         case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
+      //  case MSDK_SCENARIO_ID_CAMERA_CAPTURE_MEM:
 	case MSDK_SCENARIO_ID_CAMERA_ZSD:
             IMX135MIPICapture(pImageWindow, pSensorConfigData);
             break;
@@ -1954,16 +1979,15 @@ UINT32 IMX135MIPIControl(MSDK_SCENARIO_ID_ENUM ScenarioId, MSDK_SENSOR_EXPOSURE_
 
 UINT32 IMX135MIPISetVideoMode(UINT16 u2FrameRate)
 {
-      kal_uint16 IMX135MIPI_Video_Max_Expourse_Time = 0;
-	  SENSORDB("IMX135MIPISetVideoMode  u2FrameRate = %d\n", u2FrameRate);
-      if(u2FrameRate==0)
-	{
-		SENSORDB("Disable Video Mode or dynimac fps\n");
-		return ERROR_NONE;
-	}
-		spin_lock(&imx135_drv_lock);
+		 SENSORDB("[IMX135MIPISetVideoMode] frame rate = %d\n", u2FrameRate);
+		kal_uint16 IMX135MIPI_Video_Max_Expourse_Time = 0;
+		SENSORDB("[IMX135MIPI]%s():fix_frame_rate=%d\n",__FUNCTION__,u2FrameRate);
+if(u2FrameRate>=25)
+	return ERROR_NONE;
+
+		spin_lock(&imx111_drv_lock);
 		IMX135MIPI_sensor.fix_video_fps = KAL_TRUE;
-		spin_unlock(&imx135_drv_lock);
+		spin_unlock(&imx111_drv_lock);
 		u2FrameRate=u2FrameRate*10;//10*FPS
 		SENSORDB("[IMX135MIPI][Enter Fix_fps func] IMX135MIPI_Fix_Video_Frame_Rate = %d\n", u2FrameRate/10);
 	
@@ -1971,34 +1995,35 @@ UINT32 IMX135MIPISetVideoMode(UINT16 u2FrameRate)
 		
 		if (IMX135MIPI_Video_Max_Expourse_Time > IMX135MIPI_VIDEO_FRAME_LENGTH_LINES/*IMX135MIPI_sensor.pv_frame_length*/) 
 			{
-				spin_lock(&imx135_drv_lock);    
+				spin_lock(&imx111_drv_lock);    
 				IMX135MIPI_sensor.video_frame_length = IMX135MIPI_Video_Max_Expourse_Time;
 				IMX135MIPI_sensor.video_dummy_lines = IMX135MIPI_sensor.video_frame_length-IMX135MIPI_VIDEO_FRAME_LENGTH_LINES;
-				spin_unlock(&imx135_drv_lock);
+				spin_unlock(&imx111_drv_lock);
 				SENSORDB("[IMX135MIPI]%s():frame_length=%d,dummy_lines=%d\n",__FUNCTION__,IMX135MIPI_sensor.video_frame_length,IMX135MIPI_sensor.video_dummy_lines);
 				IMX135MIPI_SetDummy(IMX135MIPI_sensor.video_dummy_pixels,IMX135MIPI_sensor.video_dummy_lines);
 			}
-	spin_lock(&imx135_drv_lock);    
+	spin_lock(&imx111_drv_lock);    
     IMX135MIPI_MPEG4_encode_mode = KAL_TRUE; 
-	spin_unlock(&imx135_drv_lock);
+	spin_unlock(&imx111_drv_lock);
 	
     return ERROR_NONE;
 }
 
 UINT32 IMX135MIPISetAutoFlickerMode(kal_bool bEnable, UINT16 u2FrameRate)
 {
-#if 0
 	kal_uint32 pv_max_frame_rate_lines=0;
+
 if(IMX135MIPI_sensor.pv_mode==TRUE)
 	pv_max_frame_rate_lines=IMX135MIPI_PV_FRAME_LENGTH_LINES;
 else
     pv_max_frame_rate_lines=IMX135MIPI_VIDEO_FRAME_LENGTH_LINES	;
+//kal_uint32 pv_max_frame_rate_lines = IMX135MIPI_MAX_EXPOSURE_LINES;
 
     SENSORDB("[IMX135MIPISetAutoFlickerMode] frame rate(10base) = %d %d\n", bEnable, u2FrameRate);
     if(bEnable) {   // enable auto flicker   
-    	spin_lock(&imx135_drv_lock);    
+    	spin_lock(&imx111_drv_lock);    
         IMX135MIPI_Auto_Flicker_mode = KAL_TRUE; 
-		spin_unlock(&imx135_drv_lock);
+		spin_unlock(&imx111_drv_lock);
         if(IMX135MIPI_MPEG4_encode_mode == KAL_TRUE) {    // in the video mode, reset the frame rate
             pv_max_frame_rate_lines = IMX135MIPI_MAX_EXPOSURE_LINES + (IMX135MIPI_MAX_EXPOSURE_LINES>>7);            
             IMX135MIPI_write_cmos_sensor(0x0104, 1);        
@@ -2007,9 +2032,9 @@ else
             IMX135MIPI_write_cmos_sensor(0x0104, 0);        	
         }
     } else {
-    	spin_lock(&imx135_drv_lock);    
+    	spin_lock(&imx111_drv_lock);    
         IMX135MIPI_Auto_Flicker_mode = KAL_FALSE; 
-		spin_unlock(&imx135_drv_lock);
+		spin_unlock(&imx111_drv_lock);
         if(IMX135MIPI_MPEG4_encode_mode == KAL_TRUE) {    // in the video mode, restore the frame rate
             IMX135MIPI_write_cmos_sensor(0x0104, 1);        
             IMX135MIPI_write_cmos_sensor(0x0340, (IMX135MIPI_MAX_EXPOSURE_LINES >>8) & 0xFF);
@@ -2018,7 +2043,6 @@ else
         }
         SENSORDB("Disable Auto flicker\n");    
     }
-	#endif
     return ERROR_NONE;
 }
 
@@ -2039,25 +2063,35 @@ UINT32 IMX135MIPISetMaxFramerateByScenario(MSDK_SCENARIO_ID_ENUM scenarioId, MUI
 			dummyLine = frameHeight - IMX135MIPI_PV_FRAME_LENGTH_LINES;
 			if(dummyLine<0)
 				dummyLine = 0;
+			//spin_lock(&imx111_drv_lock);	
+			//IMX135MIPI_sensor.pv_mode=TRUE;
+			//spin_unlock(&imx111_drv_lock);
 			IMX135MIPI_SetDummy(0, dummyLine);			
 			break;			
 		case MSDK_SCENARIO_ID_VIDEO_PREVIEW:
-			pclk = IMX135MIPI_sensor.video_pclk;
+			pclk = IMX135MIPI_sensor.cp_pclk;
 			lineLength = IMX135MIPI_VIDEO_LINE_LENGTH_PIXELS;
 			frameHeight = (10 * pclk)/frameRate/lineLength;
 			dummyLine = frameHeight - IMX135MIPI_VIDEO_FRAME_LENGTH_LINES;
 			if(dummyLine<0)
 				dummyLine = 0;
+		//	spin_lock(&imx111_drv_lock);	
+		//	IMX135MIPI_sensor.pv_mode=TRUE;
+		//	spin_unlock(&imx111_drv_lock);
 			IMX135MIPI_SetDummy(0, dummyLine);			
 			break;			
 		case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
 		case MSDK_SCENARIO_ID_CAMERA_ZSD:			
-			pclk = IMX135MIPI_sensor.cp_pclk;
+			pclk = IMX135MIPI_sensor.video_pclk;
 			lineLength = IMX135MIPI_FULL_LINE_LENGTH_PIXELS;
 			frameHeight = (10 * pclk)/frameRate/lineLength;
 			dummyLine = frameHeight - IMX135MIPI_FULL_FRAME_LENGTH_LINES;
 			if(dummyLine<0)
 				dummyLine = 0;
+			
+			//spin_lock(&imx111_drv_lock);	
+			//IMX135MIPI_sensor.pv_mode=FALSE;
+			//spin_unlock(&imx111_drv_lock);
 			IMX135MIPI_SetDummy(0, dummyLine);			
 			break;		
         case MSDK_SCENARIO_ID_CAMERA_3D_PREVIEW: //added
@@ -2084,11 +2118,7 @@ UINT32 IMX135MIPIGetDefaultFramerateByScenario(MSDK_SCENARIO_ID_ENUM scenarioId,
 			 break;
 		case MSDK_SCENARIO_ID_CAMERA_CAPTURE_JPEG:
 		case MSDK_SCENARIO_ID_CAMERA_ZSD:
-#if defined(IMX135_CAPTURE_24FPS)
-			 *pframeRate = 240;
-#else
 			 *pframeRate = 150;
-#endif
 			break;		
         case MSDK_SCENARIO_ID_CAMERA_3D_PREVIEW: //added
         case MSDK_SCENARIO_ID_CAMERA_3D_VIDEO:
@@ -2107,7 +2137,7 @@ UINT32 IMX135MIPIGetDefaultFramerateByScenario(MSDK_SCENARIO_ID_ENUM scenarioId,
 
 UINT32 IMX135MIPISetTestPatternMode(kal_bool bEnable)  //daikan
 {
-    SENSORDB("IMX135MIPISetTestPatternMode Test pattern enable:%d\n", bEnable);
+    SENSORDB("[IMX135MIPISetTestPatternMode] Test pattern enable:%d\n", bEnable);
     
     if(bEnable) {   // enable color bar   
         IMX135MIPI_write_cmos_sensor(0x30D8, 0x10);  // color bar test pattern
@@ -2186,10 +2216,10 @@ UINT32 IMX135MIPIFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
 		         break;
         case SENSOR_FEATURE_SET_ESHUTTER:
             IMX135MIPI_SetShutter(*pFeatureData16);
-//			SENSORDB("shutter&gain test by hhl:IMX135MIPI_SetShutter in feature ctrl\n"); 
+			SENSORDB("shutter&gain test by hhl:IMX135MIPI_SetShutter in feature ctrl\n"); 
             break;
 		case SENSOR_FEATURE_SET_SENSOR_SYNC:
-//			SENSORDB("hhl'test the function of the sync cased\n"); 
+			SENSORDB("hhl'test the function of the sync cased\n"); 
 			break;
         case SENSOR_FEATURE_SET_NIGHTMODE:
             IMX135MIPI_NightMode((BOOL) *pFeatureData16);
@@ -2197,16 +2227,17 @@ UINT32 IMX135MIPIFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
         case SENSOR_FEATURE_SET_GAIN:
            IMX135MIPI_SetGain((UINT16) *pFeatureData16);
             
-//			SENSORDB("shutter&gain test by hhl:IMX135MIPI_SetGain in feature ctrl\n"); 
+			SENSORDB("shutter&gain test by hhl:IMX135MIPI_SetGain in feature ctrl\n"); 
             break;
         case SENSOR_FEATURE_SET_FLASHLIGHT:
             break;
         case SENSOR_FEATURE_SET_ISP_MASTER_CLOCK_FREQ:
-			spin_lock(&imx135_drv_lock);    
+			spin_lock(&imx111_drv_lock);    
             IMX135MIPI_isp_master_clock=*pFeatureData32;
-			spin_unlock(&imx135_drv_lock);
+			spin_unlock(&imx111_drv_lock);
             break;
         case SENSOR_FEATURE_SET_REGISTER:
+			//iWriteReg((u16) pSensorRegData->RegAddr , (u32) pSensorRegData->RegData , 1, 0x66);//to test the AF
 			IMX135MIPI_write_cmos_sensor(pSensorRegData->RegAddr, pSensorRegData->RegData);
             break;
         case SENSOR_FEATURE_GET_REGISTER:
@@ -2216,10 +2247,10 @@ UINT32 IMX135MIPIFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
             SensorRegNumber=FACTORY_END_ADDR;
             for (i=0;i<SensorRegNumber;i++)
             {
-            	spin_lock(&imx135_drv_lock);    
+            	spin_lock(&imx111_drv_lock);    
                 IMX135MIPISensorCCT[i].Addr=*pFeatureData32++;
                 IMX135MIPISensorCCT[i].Para=*pFeatureData32++; 
-				spin_unlock(&imx135_drv_lock);
+				spin_unlock(&imx111_drv_lock);
             }
             break;
         case SENSOR_FEATURE_GET_CCT_REGISTER:
@@ -2236,10 +2267,10 @@ UINT32 IMX135MIPIFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
         case SENSOR_FEATURE_SET_ENG_REGISTER:
             SensorRegNumber=ENGINEER_END;
             for (i=0;i<SensorRegNumber;i++)
-            {	spin_lock(&imx135_drv_lock);    
+            {	spin_lock(&imx111_drv_lock);    
                 IMX135MIPISensorReg[i].Addr=*pFeatureData32++;
                 IMX135MIPISensorReg[i].Para=*pFeatureData32++;
-				spin_unlock(&imx135_drv_lock);
+				spin_unlock(&imx111_drv_lock);
             }
             break;
         case SENSOR_FEATURE_GET_ENG_REGISTER:
@@ -2331,10 +2362,6 @@ UINT32 IMX135MIPIFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
 		case SENSOR_FEATURE_GET_DEFAULT_FRAME_RATE_BY_SCENARIO:
 			IMX135MIPIGetDefaultFramerateByScenario((MSDK_SCENARIO_ID_ENUM)*pFeatureData32, (MUINT32 *)(*(pFeatureData32+1)));
 			break;
-		case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE://for factory mode auto testing             
-            *pFeatureReturnPara32= IMX135_TEST_PATTERN_CHECKSUM;
-            *pFeatureParaLen=4;                             
-             break; 
         default:
             break;
     }

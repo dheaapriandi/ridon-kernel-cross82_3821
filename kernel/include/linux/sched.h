@@ -1318,7 +1318,7 @@ enum perf_event_task_context {
 };
 
 #ifdef CONFIG_MTK_SCHED_CMP_TGS
-#define NUM_CLUSTER 2
+#define MAX_NUM_CLUSTER 2
 struct thread_group_info_t {
 	/* # of cfs threas in the thread group per cluster*/
 	unsigned long cfs_nr_running; 
@@ -1469,7 +1469,7 @@ struct task_struct {
 
 #ifdef CONFIG_MTK_SCHED_CMP_TGS
 	raw_spinlock_t thread_group_info_lock;
-	struct thread_group_info_t thread_group_info[NUM_CLUSTER];
+	struct thread_group_info_t thread_group_info[MAX_NUM_CLUSTER];
 #endif
 
 	/*

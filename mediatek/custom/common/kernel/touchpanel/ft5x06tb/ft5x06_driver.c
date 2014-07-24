@@ -279,6 +279,11 @@ static ssize_t fts_i2cdev_write(struct file *file, const char __user *buf, size_
 
 	if (count > 8192)
 		count = 8192;
+/*
+	tmp = memdup_user(buf, count);
+	if (IS_ERR(tmp))
+		return PTR_ERR(tmp);
+*/
 	tmp = kmalloc(count,GFP_KERNEL);
 	if (tmp==NULL)
 		return -ENOMEM;
@@ -384,6 +389,13 @@ static noinline int i2cdev_ioctl_rdrw(struct i2c_client *client,
 				res = -EFAULT;
 			break;
 		}
+/*
+		rdwr_pa[i].buf = memdup_user(data_ptrs[i], rdwr_pa[i].len);
+		if (IS_ERR(rdwr_pa[i].buf)) {
+			res = PTR_ERR(rdwr_pa[i].buf);
+			break;
+		}
+*/
 	}
 	if (res < 0) {
 		int j;
@@ -590,6 +602,13 @@ static int fts_i2cdev_release(struct inode *inode, struct file *file)
 
 	struct fts_info *ts = ts_dev.ts;
 
+/*
+	struct i2c_client *client = file->private_data;
+
+	i2c_put_adapter(client->adapter);
+	kfree(client);
+	file->private_data = NULL;
+*/
 	TPD_DMESG("called\n");
 	if(ts_dev.ts)
 		enable_irq(ts_dev.ts->client->irq);

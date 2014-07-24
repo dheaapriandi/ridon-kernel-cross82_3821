@@ -83,12 +83,11 @@ typedef enum _VAL_CHIP_NAME_T
     VAL_CHIP_NAME_MT6589,                       ///< MT6589
     VAL_CHIP_NAME_MT6582,                       ///< MT6582
     VAL_CHIP_NAME_MT8135,                       ///< MT8135
-    VAL_CHIP_NAME_ROME,                         ///< ROME
+    VAL_CHIP_NAME_RESERVED1,                    ///< RESERVED1
     VAL_CHIP_NAME_MT6592,                       ///< MT6592
-    VAL_CHIP_NAME_MT8127,                       ///< MT8127
+    VAL_CHIP_NAME_RESERVED2,                    ///< RESERVED2
     VAL_CHIP_NAME_MAX = 0xFFFFFFFF              ///< Max Value
 } VAL_CHIP_NAME_T;
-
 
 /**
  * @par Enumeration
@@ -410,6 +409,7 @@ typedef enum _VAL_SET_TYPE_T
 typedef enum _VAL_GET_TYPE_T
 {
     VAL_GET_TYPE_CURRENT_SCENARIO_CNT,          ///< Get current scenario reference count
+    VAL_GET_TYPE_LCM_INFO,                      ///< Get LCM info 
 } VAL_GET_TYPE_T;
 
 /**
@@ -458,6 +458,17 @@ typedef struct _VAL_MCI_PORT_CONFIG_T  {
     VAL_MEM_CODEC_T    eMemCodecType;       ///< [IN] memory type - decoder/encoder
     VAL_UINT32_T       u4Config;            ///< [IN] set port config
 } VAL_MCI_PORT_CONFIG_T;
+
+/**
+ * @par Structure
+ *  VAL_LCM_INFO_T
+ * @par Description
+ *  This is a structure for get LCM info
+ */
+typedef struct _VAL_LCM_INFO_T {
+    VAL_UINT32_T        u4Width;            ///< [OUT] width
+    VAL_UINT32_T        u4Height;           ///< [OUT] height
+} VAL_LCM_INFO_T;
 
 
 #ifdef __cplusplus

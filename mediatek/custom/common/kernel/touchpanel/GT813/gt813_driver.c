@@ -134,6 +134,8 @@ struct tpd_info_t tpd_info;
 static u8 *cfg_data = NULL;
 static u8 *cfg_data_with_charger = NULL;
 
+/* mika 2012.2.28, esd protect
+ */
 //#define ESD_PROTECT
 #ifdef ESD_PROTECT
 #define TPD_I2C_DISABLE_REG 0x8000
@@ -721,6 +723,15 @@ static int tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
     err = i2c_write_bytes( client, TPD_CONFIG_REG_BASE, cfg_data, CONFIG_LEN );
 	//err = tpd_init_panel();
     i2c_write_dummy( client, TPD_HANDSHAKING_END_REG );	
+/*
+    err = gt813_check_data(cfg_data, 3); 
+
+    if ( err )
+    {
+        TPD_DMESG(TPD_DEVICE " retry TPD_MAX_RESET_COUNT fail to write tpd cfg %d\n", err );
+        return err;
+    }
+//*/
     thread = kthread_run(touch_event_handler, 0, TPD_DEVICE);
 
     if (IS_ERR(thread))
@@ -917,6 +928,23 @@ static int touch_event_handler(void *unused)
 		    continue;
         }
 
+/*        finger_num = buffer[0]&0x1F;
+
+        if ( tpd == NULL || tpd->dev == NULL )
+        {
+            i2c_write_dummy( i2c_client, TPD_HANDSHAKING_END_REG ); 
+            continue;
+        }
+
+        if ( finger_num )
+        {
+            i2c_read_bytes( i2c_client, TPD_POINT_INFO_REG_BASE, buffer, TPD_MAX_POINTS*TPD_POINT_INFO_LEN);
+        }
+        else
+        {
+            i2c_read_bytes( i2c_client, TPD_POINT_INFO_REG_BASE, buffer, 1);
+        }
+*/
         
         for ( idx = 0 ; idx < TPD_MAX_POINTS ; idx++ )
         {

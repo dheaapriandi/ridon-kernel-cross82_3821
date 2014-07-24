@@ -813,6 +813,20 @@ reset_proc:
     i2c_client = client;
 
 //FIX-ME: linux-3.10 procfs API changed
+/*
+    // Create proc file system
+    gt818_config_proc = create_proc_entry( GT818_CONFIG_PROC_FILE, 0666, NULL);
+
+    if ( gt818_config_proc == NULL )
+    {
+        TPD_DEBUG("create_proc_entry %s failed\n", GT818_CONFIG_PROC_FILE );
+    }
+    else 
+    {
+        gt818_config_proc->read_proc = gt818_config_read_proc;
+        gt818_config_proc->write_proc = gt818_config_write_proc;
+    }
+*/  
 #ifdef CREATE_WR_NODE
   	
     init_wr_node(client);
@@ -1200,6 +1214,16 @@ static int touch_event_handler(void *unused)
             i2c_write_dummy( i2c_client, TPD_HANDSHAKING_END_REG );  //kuuga  add 11082401
             continue;
         }
+/*
+        if ( finger_num == 0x0f )        //ESD-TEST reset, send cfg again!!
+        {
+            TPD_DMESG("[mtk-tpd] error!! send config again\n");
+            cfg = cfg_data;
+            i2c_write_bytes( i2c_client, TPD_CONFIG_REG_BASE, cfg, CONFIG_LEN );
+            i2c_write_dummy( i2c_client, TPD_HANDSHAKING_END_REG );  //kuuga  add 11082401
+            continue;
+        }
+		*/
 		if ( 0x0f == buffer[0] )        // send cfg again!!
         {
             TPD_DMESG("[mtk-tpd] STATUS error : %x\n", buffer[0]);

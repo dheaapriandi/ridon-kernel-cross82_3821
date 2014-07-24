@@ -9,13 +9,7 @@
 #define BLK_4K          (4096)
 #define BLK_2K          (2048)
 #define BLK_1K          (1024)
-
-#ifndef CCCI_MTU_3456B
 #define MAX_TX_BYTE     (0xFFF - 127)
-#else
-#define MAX_TX_BYTE     (3584 - 128) //3456B, skb allocate max size=3.5KB, CCCI header+reserved mem=128B
-#endif
-
 #define MD_IMG_MAX_CNT  (2)
 
 typedef KAL_INT32 (*EEMCS_CCCI_CALLBACK)(struct sk_buff *skb, KAL_UINT32 data);
@@ -24,9 +18,7 @@ typedef KAL_INT32 (*EEMCS_CCCI_WDT_CALLBACK)(void);
 
 enum
 {
-	EXPORT_CCCI_H =(1<<0),
-	TX_PRVLG1 =(1<<1),		// tx channel can send data even if modem not boot ready
-	TX_PRVLG2 =(1<<2),		// This logic channel can send data even if modem exception
+	EXPORT_CCCI_H =0x00000001,
 };
 
 typedef struct{
@@ -292,7 +284,6 @@ typedef struct
 #define CCCI_IOC_WAIT_RDY_RST			_IO(CCCI_IOC_MAGIC,  118)				/*mdinit*/ /* For MD reset flow must wait for mux/fsd/mdlogger close port */
 #define CCCI_IOC_DL_TRAFFIC_CONTROL		_IOW(CCCI_IOC_MAGIC, 119, unsigned int)	/* For MD LOGER to turn on/off downlink traffic */
 #define CCCI_IOC_FLOW_CTRL_SETTING      _IOW(CCCI_IOC_MAGIC, 120, unsigned int)	/*flow control setting*/
-#define CCCI_IOC_BOOT_UP_TIMEOUT        _IOW(CCCI_IOC_MAGIC, 121, unsigned int[2])	/*notify kernel of md boot up timeout*/
 
 /*******************************************************************************
 *                            CCCI_ERROR_CODE

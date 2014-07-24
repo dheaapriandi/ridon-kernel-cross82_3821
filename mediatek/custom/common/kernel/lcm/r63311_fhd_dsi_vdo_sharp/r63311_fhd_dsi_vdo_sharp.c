@@ -1,3 +1,73 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ */
+/* MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
+
+/*****************************************************************************
+*  Copyright Statement:
+*  --------------------
+*  This software is protected by Copyright and the information contained
+*  herein is confidential. The software may not be copied and the information
+*  contained herein may not be used or disclosed except with the written
+*  permission of MediaTek Inc. (C) 2008
+*
+*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
+*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
+*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
+*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+*
+*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
+*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
+*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+*
+*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
+*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
+*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
+*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
+*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
+*
+*****************************************************************************/
+
 #ifndef BUILD_LK
 #include <linux/string.h>
 #endif
@@ -5,19 +75,28 @@
 
 #ifdef BUILD_LK
 	#include <platform/mt_gpio.h>
+	#include <platform/mt_pmic.h> 
 #elif defined(BUILD_UBOOT)
 	#include <asm/arch/mt_gpio.h>
 #else
 	#include <mach/mt_gpio.h>
+	#include <mach/mt_pm_ldo.h>
 #endif
+
+//#define TINNO_720P
 // ---------------------------------------------------------------------------
 //  Local Constants
 // ---------------------------------------------------------------------------
 
+#ifdef TINNO_720P
+#define FRAME_WIDTH  (720)
+#define FRAME_HEIGHT (1280)
+#else
 #define FRAME_WIDTH  (1080)
 #define FRAME_HEIGHT (1920)
+#endif  /* TINNO_720P */
 
-#define LCM_ID_NT35590 (0x90)
+#define LCM_ID_R63311 (0x90)
 
 // ---------------------------------------------------------------------------
 //  Local Variables
@@ -25,7 +104,16 @@
 
 static LCM_UTIL_FUNCS lcm_util = {0};
 
-#define SET_RESET_PIN(v)    (lcm_util.set_reset_pin((v)))
+//#define SET_RESET_PIN(v)    								(lcm_util.set_reset_pin((v)))
+
+
+#define SET_RESET_PIN(v)   	\
+	mt_set_gpio_mode(GPIO_LCM_RST,GPIO_MODE_00);	\
+	mt_set_gpio_dir(GPIO_LCM_RST,GPIO_DIR_OUT);		\
+	if(v)											\
+		mt_set_gpio_out(GPIO_LCM_RST,GPIO_OUT_ONE);	\
+	else											\
+		mt_set_gpio_out(GPIO_LCM_RST,GPIO_OUT_ZERO);
 
 #define UDELAY(n) (lcm_util.udelay(n))
 #define MDELAY(n) (lcm_util.mdelay(n))
@@ -44,6 +132,61 @@ static LCM_UTIL_FUNCS lcm_util = {0};
 
 
 #define   LCM_DSI_CMD_MODE							0
+#define 	LCD_5V_LDO		(GPIO44 | 0x80000000)
+
+
+
+static unsigned char  lcm_initialization_setting[LCM_INIT_TABLE_SIZE_MAX] = {
+	
+	0xB0, 1, 0x04,
+	//TE
+	0x35, 1, 0x00,
+
+    #ifdef TINNO_720P
+    // Partail display
+	0x30, 4, 0x02, 0xd0, 0x05, 0x00,
+	0x12, 0,
+    #endif  /* TINNO_720P */
+	
+    // Display ON
+	0x29, 0,
+	0x11, 0,
+	REGFLAG_DELAY, 120,
+
+	REGFLAG_END_OF_TABLE
+};
+
+static int push_table(unsigned char table[])
+{
+	unsigned int i, bExit = 0;
+	unsigned char *p = (unsigned char *)table;
+	LCM_SETTING_ITEM *pSetting_item;
+
+	while(!bExit) {
+		pSetting_item = (LCM_SETTING_ITEM *)p;
+
+		switch (pSetting_item->cmd) {
+			
+		case REGFLAG_DELAY :
+			MDELAY(pSetting_item->count);
+			p += 2;
+		break;
+
+		case REGFLAG_END_OF_TABLE :
+			p += 2;
+			bExit = 1;
+		break;
+
+		default:
+			dsi_set_cmdq_V2(pSetting_item->cmd, 
+							pSetting_item->count, pSetting_item->params, 1);
+//			MDELAY(1);
+			p += pSetting_item->count + 2;
+		break;
+		}
+	}
+	return p - table; //return the size of  settings array.
+}
 
 
 static void init_lcm_registers(void)
@@ -114,52 +257,129 @@ static void lcm_get_params(LCM_PARAMS *params)
 		params->dsi.PS=LCM_PACKED_PS_24BIT_RGB888;
 		params->dsi.word_count=720*3;	
 
-		
 		params->dsi.vertical_sync_active				= 1;
 		params->dsi.vertical_backporch					= 4;
-		params->dsi.vertical_frontporch					= 2;
+		params->dsi.vertical_frontporch 				= 2;
 		params->dsi.vertical_active_line				= FRAME_HEIGHT; 
 
 		params->dsi.horizontal_sync_active				= 50;
 		params->dsi.horizontal_backporch				= 100;
 		params->dsi.horizontal_frontporch				= 80;
-		params->dsi.horizontal_active_pixel				= FRAME_WIDTH;
-
+		params->dsi.horizontal_active_pixel 			= FRAME_WIDTH;
+		params->dsi.pll_select=1;	//0: MIPI_PLL; 1: LVDS_PLL
+		
 		// Bit rate calculation
 		//1 Every lane speed
+
 		params->dsi.pll_div1=0;		// div1=0,1,2,3;div1_real=1,2,4,4 ----0: 546Mbps  1:273Mbps
 		params->dsi.pll_div2=0;		// div2=0,1,2,3;div1_real=1,2,4,4	
 		params->dsi.fbk_div =0x12;    // fref=26MHz, fvco=fref*(fbk_div+1)*2/(div1_real*div2_real)	
+
+//Tinno:CJ FAQ08220
+#if 0 
+/*
+		params->dsi.vertical_sync_active  = 1;
+		params->dsi.vertical_backporch	= 4;
+		params->dsi.vertical_frontporch  = 3; 
+		params->dsi.horizontal_sync_active	= 3;
+		params->dsi.horizontal_backporch	= 60;
+		params->dsi.horizontal_frontporch	= 94;
+*/
+		params->dsi.PLL_CLOCK = LCM_DSI_6589_PLL_CLOCK_396_5;// < 50fps 
+#endif
 
 }
 
 static void lcm_init(void)
 {
+//	SET_RESET_PIN(0);
+//	MDELAY(1);
+			
+#ifdef BUILD_LK	
+	upmu_set_rg_vgp3_vosel(3);   //3 means 1.8V
+	upmu_set_rg_vgp3_en(1);
+#else
+  if(TRUE != hwPowerOn(MT6323_POWER_LDO_VGP3, VOL_1800,"lcdGP3"))
+	{
+		printk("%s, Fail to enable digital power\n", __func__);
+	}
+#endif
 
-	SET_RESET_PIN(1);
-	SET_RESET_PIN(0);
-	MDELAY(1);
+	MDELAY(5);		//need 1ms
 	
+	mt_set_gpio_mode(LCD_5V_LDO, GPIO_MODE_00);
+	mt_set_gpio_dir(LCD_5V_LDO, GPIO_DIR_OUT);
+	mt_set_gpio_out(LCD_5V_LDO, GPIO_OUT_ONE);
+	
+	
+	MDELAY(10);      //need 1ms
+	           	
 	SET_RESET_PIN(1);
-	MDELAY(20);      
+	MDELAY(10);  		//need 10ms    
 
-	init_lcm_registers();
+//	init_lcm_registers();
+	push_table(lcm_initialization_setting);
 }
 
-
-
-static void lcm_suspend(void)
+static void lcm_earlysuspendsharp(void)
 {
 	unsigned int data_array[16];
-
+	
 	data_array[0]=0x00280500; // Display Off
 	dsi_set_cmdq(data_array, 1, 1);
+	
+	MDELAY(20);		//need 20ms
+		
+	data_array[0] = 0x00100500; // Sleep In
+	dsi_set_cmdq(data_array, 1, 1);
+	
+	MDELAY(100);			//need 4 frame time*/
+}
+
+static int LK_INIT=1;
+static void lcm_suspend(void)
+{
+//	unsigned int data_array[16];
+	
+#ifndef BUILD_LK
+  if(LK_INIT)	
+  {
+  	LK_INIT=0;
+	  if(TRUE != hwPowerOn(MT6323_POWER_LDO_VGP3, VOL_1800,"lcdGP3"))                   //add referance count
+		{
+			printk("%s, Fail to enable digital power\n", __func__);
+		}
+	}
+#endif
+
+/*	data_array[0]=0x00280500; // Display Off
+	dsi_set_cmdq(data_array, 1, 1);
+	
+	MDELAY(20);		//need 20ms
 	
 	data_array[0] = 0x00100500; // Sleep In
 	dsi_set_cmdq(data_array, 1, 1);
 
-	MDELAY(120);
+	MDELAY(100);			//need 4 frame time*/
+	MDELAY(1);
 	SET_RESET_PIN(0);
+	MDELAY(1);
+	
+	mt_set_gpio_mode(LCD_5V_LDO, GPIO_MODE_00);
+	mt_set_gpio_dir(LCD_5V_LDO, GPIO_DIR_OUT);
+	mt_set_gpio_out(LCD_5V_LDO, GPIO_OUT_ZERO);
+	
+	MDELAY(110);    //need 100ms
+	
+#ifdef BUILD_LK
+	upmu_set_rg_vgp3_en(0);
+#else
+	if(TRUE != hwPowerDown(MT6323_POWER_LDO_VGP3,"lcdGP3"))
+	{
+		printk("%s, Fail to disable digital power\n", __func__);
+	}
+#endif
+//	MDELAY(20);
 }
 
 
@@ -168,11 +388,11 @@ static void lcm_resume(void)
 	unsigned int data_array[16];
 	lcm_init();
 
-	data_array[0] = 0x00290500; // Display On
+/*	data_array[0] = 0x00290500; // Display On
 	dsi_set_cmdq(data_array, 1, 1);
 
 	data_array[0] = 0x00110500; // Sleep Out
-	dsi_set_cmdq(data_array, 1, 1);
+	dsi_set_cmdq(data_array, 1, 1);*/
 
 }
          
@@ -239,12 +459,32 @@ static unsigned int lcm_compare_id(void)
 		printk("%s, kernel nt35590 horse debug: nt35590 id = 0x%08x\n", __func__, id);
     #endif
 
-    if(id == LCM_ID_NT35590)
+    if(id == LCM_ID_R63311)
     	return 1;
     else
         return 0;
 
 
+}
+#endif
+
+#if !defined(BUILD_UBOOT) && !defined(BUILD_LK)
+static int get_initialization_settings(unsigned char table[])
+{
+	memcpy(table, lcm_initialization_setting, sizeof(lcm_initialization_setting));
+	return sizeof(lcm_initialization_setting);
+}
+	
+static int set_initialization_settings(const unsigned char table[], const int count)
+{
+	if ( count > LCM_INIT_TABLE_SIZE_MAX ){
+		return -EIO;
+	}
+	memset(lcm_initialization_setting, REGFLAG_END_OF_TABLE, sizeof(lcm_initialization_setting));
+	memcpy(lcm_initialization_setting, table, count);
+
+	lcm_init();
+	return count;
 }
 #endif
 
@@ -260,4 +500,11 @@ LCM_DRIVER r63311_fhd_dsi_vdo_sharp_lcm_drv =
 #if (LCM_DSI_CMD_MODE)
     .update         = lcm_update,
 #endif
+
+#if !defined(BUILD_UBOOT) && !defined(BUILD_LK)
+    .get_initialization_settings = get_initialization_settings,
+    .set_initialization_settings = set_initialization_settings,
+#endif
+
+		.earlysuspendsharp = lcm_earlysuspendsharp,
     };

@@ -85,7 +85,7 @@ static bool rpc_write(RPC_PKT* pkt_src, pIPC_RPC_StreamBuffer_T rpc_data_buffer)
 	DBGLOG(RPCD, DBG, "[RPC] enter rpc_write");
 
 	//check RX queue is available
-	if(retry>0){
+    if(retry>0){
 		while (ccci_ch_write_space_alloc(CH_RPC_TX)==0){
 			retry --;
 		}
@@ -94,7 +94,7 @@ static bool rpc_write(RPC_PKT* pkt_src, pIPC_RPC_StreamBuffer_T rpc_data_buffer)
 			retry = 1000;
 	        //goto _Exit;
 		}	
-	}
+    }
 	
 	DBGLOG(RPCD, DBG, "[RPC] rpc_buf: opid=0x%08X, num_para=0x%08X", 
 		rpc_data_buffer->rpc_opid, rpc_data_buffer->num_para);
@@ -116,27 +116,18 @@ static bool rpc_write(RPC_PKT* pkt_src, pIPC_RPC_StreamBuffer_T rpc_data_buffer)
 	}
 
 	skb_len = 0;
-	skb_len += (CCCI_RPC_HEADER_ROOM + data_len);
+    skb_len += (CCCI_RPC_HEADER_ROOM + data_len);
 	
-	while(NULL == (new_skb = dev_alloc_skb(skb_len)))
-	{        
-		DBGLOG(RPCD,ERR,"alloc tx memory fail");      
-	}
+    while(NULL == (new_skb = dev_alloc_skb( skb_len)))
+    {        
+        DBGLOG(RPCD,ERR,"[RPC] alloct tx memory fail");      
+    }
     
     /* reserve SDIO_H and CCCI header room */
-	#ifdef CCCI_SDIO_HEAD
-	skb_reserve(new_skb, sizeof(SDIO_H));
-	#endif
-	
+    skb_reserve(new_skb, sizeof(SDIO_H));
 	ccci_header = (CCCI_BUFF_T *)skb_put(new_skb, sizeof(CCCI_BUFF_T)) ;
 	pdata = (kal_uint8 *)skb_put(new_skb, data_len);
-	
-	#ifdef CCCI_SDIO_HEAD
 	memset(new_skb->data, 0, skb_len - sizeof(SDIO_H));
-	#else
-	memset(new_skb->data, 0, skb_len);
-	#endif
-	
 	(*(kal_uint32 *)pdata) = rpc_data_buffer->rpc_opid;
 	pdata += sizeof(unsigned int);
 	(*(kal_uint32 *)pdata) = rpc_data_buffer->num_para;
@@ -189,24 +180,24 @@ for(i = 0; i < rpc_data_buffer->num_para; i++)
 #endif
 
 	ccci_header->data[1]	= sizeof(CCCI_BUFF_T) + data_len;
-	ccci_header->reserved	= rpc_data_buffer->ccci_header.reserved;
+    ccci_header->reserved	= rpc_data_buffer->ccci_header.reserved;
 	ccci_header->channel	= CH_RPC_TX;
 
-	DBGLOG(RPCD, DBG, "ccci header: data[0]=0x%08X, data[1]=0x%08X, ch=%02d, reserved=0x%08X", 
+	DBGLOG(RPCD, DBG, "[RPC] ccci header: data[0]=0x%08X, data[1]=0x%08X, channel=0x%08X, reserved=0x%08X", 
 		ccci_header->data[0],ccci_header->data[1] ,ccci_header->channel,ccci_header->reserved);	 
 
-	DBGLOG(RPCD, DBG, "skb data address = 0x%p", new_skb->data);	
-	DBGLOG(RPCD, DBG, "skb data length  = 0x%08X", new_skb->len);
-	DBGLOG(RPCD, DBG, "skb tail address = 0x%p", new_skb->tail);
-	DBGLOG(RPCD, DBG, "skb end address  = 0x%p", new_skb->end);
+	DBGLOG(RPCD, DBG, "[RPC] skb data address = 0x%p", new_skb->data);	
+	DBGLOG(RPCD, DBG, "[RPC] skb data length  = 0x%08X", new_skb->len);
+	DBGLOG(RPCD, DBG, "[RPC] skb tail address = 0x%p", new_skb->tail);
+	DBGLOG(RPCD, DBG, "[RPC] skb end address  = 0x%p", new_skb->end);
 
 	ret = ccci_rpc_ch_write_desc_to_q(ccci_header->channel, new_skb);
 	
-	DBGLOG(RPCD, DBG, "ready to leave rpc_write");
+	DBGLOG(RPCD, DBG, "[RPC] ready to leave rpc_write");
 
 	if(ret != 	KAL_SUCCESS)
-	{
-		DBGLOG(RPCD, ERR, "fail send msg <%d>!!!", ret);;
+    {
+		DBGLOG(RPCD, ERR, "[RPC] fail send msg <%d>!!!", ret);;
 		dev_kfree_skb(new_skb);
 		return ret;
 	}

@@ -316,18 +316,12 @@ static int uhid_dev_create(struct uhid_device *uhid,
 	hid->hid_get_raw_report = uhid_hid_get_raw;
 	hid->hid_output_raw_report = uhid_hid_output_raw;
 	hid->bus = ev->u.create.bus;
-
-    /* for apple HID device */
-    if((hid->vendor == 0x5AC) && (hid->product == 0x255))
-    {
-        hid->vendor  = HID_ANY_ID;
-    	hid->product = HID_ANY_ID;
-    }
-    else
-    {
-        hid->vendor = ev->u.create.vendor;
-	    hid->product = ev->u.create.product;
-    }
+	#if 0
+	hid->vendor = ev->u.create.vendor;
+	hid->product = ev->u.create.product;
+	#endif
+    hid->vendor  = HID_ANY_ID;
+	hid->product = HID_ANY_ID;
 	
 	hid->version = ev->u.create.version;
 	hid->country = ev->u.create.country;

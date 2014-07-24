@@ -1,13 +1,231 @@
+/*
+** $Id: //Department/DaVinci/BRANCHES/MT6620_WIFI_DRIVER_V2_3/include/wlan_oid.h#2 $
+*/
+
+/*! \file   "wlan_oid.h"
+    \brief This file contains the declairation file of the WLAN OID processing routines
+           of Windows driver for MediaTek Inc. 802.11 Wireless LAN Adapters.
+*/
 
 
 
+/*
+** $Log: wlan_oid.h $
+ *
+ * 03 02 2012 terry.wu
+ * NULL
+ * Sync CFG80211 modification from branch 2,2.
+ *
+ * 01 05 2012 wh.su
+ * [WCXRP00001153] [MT6620 Wi-Fi][Driver] Adding the get_ch_list and set_tx_power proto type function
+ * Adding the related ioctl / wlan oid function to set the Tx power cfg.
+ *
+ * 07 18 2011 chinghwa.yu
+ * [WCXRP00000063] Update BCM CoEx design and settings[WCXRP00000612] [MT6620 Wi-Fi] [FW] CSD update SWRDD algorithm
+ * Add CMD/Event for RDD and BWCS.
+ *
+ * 03 22 2011 george.huang
+ * [WCXRP00000504] [MT6620 Wi-Fi][FW] Support Sigma CAPI for power saving related command
+ * link with supplicant commands
+ *
+ * 03 17 2011 chinglan.wang
+ * [WCXRP00000570] [MT6620 Wi-Fi][Driver] Add Wi-Fi Protected Setup v2.0 feature
+ * .
+ *
+ * 03 02 2011 george.huang
+ * [WCXRP00000504] [MT6620 Wi-Fi][FW] Support Sigma CAPI for power saving related command
+ * Support UAPSD/OppPS/NoA parameter setting
+ *
+ * 01 20 2011 eddie.chen
+ * [WCXRP00000374] [MT6620 Wi-Fi][DRV] SW debug control
+ * Add Oid for sw control debug command
+ *
+ * 12 07 2010 cm.chang
+ * [WCXRP00000238] MT6620 Wi-Fi][Driver][FW] Support regulation domain setting from NVRAM and supplicant
+ * 1. Country code is from NVRAM or supplicant
+ * 2. Change band definition in CMD/EVENT.
+ *
+ * 10 18 2010 cp.wu
+ * [WCXRP00000056] [MT6620 Wi-Fi][Driver] NVRAM implementation with Version Check[WCXRP00000086] [MT6620 Wi-Fi][Driver] The mac address is all zero at android
+ * complete implementation of Android NVRAM access
+ *
+ * 10 08 2010 cp.wu
+ * [WCXRP00000084] [MT6620 Wi-Fi][Driver][FW] Add fixed rate support for distance test
+ * adding fixed rate support for distance test. (from registry setting)
+ *
+ * 09 23 2010 cp.wu
+ * [WCXRP00000056] [MT6620 Wi-Fi][Driver] NVRAM implementation with Version Check
+ * add skeleton for NVRAM integration
+ *
+ * 09 08 2010 cp.wu
+ * NULL
+ * use static memory pool for storing IEs of scanning result.
+ *
+ * 09 03 2010 kevin.huang
+ * NULL
+ * Refine #include sequence and solve recursive/nested #include issue
+ *
+ * 08 29 2010 yuche.tsai
+ * NULL
+ * Finish SLT TX/RX & Rate Changing Support.
+ *
+ * 08 04 2010 cp.wu
+ * NULL
+ * revert changelist #15371, efuse read/write access will be done by RF test approach
+ *
+ * 08 04 2010 cp.wu
+ * NULL
+ * add OID definitions for EFUSE read/write access.
+ *
+ * 08 04 2010 yarco.yang
+ * NULL
+ * Add TX_AMPDU and ADDBA_REJECT command
+ *
+ * 08 02 2010 george.huang
+ * NULL
+ * add WMM-PS test related OID/ CMD handlers
+ *
+ * 07 08 2010 cp.wu
+ *
+ * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
+ *
+ * 06 22 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * 1) add command warpper for STA-REC/BSS-INFO sync.
+ * 2) enhance command packet sending procedure for non-oid part
+ * 3) add command packet definitions for STA-REC/BSS-INFO sync.
+ *
+ * 06 18 2010 wh.su
+ * [WPD00003840][MT6620 5931] Security migration
+ * migration from MT6620 firmware.
+ *
+ * 06 07 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * merge wlan_def.h.
+ *
+ * 06 07 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * merge wifi_var.h, precomp.h, cnm_timer.h (data type only)
+ *
+ * 06 06 2010 kevin.huang
+ * [WPD00003832][MT6620 5931] Create driver base
+ * [MT6620 5931] Create driver base
+ *
+ * 06 03 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * move timer callback to glue layer.
+ *
+ * 05 20 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) integrate OID_GEN_NETWORK_LAYER_ADDRESSES with CMD_ID_SET_IP_ADDRESS
+ * 2) buffer statistics data for 2 seconds
+ * 3) use default value for adhoc parameters instead of 0
+ *
+ * 05 18 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * implement Wakeup-on-LAN except firmware integration part
+ *
+ * 05 17 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * MT6620 is not supporting NDIS_PACKET_TYPE_PROMISCUOUS.
+ *
 
+ *
+ * 05 17 2010 cp.wu
+ * [WPD00003831][MT6620 Wi-Fi] Add framework for Wi-Fi Direct support
+ * 1) add timeout handler mechanism for pending command packets
+ * 2) add p2p add/removal key
+ *
+ * 05 13 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * add NULL OID implementation for WOL-related OIDs.
+ *
+ * 04 22 2010 cp.wu
+ * [WPD00003830]add OID_802_11_PRIVACY_FILTER support
+ * enable RX filter OID
+ *
+ * 04 14 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * information buffer for query oid/ioctl is now buffered in prCmdInfo
+ *  *  *  *  * instead of glue-layer variable to improve multiple oid/ioctl capability
+ *
+ * 03 31 2010 wh.su
+ * [WPD00003816][MT6620 Wi-Fi] Adding the security support
+ * modify the wapi related code for new driver's design.
+ *
+ * 03 26 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * indicate media stream mode after set is done
+ *
+ * 03 24 2010 jeffrey.chang
+ * [WPD00003826]Initial import for Linux port
+ * initial import for Linux port
+ *
+ * 03 03 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * implement custom OID: EEPROM read/write access
+ *
+ * 02 09 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1. Permanent and current MAC address are now retrieved by CMD/EVENT packets instead of hard-coded address
+ *  *  *  *  *  * 2. follow MSDN defined behavior when associates to another AP
+ *  *  *  *  *  * 3. for firmware download, packet size could be up to 2048 bytes
+ *
+ * 01 27 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * 1) implement timeout mechanism when OID is pending for longer than 1 second
+ *  *  * 2) allow OID_802_11_CONFIGURATION to be executed when RF test mode is turned on
+ *
+ * 01 27 2010 wh.su
+ * [WPD00003816][MT6620 Wi-Fi] Adding the security support
+ * .
+ *
+ * 01 22 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * implement following 802.11 OIDs:
+ *  *  *  * OID_802_11_RSSI,
+ *  *  *  * OID_802_11_RSSI_TRIGGER,
+ *  *  *  * OID_802_11_STATISTICS,
+ *  *  *  * OID_802_11_DISASSOCIATE,
+ *  *  *  * OID_802_11_POWER_MODE
+ *
+ * 01 21 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * implement OID_802_11_MEDIA_STREAM_MODE
+ *
+ * 01 21 2010 cp.wu
+ * [WPD00001943]Create WiFi test driver framework on WinXP
+ * implement OID_802_11_SUPPORTED_RATES / OID_802_11_DESIRED_RATES
+**  \main\maintrunk.MT6620WiFiDriver_Prj\6 2009-12-08 11:38:11 GMT mtk02752
+**  add declares for RF test related APIs
+**  \main\maintrunk.MT6620WiFiDriver_Prj\5 2009-11-24 22:41:53 GMT mtk02752
+**  remove u4SysTime, MSDN 10-second will be implemented in FW side
+**  \main\maintrunk.MT6620WiFiDriver_Prj\4 2009-11-23 20:30:13 GMT mtk02752
+**  add u4SysTime field in PARAM_BSSID_EX_T
+**  \main\maintrunk.MT6620WiFiDriver_Prj\3 2009-11-12 19:48:35 GMT mtk02752
+**  allow upper layer to set a packet filter with PROMISCUOUS mode
+**  \main\maintrunk.MT6620WiFiDriver_Prj\2 2009-03-10 20:12:12 GMT mtk01426
+**  Init for develop
+**
+*/
 
 #ifndef _WLAN_OID_H
 #define _WLAN_OID_H
 
+/*******************************************************************************
+*                         C O M P I L E R   F L A G S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 
 #define PARAM_MAX_LEN_SSID                      32
 
@@ -67,6 +285,10 @@
 #define PARAM_MEM_DUMP_MAX_SIZE         2048
 
 #define BT_PROFILE_PARAM_LEN        8
+/*******************************************************************************
+*                             D A T A   T Y P E S
+********************************************************************************
+*/
 /*----------------------------------------------------------------------------*/
 /* Parameters of User Configuration which match to NDIS5.1                    */
 /*----------------------------------------------------------------------------*/
@@ -789,9 +1011,25 @@ typedef struct _PARAM_SCAN_REQUEST_EXT_T {
 } PARAM_SCAN_REQUEST_EXT_T, *P_PARAM_SCAN_REQUEST_EXT_T;
 
 
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 /*--------------------------------------------------------------*/
 /* Routines to set parameters or query information.             */
 /*--------------------------------------------------------------*/
@@ -1770,6 +2008,39 @@ wlanoidSetTxPower (
     OUT PUINT_32    pu4SetInfoLen
     );
 
+/*
+WLAN_STATUS
+wlanoidQueryBtSingleAntenna (
+    IN  P_ADAPTER_T prAdapter,
+    OUT PVOID       pvQueryBuffer,
+    IN  UINT_32     u4QueryBufferLen,
+    OUT PUINT_32    pu4QueryInfoLen
+    );
+
+WLAN_STATUS
+wlanoidSetBtSingleAntenna (
+    IN  P_ADAPTER_T prAdapter,
+    IN  PVOID       pvSetBuffer,
+    IN  UINT_32     u4SetBufferLen,
+    OUT PUINT_32    pu4SetInfoLen
+    );
+
+WLAN_STATUS
+wlanoidSetPta (
+    IN  P_ADAPTER_T prAdapter,
+    IN  PVOID       pvSetBuffer,
+    IN  UINT_32     u4SetBufferLen,
+    OUT PUINT_32    pu4SetInfoLen
+    );
+
+WLAN_STATUS
+wlanoidQueryPta (
+    IN  P_ADAPTER_T prAdapter,
+    OUT PVOID       pvQueryBuffer,
+    IN  UINT_32     u4QueryBufferLen,
+    OUT PUINT_32    pu4QueryInfoLen
+    );
+*/
 
 #if CFG_ENABLE_WIFI_DIRECT
 WLAN_STATUS
@@ -1781,6 +2052,10 @@ wlanoidSetP2pMode (
     );
 #endif
 
+/*******************************************************************************
+*                              F U N C T I O N S
+********************************************************************************
+*/
 
 #endif /* _WLAN_OID_H */
 

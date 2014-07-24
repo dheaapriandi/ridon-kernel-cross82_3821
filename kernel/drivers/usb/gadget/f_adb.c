@@ -27,6 +27,7 @@
 #include <linux/device.h>
 #include <linux/miscdevice.h>
 #include <linux/xlog.h>
+#include <linux/ratelimit.h>
 #include "logger.h"
 
 #define ADB_BULK_BUFFER_SIZE           4096
@@ -353,6 +354,7 @@ static ssize_t adb_read(struct file *fp, char __user *buf,
 	struct usb_request *req;
 	int r = count, xfer;
 	int ret;
+	static DEFINE_RATELIMIT_STATE(ratelimit, 1 * HZ, 10);
 
 	pr_debug("%s %s %d: (%d)\n", __FILE__, __func__, __LINE__, count);
 	if (!_adb_dev)
@@ -367,8 +369,10 @@ static ssize_t adb_read(struct file *fp, char __user *buf,
 
 	if (adb_lock(&dev->read_excl))
 	{
-		xlog_printk(ANDROID_LOG_ERROR, XLOG_TAG, "%s %s %d: Failed due to lock busy\n", __FILE__, __func__, __LINE__);
-		USB_LOGGER(DEC_NUM, ADB_READ, "adb_lock", -EBUSY);
+		if (__ratelimit(&ratelimit)) {
+			xlog_printk(ANDROID_LOG_ERROR, XLOG_TAG, "%s %s %d: Failed due to lock busy\n", __FILE__, __func__, __LINE__);
+			USB_LOGGER(DEC_NUM, ADB_READ, "adb_lock", -EBUSY);
+		}
 		return -EBUSY;
 	}
 

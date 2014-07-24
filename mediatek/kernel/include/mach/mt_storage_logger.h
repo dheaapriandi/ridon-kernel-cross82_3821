@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2011 MediaTek, Inc.
+ *
+ * Author: Holmes Chiou <holmes.chiou@mediatek.com>
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 
 #ifndef __MT_STORAGE_LOGGER_H__
 #define __MT_STORAGE_LOGGER_H__
@@ -191,6 +206,9 @@ enum logger_type
 
 #endif
 
+/*
+ * add the api to disable the storage logger
+ */
 extern void storage_logger_switch( bool enabled);
 
 extern void add_trace(enum logger_type type, unsigned int msg_id,

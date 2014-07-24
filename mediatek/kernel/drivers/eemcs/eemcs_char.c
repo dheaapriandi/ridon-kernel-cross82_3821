@@ -60,13 +60,13 @@ static KAL_INT32 eemcs_cdev_rx_callback(struct sk_buff *skb, KAL_UINT32 private_
     CCCI_BUFF_T *p_cccih = NULL;
     KAL_UINT32  port_id;
 
-    DEBUG_LOG_FUNCTION_ENTRY;
+	DEBUG_LOG_FUNCTION_ENTRY;
 
-    if (skb){
-        p_cccih = (CCCI_BUFF_T *)skb->data;
-        DBGLOG(CHAR, DBG, "cdev_rx_callback: CCCI_H(0x%08X, 0x%08X, %02d, 0x%08X",\
-        	p_cccih->data[0],p_cccih->data[1],p_cccih->channel, p_cccih->reserved );
-    }
+	if (skb){
+            p_cccih = (CCCI_BUFF_T *)skb->data;
+            DBGLOG(CHAR, DBG, "cdev_rx_callback: CCCI_H(0x%x)(0x%x)(0x%x)(0x%x)",\
+            p_cccih->data[0],p_cccih->data[1],p_cccih->channel, p_cccih->reserved );
+	}
     port_id = ccci_ch_to_port(p_cccih->channel);
     
     if(CDEV_OPEN == atomic_read(&eemcs_cdev_inst.cdev_node[PORT2IDX(port_id)].cdev_state)){
@@ -216,10 +216,7 @@ static void eemcs_cdev_write_force_md_rst(void)
 	  new_skb = ccci_cdev_mem_alloc(CCCI_CDEV_HEADER_ROOM);
 	}
 	/* reserve SDIO_H header room */
-	#ifdef CCCI_SDIO_HEAD
 	skb_reserve(new_skb, sizeof(SDIO_H)); 
-	#endif
-	
 	ccci_header = (CCCI_BUFF_T *)skb_put(new_skb, sizeof(CCCI_BUFF_T)) ; 
 	ccci_header->data[0]= CCCI_MAGIC_NUM; /* message box magic */
 	ccci_header->data[1]= 0;              /* message ID */
@@ -543,8 +540,7 @@ static ssize_t eemcs_cdev_write(struct file *fp, const char __user *buf, size_t 
     struct sk_buff *new_skb;
     CCCI_BUFF_T *ccci_header;
     size_t count = in_sz;
-    size_t skb_alloc_size;
-	
+    
     DEBUG_LOG_FUNCTION_ENTRY;        
     DBGLOG(CHAR, DBG, "eemcs_cdev_write: %s(%d), len=%d",curr_node->cdev_name,port_id,count);
 
@@ -562,55 +558,43 @@ static ssize_t eemcs_cdev_write(struct file *fp, const char __user *buf, size_t 
         ret = -EINVAL;
         goto _exit;                    
     }
-
-    control_flag = ccci_get_port_cflag(port_id);	
-    if (check_device_state() == EEMCS_EXCEPTION) {//modem exception		
-        if ((control_flag & TX_PRVLG2) == 0) {
-            DBGLOG(CHAR, ERR, "[TX]PORT%d write fail when modem exception", port_id);
-            return -ETXTBSY;
-        }
-    } else if (check_device_state() != EEMCS_BOOTING_DONE) {//modem not ready
-        if ((control_flag & TX_PRVLG1) == 0) {
-            DBGLOG(CHAR, ERR, "[TX]PORT%d write fail when modem not ready", port_id);
-            return -ENODEV;
-        }
+    if(!eemcs_device_ready() && ((port_id==CCCI_PORT_META)||(port_id==CCCI_PORT_MD_LOG)))
+    {
+        ret= - ENODEV;
+        DBGLOG(CHAR, DEF, "device not ready!");
+		return ret;
     }
-	
+    control_flag = ccci_get_port_cflag(port_id);
     if((control_flag & EXPORT_CCCI_H) && (count < sizeof(CCCI_BUFF_T)))
     {
-        DBGLOG(CHAR, WAR, "[TX]PORT%d invalid wirte len(%d)", port_id, count);
+        DBGLOG(CHAR, WAR, "PORT%d wirte len not support(%d) by emcs!", port_id, count);
         ret = -EINVAL;
         goto _exit;            
     }
-	
-    if(port_id == CCCI_PORT_FS) {
-        skb_alloc_size = count - sizeof(CCCI_BUFF_T);
-    } else {
-        if(control_flag & EXPORT_CCCI_H){		
-	        if(count > (MAX_TX_BYTE+sizeof(CCCI_BUFF_T))){
-	            DBGLOG(CHAR, ERR, "[TX]PORT%d wirte_len(%d) > MTU(%d)!", port_id, count, MAX_TX_BYTE);
-	            count = MAX_TX_BYTE+sizeof(CCCI_BUFF_T);
-	        }
-	        skb_alloc_size = count - sizeof(CCCI_BUFF_T);
-        }else{
-	        if(count > MAX_TX_BYTE){
-	            DBGLOG(CHAR, WAR, "[TX]PORT%d wirte_len(%d) > MTU(%d)!", port_id, count, MAX_TX_BYTE);
-	            count = MAX_TX_BYTE;
-	        }
-	        skb_alloc_size = count;
+
+    if(control_flag & EXPORT_CCCI_H){
+        if(count > (MAX_TX_BYTE+sizeof(CCCI_BUFF_T))){
+            DBGLOG(CHAR, WAR, "PORT%d wirte_len(%d) > MTU(%d)!", port_id, count, MAX_TX_BYTE);
+            count = MAX_TX_BYTE+sizeof(CCCI_BUFF_T);
         }
-    }	
+    }else{
+        if(count > MAX_TX_BYTE){
+            DBGLOG(CHAR, WAR, "PORT%d wirte_len(%d) > MTU(%d)!", port_id, count, MAX_TX_BYTE);
+            count = MAX_TX_BYTE;
+        }
+    }
+
 __blocking_IO:
 	if (ccci_cdev_write_space_alloc(curr_node->ccci_ch.tx)==0){
         if (fp->f_flags & O_NONBLOCK) {
             ret = -EAGAIN;
-            DBGLOG(CHAR, WAR, "[TX]PORT%d ccci_cdev_write_space_alloc return 0)", port_id);
+            DBGLOG(CHAR, WAR, "PORT%d ccci_cdev_write_space_alloc return 0)", port_id);
             goto _exit;
         }else{ // Blocking IO
-            DBGLOG(CHAR, TRA, "[TX]PORT%d Enter Blocking I/O wait", port_id);
+            DBGLOG(CHAR, TRA, "PORT%d Enter Blocking I/O wait", port_id);
             ret = ccci_cdev_write_wait(curr_node->ccci_ch.tx);
         	if(ret == -ERESTARTSYS) {
-				DBGLOG(CHAR, WAR, "[TX]PORT%d Interrupted,return ERESTARTSYS", port_id);
+				DBGLOG(CHAR, WAR, "PORT%d Interrupted,return ERESTARTSYS", port_id);
 				ret = -EINTR;
 				goto _exit;
 			}
@@ -618,19 +602,17 @@ __blocking_IO:
         }
 	}	
     
-    new_skb = ccci_cdev_mem_alloc(skb_alloc_size + CCCI_CDEV_HEADER_ROOM);
+    new_skb = ccci_cdev_mem_alloc(count + CCCI_CDEV_HEADER_ROOM);
     if(NULL == new_skb)
     {
         ret = -ENOMEM;
-        DBGLOG(CHAR, ERR, "[TX]PORT%d alloc tx memory fail: %d", port_id, ret);
+        DBGLOG(CHAR, ERR, "PORT%d alloct tx memory fail(%d)", port_id, ret);
         goto _exit;  
     }
     
     /* reserve SDIO_H header room */
-    #ifdef CCCI_SDIO_HEAD
     skb_reserve(new_skb, sizeof(SDIO_H));
-    #endif
-	
+
     if(control_flag & EXPORT_CCCI_H){
         ccci_header = (CCCI_BUFF_T *)new_skb->data;
     }else{
@@ -639,8 +621,7 @@ __blocking_IO:
 
     if(copy_from_user(skb_put(new_skb, count), buf, count))
     {
-        DBGLOG(CHAR, ERR, "[TX]PORT%d copy_from_user(len=%d, %p->%p) fail", port_id, \
-			count, buf, new_skb->data);
+        DBGLOG(CHAR, ERR, "PORT%d fail copy data from user space(%d)", port_id, count);
         dev_kfree_skb(new_skb);
         ret=-EFAULT;
         goto _exit;
@@ -650,7 +631,8 @@ __blocking_IO:
     {
         /* user bring down the ccci header */
         if(count == sizeof(CCCI_BUFF_T)){
-            DBGLOG(CHAR, TRA, "[TX]PORT%d, CCCI_MSG(0x%08X, 0x%08X, %02d, 0x%08X)", 
+
+		DBGLOG(CHAR, DBG, "eemcs_cdev_write: PORT%d, CCCI_MSG(0x%x, 0x%x, 0x%x, 0x%x)", 
                     port_id, 
                     ccci_header->data[0], ccci_header->data[1],
                     ccci_header->channel, ccci_header->reserved);
@@ -661,7 +643,7 @@ __blocking_IO:
         }
 
         if(ccci_header->channel != curr_node->ccci_ch.tx){
-            DBGLOG(CHAR, WAR, "[TX]PORT%d CCCI ch mis-match (%d) vs (%d)!! will correct by char_dev",\
+            DBGLOG(CHAR, WAR, "PORT%d Tx CCCI channel not match (%d) vs (%d)!! will correct by char_dev",\
 				port_id, ccci_header->channel, curr_node->ccci_ch.tx);
         }
     }
@@ -673,7 +655,7 @@ __blocking_IO:
     }
     ccci_header->channel = curr_node->ccci_ch.tx;
     
-    DBGLOG(CHAR, DBG, "[TX]PORT%d, CCCI_MSG(0x%08X, 0x%08X, %02d, 0x%08X)", 
+	DBGLOG(CHAR, DBG, "eemcs_cdev_write: PORT%d, CCCI_MSG(0x%x, 0x%x, 0x%x, 0x%x)", 
                     port_id, 
                     ccci_header->data[0], ccci_header->data[1],
                     ccci_header->channel, ccci_header->reserved);
@@ -685,10 +667,10 @@ __blocking_IO:
         /* dump 32 byte of the !!!CCCI DATA!!! part */
 
 		CDEV_LOG(port_id, CHAR, INF, "[DUMP]PORT%d eemcs_cdev_write\n\
-		[00..07] 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n\
-		[08..15] 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n\
-		[16..23] 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n\
-		[24..31] 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x",\
+		[00..07](0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)\n\
+		[08..15](0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)\n\
+		[16..23](0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)\n\
+		[24..31](0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)",\
 		port_id,\
 		(int)*(ptr+0),(int)*(ptr+1),(int)*(ptr+2),(int)*(ptr+3),(int)*(ptr+4),(int)*(ptr+5),(int)*(ptr+6),(int)*(ptr+7),\
 		(int)*(ptr+8),(int)*(ptr+9),(int)*(ptr+10),(int)*(ptr+11),(int)*(ptr+12),(int)*(ptr+13),(int)*(ptr+14),(int)*(ptr+15),\
@@ -700,7 +682,7 @@ __blocking_IO:
     ret = ccci_cdev_write_desc_to_q(curr_node->ccci_ch.tx, new_skb);
 
 	if (KAL_SUCCESS != ret) {
-		DBGLOG(CHAR, ERR, "[TX]PORT%d PKT DROP of ch%d!", port_id, curr_node->ccci_ch.tx);
+		DBGLOG(CHAR, ERR, "Pkt drop of ch%d!",curr_node->ccci_ch.tx);
 		dev_kfree_skb(new_skb);
         ret = -EAGAIN;
 	} else {
@@ -752,7 +734,7 @@ static ssize_t eemcs_cdev_read(struct file *fp, char *buf, size_t count, loff_t 
     p_type = ccci_get_port_type(port_id);
     if(p_type != EX_T_USER) 
     {
-        DBGLOG(CHAR, ERR, "[RX]PORT%d refuse access user port: type=%d", port_id, p_type);
+        DBGLOG(CHAR, ERR, "PORT%d refuse port(%d) access user port", port_id, p_type);
         goto _exit;                    
     }
 
@@ -760,7 +742,7 @@ static ssize_t eemcs_cdev_read(struct file *fp, char *buf, size_t count, loff_t 
     KAL_ASSERT(rx_pkt_cnt_int >= 0);
     if(rx_pkt_cnt_int == 1)
     {
-        DBGLOG(CHAR, DBG, "[RX]Streaming reading!! PORT%d len=%d\n",port_id,count);
+        DBGLOG(CHAR, DBG, "Streaming reading!! PORT%d len=%d\n",port_id,count);
         rx_skb = curr_node->buff.remaining_rx_skb;
         /* rx_skb shall not be null */
         KAL_ASSERT(NULL != rx_skb);
@@ -783,14 +765,15 @@ static ssize_t eemcs_cdev_read(struct file *fp, char *buf, size_t count, loff_t 
             if(ret)
             {
                 ret = -EINTR;
-                DBGLOG(CHAR, ERR, "[RX]PORT%d Interrupted by syscall.signal=%lld", port_id, \
-					*(long long *)current->pending.signal.sig);	
+                DBGLOG(CHAR, ERR, "PORT%d interruptted while waiting data.", port_id);			
                 goto _exit;
             }
         }
        
-        /* Cached memory from last read fail*/
-        DBGLOG(CHAR, TRA, "[RX]dequeue from rx_skb_list, rx_pkt_cnt(%d)",rx_pkt_cnt); 
+        /*
+         * Cached memory from last read fail
+         */
+        DBGLOG(CHAR, TRA, "eemcs_cdev_read dequeue from rx_skb_list, rx_pkt_cnt(%d)",rx_pkt_cnt); 
         rx_skb = skb_dequeue(&curr_node->rx_skb_list);
         
         /* There should be rx_skb in the list */
@@ -801,17 +784,17 @@ static ssize_t eemcs_cdev_read(struct file *fp, char *buf, size_t count, loff_t 
 
         ccci_header = (CCCI_BUFF_T *)rx_skb->data;
 
-        DBGLOG(CHAR, DBG, "[RX]PORT%d CCCI_H(0x%08X, 0x%08X, %02d, 0x%08X)",\
+        DBGLOG(CHAR, TRA, "eemcs_cdev_read: PORT%d CCCI_H(0x%x)(0x%x)(0x%x)(0x%x)",\
                 port_id, ccci_header->data[0],ccci_header->data[1],
                 ccci_header->channel, ccci_header->reserved);
         
         /*If not match please debug EEMCS CCCI demux skb part*/
-        if(ccci_header->channel != curr_node->ccci_ch.rx) {
-            DBGLOG(CHAR,ERR,"Assert(ccci_header->channel == curr_node->ccci_ch.rx)");
-            DBGLOG(CHAR,ERR,"ccci_header->channel:%d, curr_node->ccci_ch.rx:%d, curr_node->eemcs_port_id:%d", 
+	if(ccci_header->channel != curr_node->ccci_ch.rx) {
+		DBGLOG(CHAR,ERR,"Assert(ccci_header->channel == curr_node->ccci_ch.rx)");
+		DBGLOG(CHAR,ERR,"ccci_header->channel:%d, curr_node->ccci_ch.rx:%d, curr_node->eemcs_port_id:%d", 
 				ccci_header->channel, curr_node->ccci_ch.rx, curr_node->eemcs_port_id);
-            KAL_ASSERT(ccci_header->channel == curr_node->ccci_ch.rx);
-        }
+		KAL_ASSERT(ccci_header->channel == curr_node->ccci_ch.rx);
+	}
         //KAL_ASSERT(ccci_header->channel == curr_node->ccci_ch.rx);
         
         if(!(ccci_get_port_cflag(port_id) & EXPORT_CCCI_H))
@@ -828,17 +811,17 @@ static ssize_t eemcs_cdev_read(struct file *fp, char *buf, size_t count, loff_t 
         }
     }
     
-    DBGLOG(CHAR, TRA, "[RX]PORT%d read_len=%d",port_id, read_len);
+    DBGLOG(CHAR, TRA, "eemcs_cdev_read: PORT%d read_len=%d",port_id, read_len);
 
 /* 20130816 ian add aud dump */
     {
 	    char *ptr = (char *)rx_skb->data;
 	    /* dump 32 byte of the !!!CCCI DATA!!! part */
 		CDEV_LOG(port_id, CHAR, ERR,"[DUMP]PORT%d eemcs_cdev_read\n\
-		[00..07] 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n\
-		[08..15] 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n\
-		[16..23] 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n\
-		[24..31] 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x",\
+		[00..07](0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)\n\
+		[08..15](0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)\n\
+		[16..23](0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)\n\
+		[24..31](0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)(0x%02x)",\
 		port_id,\
 		(int)*(ptr+0),(int)*(ptr+1),(int)*(ptr+2),(int)*(ptr+3),(int)*(ptr+4),(int)*(ptr+5),(int)*(ptr+6),(int)*(ptr+7),\
 		(int)*(ptr+8),(int)*(ptr+9),(int)*(ptr+10),(int)*(ptr+11),(int)*(ptr+12),(int)*(ptr+13),(int)*(ptr+14),(int)*(ptr+15),\
@@ -857,8 +840,8 @@ static ssize_t eemcs_cdev_read(struct file *fp, char *buf, size_t count, loff_t 
             curr_node->buff.remaining_rx_skb = rx_skb;
         }
         
-        DBGLOG(CHAR, TRA, "[RX]PORT%d !!! USER BUFF(%d) less than DATA SIZE(%d) !!!", port_id, count, read_len);
-        DBGLOG(CHAR, TRA, "[RX]copy_to_user: %p -> %p, len=%d", payload, buf, count);
+        DBGLOG(CHAR, DBG, "PORT%d !!! USER BUFF(%d) less than DATA SIZE(%d) !!!", port_id, count, read_len);
+        DBGLOG(CHAR, DBG, "copy data from %p to %p length = %d",payload,buf,count);
         ret = copy_to_user(buf, payload, count);
         if(ret == 0)
         {   
@@ -870,8 +853,7 @@ static ssize_t eemcs_cdev_read(struct file *fp, char *buf, size_t count, loff_t 
         else
         {
             // If error occurs, discad the skb buffer
-            DBGLOG(CHAR, ERR, "[RX]PORT%d copy_to_user(%p->%p, len=%d) fail: %d", port_id, \
-            	payload, buf, count, ret);
+            DBGLOG(CHAR, ERR, "PORT%d !!! PKT DROP !!! fail copy_to_user buf(%d, %d)", port_id, count, ret);
             atomic_dec(&curr_node->rx_pkt_drop_cnt);
             eemcs_update_statistics(0, port_id, RX, DROP);
             dev_kfree_skb(rx_skb);
@@ -887,13 +869,12 @@ static ssize_t eemcs_cdev_read(struct file *fp, char *buf, size_t count, loff_t 
     else
     {
 
-        DBGLOG(CHAR, TRA, "[RX]copy_to_user: %p->%p, len=%d", payload, buf, read_len);
+        DBGLOG(CHAR, DBG, "copy data from %p to %p length = %d", payload, buf, read_len);
 
         ret = copy_to_user(buf, payload, read_len);
         if(ret!=0)
-        {		
-            DBGLOG(CHAR, ERR, "[RX]PORT%d copy_to_user(%p->%p, len=%d) fail: %d", port_id, \
-            	payload, buf, read_len, ret);
+        {
+            DBGLOG(CHAR, ERR, "copy_to_user len=%d fail: %d)", read_len, ret);
         }       
 
         dev_kfree_skb(rx_skb);
@@ -1020,7 +1001,6 @@ void eemcs_char_exception_log_pkts(void)
 
     for (i = 0; i < EEMCS_CDEV_MAX_NUM; i++) {
 //        if (!is_valid_exception_rx_port(IDX2PORT(i))) {
-         if ((IDX2PORT(i) != CCCI_PORT_MD_LOG) && (IDX2PORT(i) != CCCI_PORT_META)) {
             pkt_cnt = atomic_read(&eemcs_cdev_inst.cdev_node[i].rx_pkt_cnt);
             if (pkt_cnt != 0) {
 				DBGLOG(CHAR, INF, "%d packets in Rx list of port%d", pkt_cnt, IDX2PORT(i));
@@ -1035,7 +1015,7 @@ void eemcs_char_exception_log_pkts(void)
                     }
                 }
             }
-        }
+//        }
     }
 }
 
@@ -1048,7 +1028,7 @@ void eemcs_char_exception_log_pkts(void)
  */
 void eemcs_char_exception_callback(KAL_UINT32 msg_id)
 {
-    DBGLOG(CHAR, INF, "Char exception Callback 0x%X", msg_id);
+    DBGLOG(CHAR, ERR, "Char exception Callback 0x%X", msg_id);
     switch (msg_id) {
         case EEMCS_EX_INIT:
             eemcs_char_exception_log_pkts();

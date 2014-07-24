@@ -2197,7 +2197,6 @@ nicUpdateBss(
     rCmdSetBssInfo.u2OperationalRateSet         = prBssInfo->u2OperationalRateSet;
     rCmdSetBssInfo.u2BSSBasicRateSet            = prBssInfo->u2BSSBasicRateSet;
     rCmdSetBssInfo.ucPhyTypeSet                 = prBssInfo->ucPhyTypeSet;
-    rCmdSetBssInfo.fgHiddenSsidMode             = prBssInfo->eHiddenSsidType;
 #if CFG_ENABLE_WIFI_DIRECT
     if(prAdapter->fgIsP2PRegistered) {
         COPY_MAC_ADDR(rCmdSetBssInfo.aucOwnMac, prBssInfo->aucOwnMacAddr);

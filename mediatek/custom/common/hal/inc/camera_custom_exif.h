@@ -1,16 +1,48 @@
+/* Copyright Statement:
+ *
+ * This software/firmware and related documentation ("MediaTek Software") are
+ * protected under relevant copyright laws. The information contained herein
+ * is confidential and proprietary to MediaTek Inc. and/or its licensors.
+ * Without the prior written permission of MediaTek inc. and/or its licensors,
+ * any reproduction, modification, use or disclosure of MediaTek Software,
+ * and information contained herein, in whole or in part, shall be strictly prohibited.
+ *
+ * MediaTek Inc. (C) 2010. All rights reserved.
+ *
+ * BY OPENING THIS FILE, RECEIVER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+ * THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+ * RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO RECEIVER ON
+ * AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+ * NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+ * SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+ * SUPPLIED WITH THE MEDIATEK SOFTWARE, AND RECEIVER AGREES TO LOOK ONLY TO SUCH
+ * THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. RECEIVER EXPRESSLY ACKNOWLEDGES
+ * THAT IT IS RECEIVER'S SOLE RESPONSIBILITY TO OBTAIN FROM ANY THIRD PARTY ALL PROPER LICENSES
+ * CONTAINED IN MEDIATEK SOFTWARE. MEDIATEK SHALL ALSO NOT BE RESPONSIBLE FOR ANY MEDIATEK
+ * SOFTWARE RELEASES MADE TO RECEIVER'S SPECIFICATION OR TO CONFORM TO A PARTICULAR
+ * STANDARD OR OPEN FORUM. RECEIVER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND
+ * CUMULATIVE LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+ * AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+ * OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY RECEIVER TO
+ * MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+ *
+ * The following software/firmware and/or related documentation ("MediaTek Software")
+ * have been modified by MediaTek Inc. All revisions are subject to any receiver's
+ * applicable license agreements with MediaTek Inc.
+ */
 #ifndef _CAMERA_CUSTOM_EXIF_
 #define _CAMERA_CUSTOM_EXIF_
 //
 #include "camera_custom_types.h"
-//PR587530-599064-Li-Zhao begin
-#define LOG_TAG "custm_SetExif"
-#include <utils/Log.h>
-#include <cutils/properties.h>
-//PR587530-599064-Li-Zhao end
 
 //
 namespace NSCamCustom
 {
+/*******************************************************************************
+* Custom EXIF: Imgsensor-related.
+*******************************************************************************/
 typedef struct SensorExifInfo_S
 {
     MUINT32 uFLengthNum;
@@ -29,7 +61,10 @@ getParamSensorExif()
 }
 
 
-#define EN_CUSTOM_EXIF_INFO //PR587530-599064-Li-Zhao
+/*******************************************************************************
+* Custom EXIF
+******************************************************************************/
+//#define EN_CUSTOM_EXIF_INFO
 #define SET_EXIF_TAG_STRING(tag,str) \
     if (strlen((const char*)str) <= 32) { \
         strcpy((char *)pexifApp1Info->tag, (const char*)str); }
@@ -43,31 +78,10 @@ typedef struct customExifInfo_s {
 MINT32 custom_SetExif(void **ppCustomExifTag)
 {
 #ifdef EN_CUSTOM_EXIF_INFO
-//PR587530-599064-Li-Zhao begin
-//#define CUSTOM_EXIF_STRING_MAKE  "custom make"
-//#define CUSTOM_EXIF_STRING_MODEL "custom model"
-//#define CUSTOM_EXIF_STRING_SOFTWARE "custom software"
-//static customExifInfo_t exifTag = {CUSTOM_EXIF_STRING_MAKE,CUSTOM_EXIF_STRING_MODEL,CUSTOM_EXIF_STRING_SOFTWARE};
-    char model[32];
-    char manufacturer[32];
-    property_get("ro.product.display.model", model, "default");
-    ALOGI("custom_SetExif model = %s", model);
-    property_get("ro.product.manufacturer", manufacturer, "default");
-    ALOGI("custom_SetExif manufacturer = %s", manufacturer);
-    static customExifInfo_t exifTag = { 0 };
-    for (int i = 0; i < 32; i++) {
-        if (model[i] != '\0' && i < strlen(model)) {
-            exifTag.strModel[i] = (unsigned char) model[i];
-        } else {
-            exifTag.strModel[i] = '\0';
-        }
-        if (manufacturer[i] != '\0' && i < strlen(manufacturer)) {
-            exifTag.strMake[i] = (unsigned char) manufacturer[i];
-        } else {
-            exifTag.strMake[i] = '\0';
-        }
-    }
-//PR587530-599064-Li-Zhao end
+#define CUSTOM_EXIF_STRING_MAKE  "custom make"
+#define CUSTOM_EXIF_STRING_MODEL "custom model"
+#define CUSTOM_EXIF_STRING_SOFTWARE "custom software"
+static customExifInfo_t exifTag = {CUSTOM_EXIF_STRING_MAKE,CUSTOM_EXIF_STRING_MODEL,CUSTOM_EXIF_STRING_SOFTWARE};
     if (0 != ppCustomExifTag) {
         *ppCustomExifTag = (void*)&exifTag;
     }
@@ -78,6 +92,9 @@ MINT32 custom_SetExif(void **ppCustomExifTag)
 }
 
 
+/*******************************************************************************
+* Custom EXIF: Exposure Program
+******************************************************************************/
 typedef struct customExif_s
 {
     MBOOL   bEnCustom;

@@ -1,12 +1,33 @@
+/*
+** $Id: @(#) gl_p2p_init.c@@
+*/
+
+/*! \file   gl_p2p_init.c
+    \brief  init and exit routines of Linux driver interface for Wi-Fi Direct
+
+    This file contains the main routines of Linux driver for MediaTek Inc. 802.11
+    Wireless LAN Adapters.
+*/
 
 
 
+/*******************************************************************************
+*                         C O M P I L E R   F L A G S
+********************************************************************************
+*/
 
-
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 
 #include "precomp.h"
 
 
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 
 #define P2P_MODE_INF_NAME "p2p%d";
 #define AP_MODE_INF_NAME "ap%d";
@@ -16,15 +37,40 @@
 #define RUNNING_P2P_MODE 0
 #define RUNNING_AP_MODE 1
 
+/*******************************************************************************
+*                             D A T A   T Y P E S
+********************************************************************************
+*/
+
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/
 
 
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 
-
+/*  Get interface name and running mode from module insertion parameter
+*       Usage: insmod p2p.ko mode=1
+*       default: interface name is p2p%d
+*                   running mode is P2P
+*/
 static PUCHAR ifname = P2P_MODE_INF_NAME;
 static UINT_16 mode = RUNNING_P2P_MODE;
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 #if defined(CONFIG_HAS_EARLYSUSPEND)
 extern int glRegisterEarlySuspend(
     struct early_suspend        *prDesc,
@@ -34,9 +80,20 @@ extern int glRegisterEarlySuspend(
 extern int glUnregisterEarlySuspend(struct early_suspend *prDesc);
 #endif
 
+/*******************************************************************************
+*                              F U N C T I O N S
+********************************************************************************
+*/
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief    check interface name parameter is valid or not
+*             if invalid, set ifname to P2P_MODE_INF_NAME
+*
+*
+* \retval
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 p2pCheckInterfaceName(
@@ -305,6 +362,13 @@ static void p2p_late_resume(struct early_suspend *h)
 #endif
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief
+*       run p2p init procedure, include register pointer to wlan
+*                                                     glue register p2p
+*                                                     set p2p registered flag
+* \retval 1     Success
+*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 p2pLaunch(
@@ -357,6 +421,14 @@ p2pSetMode (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief
+*       run p2p exit procedure, include unregister pointer to wlan
+*                                                     glue unregister p2p
+*                                                     set p2p registered flag
+
+* \retval 1     Success
+*/
 /*----------------------------------------------------------------------------*/
 BOOLEAN
 p2pRemove(
@@ -386,6 +458,13 @@ p2pRemove(
 
 #if 0
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Driver entry point when the driver is configured as a Linux Module, and
+*        is called once at module load time, by the user-level modutils
+*        application: insmod or modprobe.
+*
+* \retval 0     Success
+*/
 /*----------------------------------------------------------------------------*/
 static int initP2P(void)
 {
@@ -413,6 +492,13 @@ static int initP2P(void)
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief Driver exit point when the driver as a Linux Module is removed. Called
+*        at module unload time, by the user level modutils application: rmmod.
+*        This is our last chance to clean up after ourselves.
+*
+* \return (none)
+*/
 /*----------------------------------------------------------------------------*/
 //1 Module Leave Point
 static VOID __exit exitP2P(void)

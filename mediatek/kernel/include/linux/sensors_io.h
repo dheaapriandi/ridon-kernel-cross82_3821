@@ -1,3 +1,24 @@
+/*
+*
+* (C) Copyright 2008 
+* MediaTek <www.mediatek.com>
+*
+* Sensors IO command file for MT6516
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
 #ifndef SENSORS_IO_H
 #define SENSORS_IO_H
 		  
@@ -97,7 +118,7 @@ typedef struct{
 #define ECOMPASS_IOC_GET_MFLAG			_IOR(MSENSOR, 0x1e, short)
 #define	ECOMPASS_IOC_GET_OFLAG			_IOR(MSENSOR, 0x1f, short)
 #define ECOMPASS_IOC_GET_OPEN_STATUS	_IOR(MSENSOR, 0x20, int)
-#define ECOMPASS_IOC_SET_YPR			_IOW(MSENSOR, 0x21, int[16])
+#define ECOMPASS_IOC_SET_YPR			_IOW(MSENSOR, 0x21, int[12])
 #define ECOMPASS_IOC_GET_LAYOUT			_IOR(MSENSOR, 0X22, int)
 
 

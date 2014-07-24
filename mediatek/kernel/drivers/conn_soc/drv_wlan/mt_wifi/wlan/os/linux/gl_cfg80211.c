@@ -1,9 +1,52 @@
+/*
+** $Id: @(#) gl_cfg80211.c@@
+*/
+
+/*! \file   gl_cfg80211.c
+    \brief  Main routines for supporintg MT6620 cfg80211 control interface
+
+    This file contains the support routines of Linux driver for MediaTek Inc. 802.11
+    Wireless LAN Adapters.
+*/
 
 
 
+/*
+** $Log: gl_cfg80211.c $
+** 
+** 09 05 2013 cp.wu
+** correct length to pass to wlanoidSetBssid()
+**
+** 09 04 2013 cp.wu
+** fix typo
+**
+** 09 03 2013 cp.wu
+** add path for reassociation
+**
+** 11 23 2012 yuche.tsai
+** [ALPS00398671] [Acer-Tablet] Remove Wi-Fi Direct completely
+** Fix bug of WiFi may reboot under user load, when WiFi Direct is removed..
+** 
+** 09 12 2012 wcpadmin
+** [ALPS00276400] Remove MTK copyright and legal header on GPL/LGPL related packages
+** .
+** 
+** 08 30 2012 chinglan.wang
+** [ALPS00349664] [6577JB][WIFI] Phone can not connect to AP secured with AES via WPS in 802.11n Only
+** .
+ *
+**
+*/
 
+/*******************************************************************************
+*                         C O M P I L E R   F L A G S
+********************************************************************************
+*/
 
-
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 #include "gl_os.h"
 #include "debug.h"
 #include "wlan_lib.h"
@@ -14,8 +57,20 @@
 #include <net/cfg80211.h>
 #include "gl_cfg80211.h"
 
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                             D A T A   T Y P E S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/
 
 #if CFG_SUPPORT_WAPI
     extern UINT_8 keyStructBuf[1024];   /* add/remove key shared buffer */
@@ -23,11 +78,37 @@
     extern UINT_8 keyStructBuf[100];   /* add/remove key shared buffer */
 #endif
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                              F U N C T I O N S
+********************************************************************************
+*/
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for change STA type between
+ *        1. Infrastructure Client (Non-AP STA)
+ *        2. Ad-Hoc IBSS
+ *
+ * @param
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int 
 mtk_cfg80211_change_iface (
@@ -85,6 +166,14 @@ mtk_cfg80211_change_iface (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for adding key 
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_add_key (
@@ -171,6 +260,14 @@ mtk_cfg80211_add_key (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for getting key for specified STA
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int 
 mtk_cfg80211_get_key (
@@ -199,6 +296,14 @@ mtk_cfg80211_get_key (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for removing key for specified STA
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_del_key (
@@ -247,6 +352,14 @@ mtk_cfg80211_del_key (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for setting default key on an interface
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int 
 mtk_cfg80211_set_default_key (
@@ -273,6 +386,14 @@ mtk_cfg80211_set_default_key (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for getting station information such as RSSI
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 
 int
@@ -396,6 +517,14 @@ mtk_cfg80211_get_station (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to do a scan
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 static PARAM_SCAN_REQUEST_EXT_T rScanRequest;
 int 
@@ -466,6 +595,15 @@ mtk_cfg80211_scan (
 static UINT_8 wepBuf[48];
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to connect to 
+ *        the ESS with the specified parameters
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_connect (
@@ -489,13 +627,6 @@ mtk_cfg80211_connect (
 
 	DBGLOG(REQ, INFO, ("[wlan] mtk_cfg80211_connect 0x%p %d\n",
 		   sme->ie, sme->ie_len));
-#if CFG_SUPPORT_WAPI
-	if (sme->ie != NULL)
-	{
-		DBGLOG(REQ, INFO, ("[wlan] ELM ID 0x%x = 0x%x ?\n",
-				sme->ie[0], ELEM_ID_WAPI));
-	}
-#endif
 
     if (prGlueInfo->prAdapter->rWifiVar.rConnSettings.eOPMode > NET_TYPE_AUTO_SWITCH)
 		eOpMode = NET_TYPE_AUTO_SWITCH;
@@ -647,19 +778,22 @@ mtk_cfg80211_connect (
         PUINT_8 prDesiredIE = NULL;
 
 #if CFG_SUPPORT_WAPI
-        rStatus = kalIoctl(prGlueInfo,
-                wlanoidSetWapiAssocInfo,
-                sme->ie,
-                sme->ie_len,
-                FALSE,
-                FALSE,
-                FALSE,
-                FALSE,
-                &u4BufLen);
-        
-        if (rStatus != WLAN_STATUS_SUCCESS) {
-            DBGLOG(SEC, WARN, ("[wapi] set wapi assoc info error:%lx\n", rStatus));
-        }
+		if (wextSrchDesiredWAPIIE(sme->ie,
+				sme->ie_len, (PUINT_8 *)&prDesiredIE)){
+	        rStatus = kalIoctl(prGlueInfo,
+	                wlanoidSetWapiAssocInfo,
+	                prDesiredIE,
+	                IE_SIZE(prDesiredIE),
+	                FALSE,
+	                FALSE,
+	                FALSE,
+	                FALSE,
+	                &u4BufLen);
+			
+	        if (rStatus != WLAN_STATUS_SUCCESS) {
+	            DBGLOG(SEC, WARN, ("[wapi] set wapi assoc info error:%lx\n", rStatus));
+	        }
+		}
 #endif
 
 		DBGLOG(REQ, INFO, ("[wlan] wlanoidSetWapiAssocInfo: .fgWapiMode = %d\n",
@@ -870,6 +1004,15 @@ mtk_cfg80211_connect (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to disconnect from
+ *        currently connected ESS
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int 
 mtk_cfg80211_disconnect (
@@ -905,6 +1048,14 @@ mtk_cfg80211_disconnect (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to join an IBSS group
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_join_ibss (
@@ -975,6 +1126,14 @@ mtk_cfg80211_join_ibss (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to leave from IBSS group
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_leave_ibss (
@@ -1009,6 +1168,15 @@ mtk_cfg80211_leave_ibss (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to configure 
+ *        WLAN power managemenet
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_set_power_mgmt (
@@ -1058,6 +1226,15 @@ mtk_cfg80211_set_power_mgmt (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to cache
+ *        a PMKID for a BSSID
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_set_pmksa (
@@ -1105,6 +1282,15 @@ mtk_cfg80211_set_pmksa (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to remove
+ *        a cached PMKID for a BSSID
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_del_pmksa (
@@ -1119,6 +1305,15 @@ mtk_cfg80211_del_pmksa (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to flush
+ *        all cached PMKID
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_flush_pmksa (
@@ -1250,6 +1445,15 @@ mtk_cfg80211_mgmt_frame_register (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to stay on a 
+ *        specified channel
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int 
 mtk_cfg80211_remain_on_channel (
@@ -1346,6 +1550,15 @@ mtk_cfg80211_remain_on_channel (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to cancel staying 
+ *        on a specified channel
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_cancel_remain_on_channel (
@@ -1398,6 +1611,14 @@ mtk_cfg80211_cancel_remain_on_channel (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to send a management frame
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0)
 int
@@ -1505,6 +1726,15 @@ mtk_cfg80211_mgmt_tx (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for requesting to cancel the wait time
+ *        from transmitting a management frame on another channel
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_mgmt_tx_cancel_wait (
@@ -1533,6 +1763,14 @@ mtk_cfg80211_mgmt_tx_cancel_wait (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+ * @brief This routine is responsible for handling association request 
+ *
+ * @param 
+ *
+ * @retval 0:       successful
+ *         others:  failure
+ */
 /*----------------------------------------------------------------------------*/
 int
 mtk_cfg80211_assoc (

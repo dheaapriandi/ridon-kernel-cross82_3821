@@ -514,7 +514,17 @@ static void adjust_quirks(struct us_data *us)
 		}
 	}
 	if (!*p)	/* No match */
+	{
+		if((vid==0x204)&&(pid==0x6025))/*modify by alik,add flag:US_FL_NO_WP_DETECT */
+		{
+			printk("VID =0x%x PID=0x%x    2\n",vid,pid);
+			us->fflags |= US_FL_NO_WP_DETECT;
+		}
+
 		return;
+	}
+
+
 
 	/* Collect the flags */
 	while (*++p && *p != ',') {

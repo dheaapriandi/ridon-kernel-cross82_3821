@@ -121,4 +121,12 @@ allow installd platform_app_data_file:file { rename setattr };
 
 # 20131217 App info->force stop->clear data. 
 # 20140106 add write permission
-allow installd download_file:dir { write rmdir };
+allow installd download_file:dir { write rmdir remove_name };
+
+# 20140117 for NE
+allow installd aee_aed:unix_stream_socket connectto;
+allow installd self:process ptrace;
+allow installd aee_aed:process sigchld;
+
+# 20140120 APPIOT clean master
+allow installd download_file:file unlink;

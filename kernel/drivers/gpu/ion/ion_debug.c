@@ -53,6 +53,10 @@ struct ion_client_usage_record *client_freed_list = NULL;
 struct ion_buffer_record *buffer_created_list = NULL;
 struct ion_buffer_record *buffer_destroyed_list = NULL;
 unsigned int destroyed_buffer_count = 0;
+DEFINE_MUTEX(gUserBtTable_mutex);
+DEFINE_MUTEX(gKernelBtTable_mutex);
+DEFINE_MUTEX(gMappingStringTable_mutex);
+DEFINE_MUTEX(gKernelPathTable_mutex);
 DEFINE_MUTEX(client_usage_mutex);
 DEFINE_MUTEX(buffer_lifecycle_mutex);
 DEFINE_MUTEX(process_lifecycle_mutex);
@@ -1314,14 +1318,14 @@ static StringEntry* find_string_entry(StringTable* table, unsigned int slot,char
 }
 char *get_userString_from_hashTable(char *string_name,unsigned int len)
 {
-	return get_string(string_name,len,&gMappingStringTable);
+	return get_string(string_name,len,&gMappingStringTable,&gMappingStringTable_mutex);
 }
 char *get_kernelString_from_hashTable(char *string_name,unsigned int len)
 {
-	return get_string(string_name,len+1,&gKernelPathTable); //add 1 for '\0'
+	return get_string(string_name,len+1,&gKernelPathTable,&gKernelPathTable_mutex); //add 1 for '\0'
 }
 //get string form hash table or create new hash node in hash table
-char *get_string(char *string_name,unsigned int len,StringTable *table)
+char *get_string(char *string_name,unsigned int len,StringTable *table,struct mutex *string_mutex)
 {
     unsigned int hash;
     unsigned int slot;
@@ -1330,7 +1334,9 @@ char *get_string(char *string_name,unsigned int len,StringTable *table)
     StringEntry *entry = NULL;
     hash = RSHash(string_name,len);
     slot = hash % OBJECT_TABLE_SIZE;
+    mutex_lock(string_mutex);
     entry = find_string_entry(table,slot,(void *)string_name,len);
+    mutex_unlock(string_mutex);
     if(entry != NULL)
     {
 	//ION_DEBUG_LOG(ION_DEBUG_INFO,"	[get_string] find string in string hash table : addres 0x[%x]%s\n",entry->name,entry->name,entry->string_len);
@@ -1338,7 +1344,6 @@ char *get_string(char *string_name,unsigned int len,StringTable *table)
     }
     else
     {
-	//ION_DEBUG_LOG(ION_DEBUG_INFO,"	[get_string]can't get string in string hash table \n");
 	entry = kmalloc(sizeof(StringEntry),GFP_KERNEL);
 	string_struct_size += (unsigned int)sizeof(StringEntry);
 	string_size += len;	
@@ -1348,6 +1353,7 @@ char *get_string(char *string_name,unsigned int len,StringTable *table)
 	entry->string_len = len;
 	entry->reference = 1;
         entry->prev = NULL;
+	mutex_lock(string_mutex);
         entry->next =  table->slots[slot];
         table->slots[slot] = entry;
         if(entry->next != NULL)
@@ -1355,6 +1361,7 @@ char *get_string(char *string_name,unsigned int len,StringTable *table)
         	entry->next->prev = entry;
         }
         table->count++;
+	mutex_unlock(string_mutex);
 	ION_DEBUG_LOG(ION_DEBUG_WARN, "string_struct_size [%d] string_size[%d]\n",string_struct_size,string_size);
 	//ION_DEBUG_LOG(ION_DEBUG_INFO,"        [get_string]create new node in string hash table: address 0x[%x]%s size %d\n",entry->name,entry->name,len);
 	return entry->name;
@@ -1409,7 +1416,9 @@ void *get_record(unsigned int type, ion_sys_record_t *param)
 			{
 				hash = get_hash(param->backtrace,param->backtrace_num);
 				slot = hash % OBJECT_TABLE_SIZE;
+				mutex_lock(&gUserBtTable_mutex);
 				entry = find_entry(&gUserBtTable,slot,(void *)param->backtrace,param->backtrace_num);
+				mutex_unlock(&gUserBtTable_mutex);
 				if(entry != NULL)
 				{
 					//ION_DEBUG_LOG(ION_DEBUG_INFO,"        [get_record][USER_BACKTRACE]find the same entry entry 0x%x entry num %d\n",entry->object,entry->numEntries);
@@ -1422,16 +1431,17 @@ void *get_record(unsigned int type, ion_sys_record_t *param)
 					entry->reference = 1;
 					entry->prev = NULL;
 					entry->slot = slot;
-					entry->next = gUserBtTable.slots[slot];
 					entry->numEntries = param->backtrace_num;
-
 					memcpy(entry->object,&(param->backtrace[0]),entry->numEntries * sizeof(unsigned int));
+					mutex_lock(&gUserBtTable_mutex);
+					entry->next = gUserBtTable.slots[slot];
 					gUserBtTable.slots[slot] = entry;
 					if(entry->next != NULL)
 					{
 						entry->next->prev = entry;
 					}
 					gUserBtTable.count++;
+					mutex_unlock(&gUserBtTable_mutex);
 					// ION_DEBUG_LOG(ION_DEBUG_INFO,"        [get_record][USER_BACKTRACE]create new entry>object  0x%x entry num %d souce %x source2 %x\n",entry->object,entry->numEntries,&param->backtrace[0],&(param->backtrace[0]));
 
 				}
@@ -1441,7 +1451,9 @@ void *get_record(unsigned int type, ion_sys_record_t *param)
 			{
                                 hash = get_hash(param->backtrace,param->backtrace_num);
                                 slot = hash % OBJECT_TABLE_SIZE;
+				mutex_lock(&gKernelBtTable_mutex);
                                 entry = find_entry(&gKernelBtTable,slot,(void *)param->backtrace,param->backtrace_num);
+				mutex_unlock(&gKernelBtTable_mutex);
                                 if(entry != NULL)
                                 {
                                         //ION_DEBUG_LOG(ION_DEBUG_INFO,"        [get_record][KERNEL_BACKTRACE]find the same entry entry 0x%x entry num %d\n",entry->object,entry->numEntries);
@@ -1453,15 +1465,17 @@ void *get_record(unsigned int type, ion_sys_record_t *param)
                                         entry->reference = 1;
                                         entry->prev = NULL;
                                         entry->slot = slot;
-                                        entry->next = gKernelBtTable.slots[slot];
                                         entry->numEntries = param->backtrace_num;
                                         memcpy(entry->object,param->backtrace,entry->numEntries * sizeof(unsigned int));
+					mutex_lock(&gKernelBtTable_mutex);
+					entry->next = gKernelBtTable.slots[slot];
                                         gKernelBtTable.slots[slot] = entry;
                                         if(entry->next != NULL)
                                         {
                                                 entry->next->prev = entry;
                                         }
                                         gKernelBtTable.count++;
+					mutex_unlock(&gKernelBtTable_mutex);
 					//ION_DEBUG_LOG(ION_DEBUG_INFO,"        [get_record][KERNEL_BACKTRACE]create new entry>object  0x%x entry num %d\n",entry->object,entry->numEntries);
                                 }
                                 return entry;

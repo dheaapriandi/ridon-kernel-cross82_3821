@@ -44,5 +44,5 @@ unsigned int get_kernel_backtrace_show(unsigned long *backtrace);
 void get_kernel_symbol(unsigned long *backtrace,unsigned int numEntries, unsigned int *kernel_symbol);
 char *get_userString_from_hashTable(char *string_name,unsigned int len);
 char *get_kernelString_from_hashTable(char *string_name,unsigned int len);
-char *get_string(char *string_name,unsigned int len,StringTable *table);
+char *get_string(char *string_name,unsigned int len,StringTable *table,struct mutex *string_mutex);
 char *ion_get_backtrace_info(struct ion_record_basic_info *tracking_info,char *backtrace_string,unsigned int backtrace_string_len, unsigned int backtrace_index,unsigned int show_backtrace_type);

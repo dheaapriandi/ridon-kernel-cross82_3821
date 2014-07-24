@@ -1,3 +1,18 @@
+/*
+ * Copyright (C) 2011 MediaTek, Inc.
+ *
+ * Author: Holmes Chiou <holmes.chiou@mediatek.com>
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/sched.h>
@@ -564,32 +579,7 @@ static int freqhopping_dramc_proc_open(struct inode *inode, struct file *file)
 }
 static ssize_t freqhopping_dramc_proc_write(struct file *file, const char *buffer, size_t count, loff_t *data)
 {
-	int len = 0, freq = 0;
-	char dramc[32];
-
-	FH_MSG("EN: proc");
-
-	len = (count < (sizeof(dramc) - 1)) ? count : (sizeof(dramc) - 1);
-
-	if (copy_from_user(dramc, buffer, len))
-	{
-		FH_MSG("copy_from_user fail!");
-		return 1;
-	}
-	
-	dramc[len] = '\0';
-   
-	if (sscanf(dramc, "%d", &freq) == 1)
-	{
-		mt_fh_dram_overclock(freq);
-		return count;
-	}
-	else
-	{
-		FH_MSG("  bad argument!!");
-	}
-
-	return -EINVAL;
+    return (ssize_t)(g_p_fh_hal_drv->proc.dramc_write(file, buffer, count, data));
 }
 
 static int freqhopping_dvfs_proc_open(struct inode *inode, struct file *file)
@@ -598,7 +588,7 @@ static int freqhopping_dvfs_proc_open(struct inode *inode, struct file *file)
 }
 static ssize_t freqhopping_dvfs_proc_write(struct file *file, const char *buffer, size_t count, loff_t *data)
 {
-    return (ssize_t)(g_p_fh_hal_drv->proc.dvfs_write);
+    return (ssize_t)(g_p_fh_hal_drv->proc.dvfs_write(file, buffer, count, data));
 }
 
 static int freqhopping_dumpregs_proc_open(struct inode *inode, struct file *file)

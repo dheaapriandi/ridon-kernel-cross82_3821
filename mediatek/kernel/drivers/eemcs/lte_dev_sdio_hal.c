@@ -23,38 +23,13 @@
 #include <linux/mmc/sdio_ids.h>
 #include <linux/mmc/sdio.h>
 
-#include <linux/aee.h>
-
 #include "lte_dev_test.h"
 #include "eemcs_kal.h"
 
 //#define PADPATER_TO_PSDIOFUNC(_pAdapter) ((struct sdio_func *)(((PHDRV_ADAPTER)_pAdapter)->pBusFunction))
 struct sdio_func *lte_sdio_func = NULL;
-extern struct wake_lock sdio_wake_lock;
 
-#ifdef USER_BUILD_KERNEL
-unsigned int assert_when_msdc_fail = 0;
-#else
 unsigned int assert_when_msdc_fail = 1;
-#endif
-
-//KAL_UINT32 log_sdio_read_time = 0;
-//KAL_UINT32 log_sdio_write_time = 0;
-
-#ifdef USER_BUILD_KERNEL
-
-MTLTE_HAL_TO_HIF_CALLBACK lte_sdio_cb_msdc_err = NULL;
-
-int mtlte_hal_register_MSDC_ERR_callback(MTLTE_HAL_TO_HIF_CALLBACK func_ptr) 
-{
-	KAL_DBGPRINT(KAL, DBG_INFO,("====> %s\n",KAL_FUNC_NAME)) ;
-    
-	lte_sdio_cb_msdc_err = func_ptr ;
-	
-	KAL_DBGPRINT(KAL, DBG_INFO,("<==== %s\n",KAL_FUNC_NAME)) ;
-	return KAL_SUCCESS ; 
-}
-#endif
 
 int sdio_func0_wr(unsigned int u4Register,unsigned char *pValue,  unsigned int Length)
 {
@@ -70,29 +45,14 @@ int sdio_func0_wr(unsigned int u4Register,unsigned char *pValue,  unsigned int L
     
     for (i=0 ; i<Length ; i++ ){
         // only reserved for vendor address is valid , that is u4Register = 0xF0~0xFF
-		
-		wake_lock(&sdio_wake_lock);
+
         sdio_claim_host(lte_sdio_func);	
         sdio_f0_writeb(lte_sdio_func,*(pValue+i) ,(u4Register+i), &err_ret) ;
         sdio_release_host(lte_sdio_func);
-		wake_unlock(&sdio_wake_lock);
        
         if (err_ret){
             KAL_DBGPRINT(KAL, DBG_ERROR, ("[ERR] function 0 write fail : addr : 0x%x , size : %d, err_ret: 0x%x\n", u4Register, Length, err_ret )) ;
             if(assert_when_msdc_fail) KAL_ASSERT(0);
-            else{
-#ifdef USER_BUILD_KERNEL
-                if(NULL != lte_sdio_cb_msdc_err){
-                    KAL_DBGPRINT(KAL, DBG_ERROR, ("[MTLTE][ERR] MSDC access Fail!!  Perform Slient Reset by using WDT reset... \n")) ;
-                    lte_sdio_cb_msdc_err(0);
-                }
-#else
-                char error_srt[64] = {0};
-                sprintf(error_srt, "\n1.MD maybe already CRASH \n2.MSDC setting maybe not good ");
-                aee_kernel_warning("[EEMCS] SDIO access FAIL!! \n  DO NOT access MD anymore!! ", error_srt);
-                while(1){KAL_SLEEP_MSEC(1000);}
-#endif                
-            }
         }else{
 	        KAL_DBGPRINT(KAL, DBG_INFO, ("[INFO] function 0 write - addr : 0x%x , value: 0x%x\n", u4Register+i, *(pValue+i))) ;	
 	    }
@@ -116,28 +76,13 @@ int sdio_func0_rd(  unsigned int u4Register,unsigned char *pValue,  unsigned int
     
     for (i=0 ; i<Length ; i++ ){
        
-		wake_lock(&sdio_wake_lock);
         sdio_claim_host(lte_sdio_func);	
         *(pValue+i) = sdio_f0_readb(lte_sdio_func, (u4Register+i), &err_ret) ;
         sdio_release_host(lte_sdio_func);
-		wake_unlock(&sdio_wake_lock);
      
         if (err_ret){
             KAL_DBGPRINT(KAL, DBG_ERROR, ("[ERR]function 0 read fail : addr : 0x%x , size : %d, err_ret: 0x%x\n", u4Register, Length, err_ret)) ;
             if(assert_when_msdc_fail) KAL_ASSERT(0);
-            else{
-#ifdef USER_BUILD_KERNEL
-                if(NULL != lte_sdio_cb_msdc_err){
-                    KAL_DBGPRINT(KAL, DBG_ERROR, ("[MTLTE][ERR] MSDC access Fail!!  Perform Slient Reset by using WDT reset... \n")) ;
-                    lte_sdio_cb_msdc_err(0);
-                }
-#else                
-                char error_srt[64] = {0};
-                sprintf(error_srt, "\n1.MD maybe already CRASH \n2.MSDC setting maybe not good ");
-                aee_kernel_warning("[EEMCS] SDIO access FAIL!! \n  DO NOT access MD anymore!! ", error_srt);
-                while(1){KAL_SLEEP_MSEC(1000);}
-#endif
-            }
         }else{
 	        KAL_DBGPRINT(KAL, DBG_INFO, ("[INFO] function 0 read - addr : 0x%x , value: 0x%x\n", u4Register+i, *(pValue+i))) ;	
 	    }
@@ -157,12 +102,10 @@ int sdio_func1_wr(unsigned int u4Register,void *pBuffer,  unsigned int Length)
     }
     
     KAL_ASSERT((pBuffer!=NULL)) ;
-
-	wake_lock(&sdio_wake_lock);
+   
     sdio_claim_host(lte_sdio_func);	
     ret = sdio_writesb(lte_sdio_func, u4Register, pBuffer, Length);
     sdio_release_host(lte_sdio_func);
-	wake_unlock(&sdio_wake_lock);
    
     if (ret){
         KAL_DBGPRINT(KAL, DBG_ERROR, ("[ERR] function 1 write fail : addr : 0x%x , size : %d, err_ret: 0x%x\n", u4Register, Length, ret)) ;
@@ -177,20 +120,6 @@ int sdio_func1_wr(unsigned int u4Register,void *pBuffer,  unsigned int Length)
         }
         KAL_DBGPRINT(KAL, DBG_ERROR, (" \n ")) ;
         if(assert_when_msdc_fail) KAL_ASSERT(0);
-        else{
-#ifdef USER_BUILD_KERNEL
-                if(NULL != lte_sdio_cb_msdc_err){
-                    KAL_DBGPRINT(KAL, DBG_ERROR, ("[MTLTE][ERR] MSDC access Fail!!  Perform Slient Reset by using WDT reset... \n")) ;
-                    lte_sdio_cb_msdc_err(0);
-                }
-#else
-
-                char error_srt[64] = {0};
-                sprintf(error_srt, "\n1.MD maybe already CRASH \n2.MSDC setting maybe not good ");
-                aee_kernel_warning("[EEMCS] SDIO access FAIL!! \n  DO NOT access MD anymore!! ", error_srt);
-                while(1){KAL_SLEEP_MSEC(1000);}
-#endif                
-            }
         
     }else{
 	    KAL_DBGPRINT(KAL, DBG_INFO, ("[INFO] function 1 write - addr : 0x%x , Length: %d, value: 0x%08x\n", u4Register, Length, *((unsigned int*)pBuffer))) ;	
@@ -215,29 +144,14 @@ int sdio_func1_rd(unsigned int u4Register,void *pBuffer,  unsigned int Length)
     }
     
     KAL_ASSERT((pBuffer!=NULL)) ;
-
-	wake_lock(&sdio_wake_lock);
+   
     sdio_claim_host(lte_sdio_func);	
     ret = sdio_readsb(lte_sdio_func, pBuffer, u4Register, Length);
     sdio_release_host(lte_sdio_func);
-	wake_unlock(&sdio_wake_lock);
     
     if (ret){
         KAL_DBGPRINT(KAL, DBG_ERROR, ("[ERR] function 1 read fail : addr : 0x%x , size : %d, err_ret: 0x%x\n", u4Register, Length, ret)) ;		
         if(assert_when_msdc_fail) KAL_ASSERT(0);
-        else{
-#ifdef USER_BUILD_KERNEL
-                if(NULL != lte_sdio_cb_msdc_err){
-                    KAL_DBGPRINT(KAL, DBG_ERROR, ("[MTLTE][ERR] MSDC access Fail!!  Perform Slient Reset by using WDT reset... \n")) ;
-                    lte_sdio_cb_msdc_err(0);
-                }
-#else            
-                char error_srt[64] = {0};
-                sprintf(error_srt, "\n1.MD maybe already CRASH \n2.MSDC setting maybe not good ");
-                aee_kernel_warning("[EEMCS] SDIO access FAIL!! \n  DO NOT access MD anymore!! ", error_srt);
-                while(1){KAL_SLEEP_MSEC(1000);}
-#endif
-            }
     }else{
 	    KAL_DBGPRINT(KAL, DBG_INFO, ("[INFO] function 1 read - addr : 0x%x , Length: %d, value: 0x%08x\n", u4Register, Length, *((unsigned int *)pBuffer))) ;	
 	}

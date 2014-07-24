@@ -1,7 +1,33 @@
+/*
+** $Id: $
+*/
+
+/*! \file   "hif_sdio.c"
+ * \brief
+ *
+ * detailed description
+*/
+
+/*
+** $Log: $
+ *
+ * 07 25 2010 george.kuo
+ *
+ * Move hif_sdio driver to linux directory.
+ *
+ * 07 23 2010 george.kuo
+ *
+ * Add MT6620 driver source tree
+ * , including char device driver (wmt, bt, gps), stp driver, interface driver (tty ldisc and hif_sdio), and bt hci driver.
+**
+**
+*/
 
 
-
-
+/*******************************************************************************
+*                         C O M P I L E R   F L A G S
+********************************************************************************
+*/
 #define HIF_SDIO_UPDATE (1)
 #if (WMT_PLAT_APEX==1)
 #define HIF_SDIO_SUPPORT_SUSPEND (1)
@@ -9,6 +35,10 @@
 #define HIF_SDIO_SUPPORT_SUSPEND (0)
 #endif
 
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 
 #include <linux/proc_fs.h>
 
@@ -23,21 +53,53 @@ extern void mmc_power_off_ext(struct mmc_host *host);
 #define mmc_power_off_ext(x)
 
 #endif
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 //#define DRV_NAME "[hif_sdio]"
 
+/*******************************************************************************
+*                             D A T A   T Y P E S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
+/*!
+ * \brief A macro used to generate hif_sdio client's context
+ *
+ * Generate a context for hif_sdio client based on the following input parameters
+ * |<-card id (16bits)->|<-block size in unit of 256 bytes(8 bits)->|<-function number(4bits)->|<-index(4bits)->|
+ *
+ * \param manf      the 16 bit manufacturer id
+ * \param card      the 16 bit card id
+ * \param func      the 16 bit function number
+ * \param b_sz    the 16 bit function block size
+ */
 #define CLTCTX(cid, func, blk_sz, idx) \
     (MTK_WCN_HIF_SDIO_CLTCTX)( (((UINT32)(cid) & 0xFFFFUL) << 16) | \
         (((UINT32)(func) & 0xFUL) << 4) | \
         (((UINT32)(blk_sz) & 0xFF00UL) << 0) | \
         (((UINT32)idx & 0xFUL) << 0) )
 
+/*!
+ * \brief A set of macros used to get information out of an hif_sdio client context
+ *
+ * Generate a context for hif_sdio client based on the following input parameters
+ */
 #define CLTCTX_CID(ctx) (((ctx) >> 16) & 0xFFFF)
 #define CLTCTX_FUNC(ctx) (((ctx) >> 4) & 0xF)
 #define CLTCTX_BLK_SZ(ctx) (((ctx) >> 0) & 0xFF00)
 #define CLTCTX_IDX(ctx) ((ctx) & 0xF)
 #define CLTCTX_IDX_VALID(idx) ((idx >= 0) && (idx < CFG_CLIENT_COUNT))
 
+/*******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 #if HIF_SDIO_SUPPORT_SUSPEND
 static int hif_sdio_suspend (
     struct device *dev
@@ -133,6 +195,10 @@ extern void msdc_sdio_deep_sleep(struct msdc_host *host, int nDelay);
 extern void msdc_sdio_wake_up(struct msdc_host *host);
 #endif
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 
 /* Supported SDIO device table */
 static const struct sdio_device_id mtk_sdio_id_tbl[] = {
@@ -196,6 +262,10 @@ static int gRefCount;
 static int (*fp_wmt_tra_sdio_update)(void) = NULL;
 
 
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("MediaTek Inc WCN_SE_CS3");
 MODULE_DESCRIPTION("MediaTek MT6620 HIF SDIO Driver");
@@ -205,6 +275,10 @@ MODULE_DEVICE_TABLE(sdio, mtk_sdio_id_tbl);
 UINT32 gHifSdioDbgLvl = HIF_SDIO_LOG_INFO;
 
 
+/*******************************************************************************
+*                              F U N C T I O N S
+********************************************************************************
+*/
 
 #if (WMT_PLAT_APEX==0)
 extern int mtk_wcn_sdio_irq_flag_set (int falg);
@@ -217,6 +291,14 @@ int mtk_wcn_sdio_irq_flag_set (int falg)
 
 
 
+/*!
+ * \brief register the callback funciton for record the timestamp of sdio access 
+ *
+ * \param  callback function
+ *
+ * \retval -EINVAL, when registered callback is invalid
+ * \retval 0, when registered callback is valid
+ */
 extern INT32 mtk_wcn_hif_sdio_update_cb_reg(int (*ts_update)(void))
 {
     if(ts_update){
@@ -229,6 +311,14 @@ extern INT32 mtk_wcn_hif_sdio_update_cb_reg(int (*ts_update)(void))
 }
 
 
+/*!
+ * \brief update the accessing time of SDIO via callback function
+ *
+ * \param  void
+ *
+ * \retval -EINVAL, when callback is not registered
+ * \retval returned value of callback
+ */
 static INT32 wmt_tra_sdio_update(VOID)
 {
     if(fp_wmt_tra_sdio_update){     
@@ -239,6 +329,19 @@ static INT32 wmt_tra_sdio_update(VOID)
         return -EINVAL;
     }   
 }
+/*!
+ * \brief Translate CLTCTX into a pointer to struct sdio_func if it is valid
+ *
+ * Translate a CLTCTX into a pointer to struct sdio_func if it is
+ *  1) probed by mmc_core, and
+ *  2) client driver is registered, and
+ *  3) clt_idx of client driver is valid
+ *
+ * \param ctx a context provided by client driver
+ *
+ * \retval null if any condition is not valie
+ * \retval a pointer to a struct sdio_func mapped by provided ctx
+ */
 static inline struct sdio_func* hif_sdio_ctx_to_func (
     MTK_WCN_HIF_SDIO_CLTCTX ctx)
 {
@@ -263,6 +366,16 @@ static inline struct sdio_func* hif_sdio_ctx_to_func (
     return g_hif_sdio_probed_func_list[probe_index].func;
 }
 
+/*!
+ * \brief MTK hif sdio client registration function
+ *
+ * Client uses this function to register itself to hif_sdio driver
+ *
+ * \param pinfo a pointer of client's information
+ *
+ * \retval 0 register successfully
+ * \retval < 0 list error code here
+ */
 INT32 mtk_wcn_hif_sdio_client_reg (
     const MTK_WCN_HIF_SDIO_CLTINFO *pinfo
     )
@@ -386,6 +499,16 @@ out:
     return ret;
 } /* end of mtk_wcn_hif_sdio_client_reg() */
 
+/*!
+ * \brief MTK hif sdio client un-registration function
+ *
+ * Client uses this function to un-register itself
+ *
+ * \param pinfo a pointer of client's information
+ *
+ * \retval 0    register successfully
+ * \retval < 0  list error code here
+ */
 INT32 mtk_wcn_hif_sdio_client_unreg (
     const MTK_WCN_HIF_SDIO_CLTINFO *pinfo
     )
@@ -449,6 +572,16 @@ out:
     return ret;
 }/* end of mtk_wcn_hif_sdio_client_unreg() */
 
+/*!
+ * \brief
+ *
+ * detailed descriptions
+ *
+ * \param ctx client's context variable
+ *
+ * \retval 0    register successfully
+ * \retval < 0  list error code here
+ */
 INT32 mtk_wcn_hif_sdio_readb (
     MTK_WCN_HIF_SDIO_CLTCTX ctx,
     UINT32 offset,
@@ -507,6 +640,16 @@ out:
     return ret;
 } /* end of mtk_wcn_hif_sdio_client_unreg() */
 
+/*!
+ * \brief
+ *
+ * detailed descriptions
+ *
+ * \param ctx client's context variable
+ *
+ * \retval 0    register successfully
+ * \retval < 0  list error code here
+ */
 INT32 mtk_wcn_hif_sdio_writeb (
     MTK_WCN_HIF_SDIO_CLTCTX ctx,
     UINT32 offset,
@@ -567,6 +710,16 @@ out:
     return ret;
 } /* end of mtk_wcn_hif_sdio_client_unreg() */
 
+/*!
+ * \brief
+ *
+ * detailed descriptions
+ *
+ * \param ctx client's context variable
+ *
+ * \retval 0    register successfully
+ * \retval < 0  list error code here
+ */
 INT32 mtk_wcn_hif_sdio_readl (
     MTK_WCN_HIF_SDIO_CLTCTX ctx,
     UINT32 offset,
@@ -626,6 +779,16 @@ out:
     return ret;
 } /* end of mtk_wcn_hif_sdio_client_unreg() */
 
+/*!
+ * \brief
+ *
+ * detailed descriptions
+ *
+ * \param ctx client's context variable
+ *
+ * \retval 0    register successfully
+ * \retval < 0  list error code here
+ */
 INT32 mtk_wcn_hif_sdio_writel (
     MTK_WCN_HIF_SDIO_CLTCTX ctx,
     UINT32 offset,
@@ -685,6 +848,16 @@ out:
     return ret;
 } /* end of mtk_wcn_hif_sdio_client_unreg() */
 
+/*!
+ * \brief
+ *
+ * detailed descriptions
+ *
+ * \param ctx client's context variable
+ *
+ * \retval 0    register successfully
+ * \retval < 0  list error code here
+ */
 INT32 mtk_wcn_hif_sdio_read_buf (
     MTK_WCN_HIF_SDIO_CLTCTX ctx,
     UINT32 offset,
@@ -746,6 +919,16 @@ out:
 } /* end of mtk_wcn_hif_sdio_read_buf() */
 
 
+/*!
+ * \brief
+ *
+ * detailed descriptions
+ *
+ * \param ctx client's context variable
+ *
+ * \retval 0    register successfully
+ * \retval < 0  list error code here
+ */
 INT32 mtk_wcn_hif_sdio_write_buf (
     MTK_WCN_HIF_SDIO_CLTCTX ctx,
     UINT32 offset,
@@ -808,6 +991,14 @@ out:
     return ret;
 } /* end of mtk_wcn_hif_sdio_write_buf() */
 
+/*!
+ * \brief store client driver's private data function.
+ *
+ *
+ * \param clent's MTK_WCN_HIF_SDIO_CLTCTX.
+ *
+ * \retval none.
+ */
 void mtk_wcn_hif_sdio_set_drvdata(
     MTK_WCN_HIF_SDIO_CLTCTX ctx,
     void* private_data_p
@@ -826,6 +1017,14 @@ void mtk_wcn_hif_sdio_set_drvdata(
     }
 }
 
+/*!
+ * \brief get client driver's private data function.
+ *
+ *
+ * \param clent's MTK_WCN_HIF_SDIO_CLTCTX.
+ *
+ * \retval private data pointer.
+ */
 void* mtk_wcn_hif_sdio_get_drvdata(
     MTK_WCN_HIF_SDIO_CLTCTX ctx
     )
@@ -845,6 +1044,15 @@ void* mtk_wcn_hif_sdio_get_drvdata(
     }
 }
 
+/*!
+ * \brief control stp/wifi on/off from wmt.
+ *
+ *
+ * \param (1)control function type, (2)on/off control.
+ *
+ * \retval (1)control results ,(2)unknow type: -5.
+ * \retval 0:success, -11:not probed, -12:already on, -13:not registered, other errors.
+ */
 INT32
 mtk_wcn_hif_sdio_wmt_control (
     WMT_SDIO_FUNC_TYPE func_type,
@@ -879,6 +1087,16 @@ mtk_wcn_hif_sdio_wmt_control (
     }
 }
 
+/*!
+ * \brief ???
+ *
+ * \detail ???
+ *
+ * \param ctx a context provided by client driver
+ * \param struct device ** ???
+ *
+ * \retval none
+ */
 void mtk_wcn_hif_sdio_get_dev(
     MTK_WCN_HIF_SDIO_CLTCTX ctx,
     struct device **dev
@@ -912,6 +1130,14 @@ void mtk_wcn_hif_sdio_get_dev(
 #endif
 }
 
+/*!
+ * \brief client's probe() function.
+ *
+ *
+ * \param work queue structure.
+ *
+ * \retval none.
+ */
 static int hif_sdio_clt_probe_func (
     MTK_WCN_HIF_SDIO_REGISTINFO *registinfo_p,
     INT8 probe_idx
@@ -947,6 +1173,14 @@ static int hif_sdio_clt_probe_func (
     return ret;
 }
 
+/*!
+ * \brief client's probe() worker.
+ *
+ *
+ * \param work queue structure.
+ *
+ * \retval none.
+ */
 static void hif_sdio_clt_probe_worker(
     struct work_struct *work
     )
@@ -989,6 +1223,14 @@ static void hif_sdio_clt_probe_worker(
     HIF_SDIO_DBG_FUNC("end!\n");
 }
 
+/*!
+ * \brief client's probe() worker.
+ *
+ *
+ * \param work queue structure.
+ *
+ * \retval none.
+ */
 static void
 hif_sdio_dump_probe_list (void)
 {
@@ -1015,6 +1257,14 @@ hif_sdio_dump_probe_list (void)
 }
 
 
+/*!
+ * \brief Initialize g_hif_sdio_probed_func_list
+ *
+ *
+ * \param index of g_hif_sdio_probed_func_list.
+ *
+ * \retval none.
+ */
 static void hif_sdio_init_probed_list(
     INT32 index
     )
@@ -1037,6 +1287,14 @@ static void hif_sdio_init_probed_list(
 }
 
 
+/*!
+ * \brief Initialize g_hif_sdio_clt_drv_list
+ *
+ *
+ * \param index of g_hif_sdio_clt_drv_list.
+ *
+ * \retval none.
+ */
 static void hif_sdio_init_clt_list(
     INT32 index
     )
@@ -1057,6 +1315,15 @@ static void hif_sdio_init_clt_list(
 }
 
 
+/*!
+ * \brief find matched g_hif_sdio_probed_func_list index from sdio function handler
+ *
+ *
+ * \param sdio function handler
+ *
+ * \retval -1    index not found
+ * \retval >= 0  return found index
+ */
 static int hif_sdio_find_probed_list_index_by_func(
     struct sdio_func* func
     )
@@ -1076,6 +1343,15 @@ static int hif_sdio_find_probed_list_index_by_func(
     return -1;
 }
 
+/*!
+ * \brief find matched g_hif_sdio_probed_func_list from vendor_id, device_id, and function number
+ *
+ *
+ * \param vendor id, device id, and function number of the sdio card.
+ *
+ * \retval -1    index not found
+ * \retval >= 0  return found index
+ */
 static int hif_sdio_find_probed_list_index_by_id_func(
     UINT16 vendor,
     UINT16 device,
@@ -1114,6 +1390,16 @@ static int hif_sdio_find_probed_list_index_by_id_func(
     return -1;
 }
 
+/*!
+ * \brief find matched g_hif_sdio_clt_drv_list index
+ *
+ * find the matched g_hif_sdio_clt_drv_list index from card_id and function number.
+ *
+ * \param vendor id, device id, and function number of the sdio card
+ *
+ * \retval -1    index not found
+ * \retval >= 0  return found index
+ */
 static int hif_sdio_find_clt_list_index (
     UINT16 vendor,
     UINT16 device,
@@ -1139,6 +1425,15 @@ static int hif_sdio_find_clt_list_index (
 }
 
 
+/*!
+ * \brief check if the vendor, device ids are supported in mtk_sdio_id_tbl.
+ *
+ *
+ * \param vendor id and device id of the sdio card
+ *
+ * \retval (-HIF_SDIO_ERR_FAIL)  vendor, device ids are not suppported
+ * \retval HIF_SDIO_ERR_SUCCESS  vendor, device ids are suppported
+ */
 static int hif_sdio_check_supported_sdio_id(
     UINT16 vendor,
     UINT16 device
@@ -1157,6 +1452,15 @@ static int hif_sdio_check_supported_sdio_id(
 }
 
 
+/*!
+ * \brief check if the vendor, device ids are duplicated in g_hif_sdio_clt_drv_list.
+ *
+ *
+ * \param vendor id, device id, and function number of the sdio card
+ *
+ * \retval (-HIF_SDIO_ERR_DUPLICATED)  vendor, device, func_num are duplicated
+ * \retval HIF_SDIO_ERR_SUCCESS        vendor, device, func_num are not duplicated
+ */
 static int hif_sdio_check_duplicate_sdio_id(
     UINT16 vendor,
     UINT16 device,
@@ -1181,6 +1485,16 @@ static int hif_sdio_check_duplicate_sdio_id(
 }
 
 
+/*!
+ * \brief Add the client info into g_hif_sdio_clt_drv_list.
+ *
+ *
+ * \param [output] client's index pointer.
+ * \param MTK_WCN_HIF_SDIO_CLTINFO of client's contex.
+ *
+ * \retval (-HIF_SDIO_ERR_FAIL)  Add to clt_list successfully
+ * \retval HIF_SDIO_ERR_SUCCESS  Add to clt_list failed (buffer is full)
+ */
 static int hif_sdio_add_clt_list(
     INT32*  clt_index_p,
     const MTK_WCN_HIF_SDIO_CLTINFO *pinfo,
@@ -1259,6 +1573,18 @@ static int hif_sdio_resume (struct device *dev)
 }
 #endif
 
+/*!
+ * \brief hif_sdio probe function
+ *
+ * hif_sdio probe function called by mmc driver when any matched SDIO function
+ * is detected by it.
+ *
+ * \param func
+ * \param id
+ *
+ * \retval 0    register successfully
+ * \retval < 0  list error code here
+ */
 static int hif_sdio_probe (
     struct sdio_func *func,
     const struct sdio_device_id *id
@@ -1418,6 +1744,15 @@ out:
 }
 
 
+/*!
+ * \brief hif_sdio remove function
+ *
+ * hif_sdio probe function called by mmc driver when the probed func should be
+ * removed.
+ *
+ * \param func
+ *
+ */
 static void hif_sdio_remove (
     struct sdio_func *func
     )
@@ -1473,6 +1808,14 @@ static void hif_sdio_remove (
     HIF_SDIO_INFO_FUNC("sdio func(0x%p) is removed successfully!\n", func);
 }
 
+/*!
+ * \brief hif_sdio interrupt handler
+ *
+ * detailed descriptions
+ *
+ * \param ctx client's context variable
+ *
+ */
 static void hif_sdio_irq (
     struct sdio_func *func
     )
@@ -1527,6 +1870,13 @@ static void hif_sdio_irq (
 
 
 
+/*!
+ * \brief hif_sdio init function
+ *
+ * detailed descriptions
+ *
+ * \retval
+ */
 static int hif_sdio_init(void)
 {
     int   ret = 0;
@@ -1565,6 +1915,13 @@ static int hif_sdio_init(void)
     return ret;
 }
 
+/*!
+ * \brief hif_sdio init function
+ *
+ * detailed descriptions
+ *
+ * \retval
+ */
 static VOID hif_sdio_exit(void)
 {
     HIF_SDIO_INFO_FUNC("start!\n");
@@ -1593,6 +1950,14 @@ static VOID hif_sdio_exit(void)
     return;
 } /* end of exitWlan() */
 
+/*!
+ * \brief stp on by wmt (probe client driver).
+ *
+ *
+ * \param none.
+ *
+ * \retval 0:success, -11:not probed, -12:already on, -13:not registered, other errors.
+ */
 INT32 hif_sdio_stp_on(
     void
     )
@@ -1718,6 +2083,14 @@ stp_on_exist:
     }
 }
 
+/*!
+ * \brief stp off by wmt (remove client driver).
+ *
+ *
+ * \param none.
+ *
+ * \retval 0:success, -11:not probed, -12:already off, -13:not registered, other errors.
+ */
 INT32 hif_sdio_stp_off(
     void
     )
@@ -1836,6 +2209,14 @@ stp_off_exist:
     }
 }
 
+/*!
+ * \brief wifi on by wmt (probe client driver).
+ *
+ *
+ * \param none.
+ *
+ * \retval 0:success, -11:not probed, -12:already on, -13:not registered, other errors.
+ */
 INT32
 hif_sdio_wifi_on (void)
 {
@@ -1951,6 +2332,14 @@ wifi_on_exist:
     }
 }
 
+/*!
+ * \brief wifi off by wmt (remove client driver).
+ *
+ *
+ * \param none.
+ *
+ * \retval 0:success, -11:not probed, -12:already off, -13:not registered, other errors.
+ */
 INT32 hif_sdio_wifi_off(
     void
     )
@@ -2061,6 +2450,15 @@ wifi_off_exist:
     }
 }
 
+/*!
+ * \brief set mmc power up/off
+ *
+ * detailed descriptions
+ *
+ * \param: 1. ctx client's context variable, 2.power state: 1:power up, other:power off
+ *
+ * \retval 0:success, -1:fail
+ */
 INT32 mtk_wcn_hif_sdio_bus_set_power (
     MTK_WCN_HIF_SDIO_CLTCTX ctx,
     UINT32 pwrState
@@ -2120,6 +2518,16 @@ void mtk_wcn_hif_sdio_enable_irq(
 }
 
 #if HIF_SDIO_API_EXTENSION
+/*!
+ * \brief
+ *
+ * detailed descriptions
+ *
+ * \param ctx client's context variable
+ *
+ * \retval 0    register successfully
+ * \retval < 0  list error code here
+ */
 INT32 mtk_wcn_hif_sdio_f0_readb (
     MTK_WCN_HIF_SDIO_CLTCTX ctx,
     UINT32 offset,
@@ -2179,6 +2587,16 @@ out:
 } /* end of mtk_wcn_hif_sdio_f0_readb() */
 
 
+/*!
+ * \brief
+ *
+ * detailed descriptions
+ *
+ * \param ctx client's context variable
+ *
+ * \retval 0    register successfully
+ * \retval < 0  list error code here
+ */
 INT32 mtk_wcn_hif_sdio_f0_writeb (
     MTK_WCN_HIF_SDIO_CLTCTX ctx,
     UINT32 offset,

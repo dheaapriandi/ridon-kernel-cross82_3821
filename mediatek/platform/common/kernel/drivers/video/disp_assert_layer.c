@@ -163,21 +163,6 @@ UINT32 DAL_GetLayerSize(void)
     return DAL_PITCH* DAL_HEIGHT * DAL_BPP + 4096;
 }
 
-int DAL_address_burst_align(void)
-{
-    int align = 0;
-    int burst_mod = DAL_WIDTH*DAL_BPP % (8*DAL_BPP);
-    int burst = DAL_WIDTH*DAL_BPP/(8*DAL_BPP) + (burst_mod ?1:0);
-
-    int burst_8mod = burst%8;
-    if(burst_8mod < 4)
-    {
-         align = 0x40;
-    }
-    printk("dal address align 0x%x\n",align);
-    return align;
-}
-
 DAL_STATUS DAL_SetScreenColor(DAL_COLOR color)
 {
 	UINT32 i;
@@ -194,7 +179,7 @@ DAL_STATUS DAL_SetScreenColor(DAL_COLOR color)
 	UINT32 offset =  MFC_Get_Cursor_Offset(mfc_handle);
 	UINT32 *addr=ctxt->fb_addr+offset;
 	
-	size= DAL_GetLayerSize()-offset - DAL_address_burst_align();
+	size= DAL_GetLayerSize()-offset;
 	for(i = 0; i < size/ sizeof(UINT32); ++ i) 
 	{
 	    *addr ++ = BG_COLOR;
@@ -204,11 +189,26 @@ DAL_STATUS DAL_SetScreenColor(DAL_COLOR color)
     return DAL_STATUS_OK;
 }
 
+int DAL_address_burst_align()
+{
+    int align = 0;
+    int burst_mod = DAL_WIDTH*DAL_BPP % (8*DAL_BPP);
+    int burst = DAL_WIDTH*DAL_BPP/(8*DAL_BPP) + (burst_mod ?1:0);
+
+    int burst_8mod = burst%8;
+    if(burst_8mod < 4)
+    {
+         align = 0x40;
+    }
+    printk("dal address align 0x%x\n",align);
+    return align;
+}
+
 DAL_STATUS DAL_Init(UINT32 layerVA, UINT32 layerPA)
 {
     printk("%s", __func__);
 
-    int align = DAL_address_burst_align();
+    int align = DAL_address_burst_align(layerVA);
     dal_fb_addr = (void *)(layerVA+align);
     dal_fb_pa = layerPA+align;
     DAL_CHECK_MFC_RET(MFC_Open_Ex(&mfc_handle, dal_fb_addr,

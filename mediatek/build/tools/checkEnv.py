@@ -279,7 +279,7 @@ class PythonCheck(object):
             number = self.versionNo.split(".")
             if int(number[0]) < 1 or (int(number[0]) ==2 and int(number[1] < 6)):
                self.info = "your python version is lower than recommendation" 
-            elif int(number[0]) == 2 and (int(number[1]) == 6 or int(number[1]) == 7):
+            elif int(number[0]) == 2 and int(number[1]) == 6:
                self.flag = "OK"
             else:
                self.flag = "WARNING"

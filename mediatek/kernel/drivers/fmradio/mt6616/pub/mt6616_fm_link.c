@@ -1,3 +1,25 @@
+/* mt6626_fm_link.c
+ *
+ * (C) Copyright 2009
+ * MediaTek <www.MediaTek.com>
+ * Hongcheng <hongcheng.xia@MediaTek.com>
+ *
+ * MT6626 FM Radio Driver -- setup data link
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #include <linux/slab.h>
 #include <linux/version.h>
 #include <linux/interrupt.h>
@@ -75,6 +97,18 @@ static fm_u32 fm_event_clr(struct fm_link_event* thiz, fm_u32 mask)
     return thiz->flag &= ~mask;
 }
 
+/**
+ * fm_event_check - sleep until a condition gets true or a timeout elapses
+ * @thiz: the pointer of current object
+ * @mask: bitmap in fm_u32
+ * @timeout: timeout, in jiffies
+ *
+ * fm_event_set() has to be called after changing any variable that could
+ * change the result of the wait condition.
+ *
+ * The function returns 0 if the @timeout elapsed, and the remaining
+ * jiffies if the condition evaluated to true before the timeout elapsed.
+ */
 static long fm_event_check(struct fm_link_event* thiz, fm_u32 mask, long timeout)
 {
     return wait_event_timeout(thiz->wq, ((thiz->flag & mask) == mask), timeout*HZ);
@@ -123,6 +157,13 @@ fm_s32 fm_link_release(void)
     return 0;
 }
 
+/*
+ * fm_ctrl_rx
+ * the low level func to read a rigister
+ * @addr - rigister address
+ * @val - the pointer of target buf
+ * If success, return 0; else error code
+ */
 fm_s32 fm_ctrl_rx(fm_u8 addr, fm_u16 *val)
 {
     fm_s32 n;
@@ -149,6 +190,13 @@ fm_s32 fm_ctrl_rx(fm_u8 addr, fm_u16 *val)
     return 0;
 }
 
+/*
+ * fm_ctrl_tx
+ * the low level func to write a rigister
+ * @addr - rigister address
+ * @val - value will be writed in the rigister
+ * If success, return 0; else error code
+ */
 fm_s32 fm_ctrl_tx(fm_u8 addr, fm_u16 val)
 {
     fm_s32 n;
@@ -168,6 +216,15 @@ fm_s32 fm_ctrl_tx(fm_u8 addr, fm_u16 val)
     return 0;
 }
 
+/*
+ * fm_cmd_tx() - send cmd to FM firmware and wait event
+ * @buf - send buffer
+ * @len - the length of cmd
+ * @mask - the event flag mask
+ * @	cnt - the retry conter
+ * @timeout - timeout per cmd
+ * Return 0, if success; error code, if failed
+ */
 fm_s32 fm_cmd_tx(fm_u8* buf, fm_u16 len, fm_s32 mask, fm_s32 cnt, fm_s32 timeout, fm_s32(*callback)(struct fm_res_ctx* result))
 {
     return 0;

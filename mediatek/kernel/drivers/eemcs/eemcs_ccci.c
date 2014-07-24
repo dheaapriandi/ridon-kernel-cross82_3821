@@ -14,8 +14,6 @@
 #endif
 
 static struct wake_lock eemcs_wake_lock;
-/*used to ensure sdio_fun1_read, sdio_fun1_write*/
-struct wake_lock sdio_wake_lock;
 static KAL_UINT8 eemcs_wakelock_name[32];
 static spinlock_t swint_cb_lock;
 static ccci_tx_waitq_t ccci_tx_waitq[TXQ_NUM];
@@ -24,21 +22,21 @@ static EEMCS_CCCI_WDT_CALLBACK ccci_WDT_cb = NULL;
 static KAL_UINT32 ccci_ch_to_port_mapping[CH_NUM_MAX];
 static ccci_port_cfg ccci_port_info[CCCI_PORT_NUM_MAX] = {
     /* CCCI Character Devices */
-    {{CH_CTRL_RX,   CH_CTRL_TX, NULL, NULL}, HIF_SDIO, TX_Q_0, RX_Q_0, 0, 0, BLK_4K, 4, BLK_4K, 4, EX_T_USER, PRI_RT,EXPORT_CCCI_H|TX_PRVLG1|TX_PRVLG2},
+	{{CH_CTRL_RX,   CH_CTRL_TX, NULL, NULL}, HIF_SDIO, TX_Q_0, RX_Q_0, 0, 0, BLK_4K, 4, BLK_4K, 4, EX_T_USER, PRI_RT,EXPORT_CCCI_H},
     {{CH_SYS_RX,    CH_SYS_TX,  NULL, NULL}, HIF_SDIO, TX_Q_0, RX_Q_0, 0, 0, BLK_4K, 1, BLK_4K, 1, EX_T_USER, PRI_RT,EXPORT_CCCI_H},
     {{CH_AUD_RX,    CH_AUD_TX,  NULL, NULL}, HIF_SDIO, TX_Q_0, RX_Q_0, 0, 0, BLK_4K, 8, BLK_4K, 8, EX_T_USER, PRI_RT, EXPORT_CCCI_H},
     
-    {{CH_META_RX,   CH_META_TX, NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_1, 0, 0, BLK_16K, 4, BLK_16K, 4, EX_T_USER, PRI_NR, TX_PRVLG2},
+    {{CH_META_RX,   CH_META_TX, NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_1, 0, 0, BLK_16K, 4, BLK_16K, 4, EX_T_USER, PRI_NR, 0},
     {{CH_MUX_RX,    CH_MUX_TX,  NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_1, 0, 0, BLK_4K, 16, BLK_2K, 16, EX_T_USER, PRI_NR, 0},
 
-    {{CH_FS_RX,     CH_FS_TX,   NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_1, 0, 0, BLK_4K, 4, BLK_4K, 8, EX_T_USER, PRI_NR, EXPORT_CCCI_H|TX_PRVLG1|TX_PRVLG2},
+    {{CH_FS_RX,     CH_FS_TX,   NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_1, 0, 0, BLK_4K, 4, BLK_4K, 8, EX_T_USER, PRI_NR, EXPORT_CCCI_H},
     {{CH_PMIC_RX,   CH_PMIC_TX, NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_1, 0, 0, BLK_4K, 1, BLK_2K, 1, EX_T_USER, PRI_NR, EXPORT_CCCI_H},
     {{CH_UEM_RX,    CH_UEM_TX,  NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_1, 0, 0, BLK_4K, 1, BLK_1K, 1, EX_T_USER, PRI_NR, EXPORT_CCCI_H},
 
-    {{CH_RPC_RX,    CH_RPC_TX,  NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_1, 0, 0, BLK_4K, 2, BLK_4K, 2, EX_T_USER, PRI_NR, TX_PRVLG1},
+    {{CH_RPC_RX,    CH_RPC_TX,  NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_1, 0, 0, BLK_4K, 2, BLK_4K, 2, EX_T_USER, PRI_NR, 0},
     {{CH_IPC_RX,    CH_IPC_TX,  NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_1, 0, 0, BLK_4K, 2, BLK_4K, 2, EX_T_USER, PRI_NR, 0},
     {{CH_AGPS_RX,   CH_AGPS_TX, NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_1, 0, 0, BLK_4K, 2, BLK_4K, 2, EX_T_USER, PRI_NR, 0},
-    {{CH_MLOG_RX,   CH_MLOG_TX, NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_2, 500, 300, BLK_4K, 4, BLK_4K, 4, EX_T_USER, PRI_RT, TX_PRVLG2},
+    {{CH_MLOG_RX,   CH_MLOG_TX, NULL, NULL}, HIF_SDIO, TX_Q_1, RX_Q_2, 500, 300, BLK_4K, 4, BLK_4K, 4, EX_T_USER, PRI_RT, 0},
 
     {{CH_IMSV_DL,   CH_IMSV_UL, NULL, NULL}, HIF_SDIO, TX_Q_0, RX_Q_0, 0, 0, BLK_4K, 8, BLK_4K, 8, EX_T_USER, PRI_RT, 0},
     {{CH_IMSC_DL,   CH_IMSC_UL, NULL, NULL}, HIF_SDIO, TX_Q_0, RX_Q_0, 0, 0, BLK_4K, 8, BLK_4K, 8, EX_T_USER, PRI_RT, 0},
@@ -49,7 +47,7 @@ static ccci_port_cfg ccci_port_info[CCCI_PORT_NUM_MAX] = {
     {{CH_DUMMY,     CH_DUMMY   ,NULL, NULL}, HIF_SDIO, TX_Q_0, RX_Q_0, 0, 0, BLK_4K, 8, BLK_4K, 8, EX_T_USER, PRI_RT, 0}, /*CCCI_PORT_IOCTL*/
     {{CH_DUMMY,     CH_DUMMY   ,NULL, NULL}, HIF_SDIO, TX_Q_0, RX_Q_0, 0, 0, BLK_4K, 8, BLK_4K, 8, EX_T_USER, PRI_RT, 0}, /*CCCI_PORT_RILD*/
         
-    {{CH_IT_RX,   CH_IT_TX, NULL, NULL}, HIF_SDIO, TX_Q_0, RX_Q_0, 0, 0, BLK_4K, 4, BLK_4K, 4, EX_T_USER, PRI_RT,EXPORT_CCCI_H|TX_PRVLG1|TX_PRVLG2},    
+    {{CH_IT_RX,   CH_IT_TX, NULL, NULL}, HIF_SDIO, TX_Q_0, RX_Q_0, 0, 0, BLK_4K, 4, BLK_4K, 4, EX_T_USER, PRI_RT,EXPORT_CCCI_H},    
     /* CCCI Network Interface */
     {{CH_NET1_RX,   CH_NET1_TX, NULL, NULL}, HIF_SDIO, TX_Q_2, RX_Q_3, 0, 0, BLK_2K, 32, BLK_2K, 32, EX_T_KERN, PRI_NR,0},
     {{CH_NET2_RX,   CH_NET2_TX, NULL, NULL}, HIF_SDIO, TX_Q_3, RX_Q_3, 0, 0, BLK_2K, 4, BLK_2K, 4, EX_T_KERN, PRI_NR,0},
@@ -58,7 +56,6 @@ static ccci_port_cfg ccci_port_info[CCCI_PORT_NUM_MAX] = {
 };
 KAL_UINT32 ccci_ch_to_port(KAL_UINT32 ccci_ch_num){
     KAL_UINT32 port_index;
-    KAL_ASSERT(ccci_ch_num < CH_NUM_MAX);
     port_index = ccci_ch_to_port_mapping[ccci_ch_num];
     KAL_ASSERT(port_index < CCCI_PORT_NUM_MAX);
     return port_index;
@@ -306,7 +303,7 @@ KAL_INT32 eemcs_ccci_UL_write_skb_to_swq(CCCI_CHANNEL_T chn, struct sk_buff *skb
         {
             if(is_valid_exception_tx_channel(chn))
             {
-                expt_port_info = get_expt_port_info(ccci_ch_to_port(chn));
+                expt_port_info = ccci_get_expt_port_info(ccci_ch_to_port(chn));
                 /* set exception TX Q*/
                 tx_queue_idx = expt_port_info->expt_txq_id;
                 DBGLOG(CCCI, DBG, "[EXPT] ccci_UL_write_skb_to_swq write skb to DF: ch=%d, txq=%d", chn, tx_queue_idx);
@@ -387,7 +384,7 @@ KAL_INT32 eemcs_ccci_boot_UL_write_skb_to_swq(struct sk_buff *skb)
         {
             if(is_valid_exception_tx_channel(CH_CTRL_TX))
             {
-                expt_port_info = get_expt_port_info(ccci_ch_to_port(CH_CTRL_TX));
+                expt_port_info = ccci_get_expt_port_info(ccci_ch_to_port(CH_CTRL_TX));
                 /* set exception TX Q*/
                 tx_queue_idx = expt_port_info->expt_txq_id;
                 DBGLOG(CCCI, DBG, "[EXPT]boot_write_skb_to_swq: ch=%d, txq=%d", CH_CTRL_TX, tx_queue_idx);
@@ -447,13 +444,11 @@ int is_xboot_command(struct sk_buff *skb)
 
 int ccci_df_to_ccci_callback(unsigned int rxq_no)
 {
-    int ret, hc_ret;
-    bool is_xcmd = false;
+    int ret, hc_ret, is_xcmd;
     struct sk_buff * skb = NULL;
     CCCI_BUFF_T *ccci_h  = NULL;
     XBOOT_CMD *p_xcmd = NULL;
-    KAL_UINT32   port_id = CCCI_PORT_CTRL;
-    static KAL_UINT32 rx_err_cnt[CCCI_PORT_NUM_MAX] = {0};
+    KAL_UINT32   port_id = 0;
 #ifdef __EEMCS_EXPT_SUPPORT__
     EEMCS_EXCEPTION_STATE mode = EEMCS_EX_INVALID;
 #endif
@@ -474,66 +469,84 @@ int ccci_df_to_ccci_callback(unsigned int rxq_no)
     hc_ret = hif_dl_pkt_handle_complete(rxq_no);
     KAL_ASSERT(0 == hc_ret);
 
-    wake_lock_timeout(&eemcs_wake_lock, HZ/2); // Using 0.5s wake lock
-
-	/* Step 3. buffer type */
+    DBGLOG(CCCI, DBG, "ccci_df_to_ccci_callback() rxq_no = %d", rxq_no);
+    /* Step 3. buffer type */
     if (rxq_no == RXQ_Q0) {
-        //is_xcmd = is_xboot_command(skb);
-        p_xcmd = (XBOOT_CMD *)skb->data;
-	    if (p_xcmd->magic == (KAL_UINT32)MAGIC_MD_CMD) {
-			if (check_device_state() >= EEMCS_MOLY_HS_P1) {
-        		DBGLOG(CCCI, ERR, "can't recv xBoot cmd when EEMCS state=%d", check_device_state());
-    		} else {
-    			is_xcmd = true;
-	    	}
-	    }
+        is_xcmd = is_xboot_command(skb);
+    } else {
+        is_xcmd = false;
     }
 
-    if (is_xcmd) {
+    wake_lock_timeout(&eemcs_wake_lock, HZ); // Using 1s wake lock
+
+    if (is_xcmd ==  true) {
         /* Step 4. callback to xBoot */
-    	CDEV_LOG(port_id, CCCI, INF, "XBOOT_CMD: 0x%08X, 0x%08X, 0x%08X, 0x%08X",\
-        	p_xcmd->magic, p_xcmd->msg_id, p_xcmd->status, p_xcmd->reserved[0]);
-    	ret = ccci_port_info[port_id].ch.rx_cb(skb, 0);
+        p_xcmd = (XBOOT_CMD *)skb->data;
+        KAL_ASSERT(p_xcmd->magic == (KAL_UINT32)MAGIC_MD_CMD);
+        if (NULL != ccci_port_info[CCCI_PORT_CTRL].ch.rx_cb){
+            DBGLOG(CCCI, DBG, "[CCCI][DF CALLBACK] XBOOT_CMD (0x%X)(0x%X)(0x%X)(0x%X)",\
+                p_xcmd->magic, p_xcmd->msg_id, p_xcmd->status, p_xcmd->reserved[0]);
+#ifdef __EEMCS_EXPT_SUPPORT__
+            if(is_exception_mode(&mode))
+            {
+                if(!is_valid_exception_port(CCCI_PORT_CTRL, true))
+                {
+                    ret = KAL_FAIL;
+                    dev_kfree_skb(skb);
+                    eemcs_expt_ccci_rx_drop(port_id);
+                    DBGLOG(CCCI, ERR, "[CCCI] [DF CALLBACK] EXCEPTION MODE PKT DROPPED !! Q(%d) PORT(%d)", rxq_no, CCCI_PORT_CTRL);
+                    goto _end;
+                }
+                else
+                {
+                    ret = ccci_port_info[CCCI_PORT_CTRL].ch.rx_cb(skb, 0);
+                }
+            }
+            else
+#endif      
+            {
+                ret = ccci_port_info[CCCI_PORT_CTRL].ch.rx_cb(skb, 0);
+            }
+        } else {
+            ret = KAL_FAIL;
+            dev_kfree_skb(skb);
+            DBGLOG(CCCI, ERR, "[CCCI] !!! PKT DROP !!! ccci_df_to_ccci_callback xBoot not registered");
+        }
     } else {
-    	ccci_h = (CCCI_BUFF_T *)skb->data;
-    	port_id = ccci_ch_to_port(ccci_h->channel);		
-    	CDEV_LOG(port_id, CCCI, INF, "CCCI_H: 0x%08X, 0x%08X, 0x%08X, 0x%08X",\
-        	ccci_h->data[0],ccci_h->data[1],ccci_h->channel, ccci_h->reserved);
-        /* Step 4. callback to CCCI device */       
+        /* Step 4. callback to CCCI device */
+        ccci_h = (CCCI_BUFF_T *)skb->data;
+        KAL_ASSERT(ccci_h->channel < CH_NUM_MAX);
+        port_id = ccci_ch_to_port(ccci_h->channel);
         if(NULL != ccci_port_info[port_id].ch.rx_cb){
-            #ifdef __EEMCS_EXPT_SUPPORT__
+            DBGLOG(CCCI,DBG,"ccci_df_to_ccci_callback Rx packet CCCI_H(0x%x)(0x%x)(0x%x)(0x%x)",\
+                ccci_h->data[0],ccci_h->data[1],ccci_h->channel, ccci_h->reserved );
+
+#ifdef __EEMCS_EXPT_SUPPORT__
             if(is_exception_mode(&mode))
             {
                 if(!is_valid_exception_port(port_id, true))
                 {
                     ret = KAL_FAIL;
                     dev_kfree_skb(skb);
-                    eemcs_ccci_release_rx_skb(port_id, 1, skb);
                     eemcs_expt_ccci_rx_drop(port_id);
-                    DBGLOG(CCCI, ERR, "PKT DROP when PORT%d(rxq=%d) at md exception", \
-						port_id, rxq_no);
+                    DBGLOG(CCCI, ERR, "[CCCI] [DF CALLBACK] EXCEPTION MODE PKT DROPPED !! Q(%d) PORT(%d)", rxq_no, port_id);
                     goto _end;
-                } else {
+                }
+                else
+                {
                     ret = ccci_port_info[port_id].ch.rx_cb(skb, 0);
                 }
             }
             else
-            #endif      
+#endif      
             {
                 ret = ccci_port_info[port_id].ch.rx_cb(skb, 0);
             }
-            rx_err_cnt[port_id] = 0;
-        } else { 
+        }else{
             ret = KAL_FAIL;
             dev_kfree_skb(skb);
-            eemcs_ccci_release_rx_skb(port_id, 1, skb);
-            if (rx_err_cnt[port_id]%20 == 0) {
-            	DBGLOG(CCCI, ERR, "PKT DROP when PORT%d rx callback(ch=%d) not registered", \
-					port_id, ccci_h->channel);
-            }
-            rx_err_cnt[port_id]++;
+            DBGLOG(CCCI,ERR, "[CCCI] !!! PKT DROP !!! ccci_df_to_ccci_callback ccci_port(%d) channel Rx(%d) not registered", port_id, ccci_h->channel);
             eemcs_update_statistics(0, port_id, RX, DROP);
-			
         }
         eemcs_update_statistics(0, port_id, RX, NORMAL);
     }
@@ -636,16 +649,8 @@ KAL_INT32 eemcs_ccci_mod_init(void)
 			ccci_port_info[i].rx_flow_ctrl_limit, ccci_port_info[i].rx_flow_ctrl_thresh);
         }
     }
- 
-    // please fix the way of hardcode rx skb size
-    mtlte_df_DL_set_skb_alloc_size_depth(0, DEV_MAX_PKT_SIZE, 256);
-    mtlte_df_DL_set_skb_alloc_size_depth(1, DEV_MAX_PKT_SIZE, 256);
-    mtlte_df_DL_set_skb_alloc_size_depth(2, DEV_MAX_PKT_SIZE, 512);
-    mtlte_df_DL_set_skb_alloc_size_depth(3, 1600, 512);
-    
     snprintf(eemcs_wakelock_name, sizeof(eemcs_wakelock_name), "eemcs_wakelock");
     wake_lock_init(&eemcs_wake_lock, WAKE_LOCK_SUSPEND, eemcs_wakelock_name);    
-    wake_lock_init(&sdio_wake_lock, WAKE_LOCK_SUSPEND, "sdio_wakelock");    
     
 #ifdef _EEMCS_CCCI_LB_UT
     ccci_ut_init_probe();
@@ -665,7 +670,6 @@ void eemcs_ccci_exit(void)
     }
 
     wake_lock_destroy(&eemcs_wake_lock);
-	wake_lock_destroy(&sdio_wake_lock);
     
 #ifdef _EEMCS_CCCI_LB_UT
     ccci_ut_exit();
@@ -714,7 +718,7 @@ KAL_UINT32 ccci_ul_lb_queue(struct sk_buff *skb)
 #ifdef _EEMCS_EXCEPTION_UT
     if(is_exception_mode(NULL))
     {
-        ccci_expt_port_info = get_expt_port_info(port_id);
+        ccci_expt_port_info = ccci_get_expt_port_info(port_id);
         rx_qno = SDIO_RXQ(ccci_expt_port_info->expt_rxq_id);
     }
     else

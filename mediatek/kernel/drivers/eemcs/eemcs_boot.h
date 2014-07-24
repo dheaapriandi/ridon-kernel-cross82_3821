@@ -100,12 +100,6 @@ typedef enum EEMCS_BOOT_STATE_e {
     END_OF_MD_STATE,
 } EEMCS_BOOT_STATE;
 
-enum {
-	MD_BOOT_XBOOT_FAIL = 0,
-	MD_BOOT_HS1_FAIL = 1,
-	MD_BOOT_HS2_FAIL = 2
-};
-
 //===================================================================
 //  XBOOT Structures
 //===================================================================
@@ -279,7 +273,6 @@ typedef struct EEMCS_BOOT_SET_st {
     KAL_UINT32 md_img_list_scaned;
     img_mapping_t md_img_file_list[MD_IMG_MAX_CNT+1];
     img_mapping_t dsp_img_file_list[MD_IMG_MAX_CNT+1];
-    atomic_t md_reset_cnt;              /* 0: no md reset; > 0: md reset is on-going*/
     
 #ifdef _EEMCS_BOOT_UT
     KAL_UINT32 ut_xcmd_idx;

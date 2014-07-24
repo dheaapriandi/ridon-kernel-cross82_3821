@@ -1313,13 +1313,13 @@ kalP2PIndicateRxMgmtFrame (
                             RCPI_TO_dBm(prSwRfb->prHifRxHdr->ucRcpi),
                             prSwRfb->pvHeader,
                             prSwRfb->u2PacketLen,
-                            GFP_KERNEL);
+                            GFP_ATOMIC);
 #else
         cfg80211_rx_mgmt(prGlueP2pInfo->prDevHandler, //struct net_device * dev,
                             i4Freq,
                             prSwRfb->pvHeader,
                             prSwRfb->u2PacketLen,
-                            GFP_KERNEL);
+                            GFP_ATOMIC);
 #endif
 
     } while (FALSE);

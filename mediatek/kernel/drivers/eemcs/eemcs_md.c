@@ -17,7 +17,7 @@
 #include "eemcs_ccci.h"
 #include "eemcs_debug.h"
 
-#define MDLOGGER_FILE_PATH "/data/extmdl/mdl_config"
+#define MDLOGGER_FILE_PATH "/data/exmdl/mdl_config"
 
 /*
  * @brief Configure the modem runtime data structure.

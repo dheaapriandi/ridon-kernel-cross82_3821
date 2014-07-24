@@ -359,8 +359,6 @@ typedef struct _AIS_FSM_INFO_T {
 
 
     TIMER_T             rScanDoneTimer; 
-	
-	TIMER_T				rDeauthDoneTimer;
 
     UINT_8              ucSeqNumOfReqMsg;
     UINT_8              ucSeqNumOfChReq;
@@ -698,11 +696,6 @@ aisFsmRunEventScanDoneTimeOut (
     UINT_32 u4Param
     );
 
-VOID
-aisFsmRunEventDeauthTimeout (
-    IN P_ADAPTER_T prAdapter,
-    UINT_32 u4Param
-    );
 
 /*----------------------------------------------------------------------------*/
 /* OID/IOCTL Handling                                                         */

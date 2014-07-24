@@ -33,6 +33,9 @@ struct i2c_gpio_platform_data {
 	unsigned int	sda_is_open_drain:1;
 	unsigned int	scl_is_open_drain:1;
 	unsigned int	scl_is_output_only:1;
+	int	is_sccb;
+	int    is_common;	
+	void (*gpio_i2c_config_gpio)(struct i2c_gpio_platform_data*, int );              //add mtk gpio_i2c
 };
 
 #endif /* _LINUX_I2C_GPIO_H */

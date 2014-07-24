@@ -1,3 +1,25 @@
+/* mt6626_rds.c
+ *
+ * (C) Copyright 2009
+ * MediaTek <www.MediaTek.com>
+ * hongcheng <hongcheng.xia@MediaTek.com>
+ *
+ * mt6626 FM Radio Driver
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #include "fm_typedef.h"
 #include "fm_dbg.h"
 #include "fm_err.h"
@@ -218,6 +240,10 @@ fm_bool mt6626_RDS_OnOff(struct fm *fm, fm_bool bFlag)
 
 extern fm_s32 rds_parser(rds_t *rds_dst, struct rds_rx_t *rds_raw, fm_s32 rds_size, fm_u16(*getfreq)(void));
 
+/* mt6626_RDS_Efm_s32_Handler    -    response FM RDS fm_s32errupt
+ * @fm - main data structure of FM driver
+ * This function first get RDS raw data, then call RDS spec parser
+ */
 fm_s32 mt6628_rds_parser(rds_t *rds_dst, struct rds_rx_t *rds_raw, fm_s32 rds_size, fm_u16(*getfreq)(void))
 {
     struct rds_rx_t raw;

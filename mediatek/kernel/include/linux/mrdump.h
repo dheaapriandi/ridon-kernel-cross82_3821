@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include <linux/elf.h>
 #include <linux/elfcore.h>
+#include <linux/aee.h>
 
 #define MRDUMP_CPU_MAX 16
 
@@ -82,12 +83,14 @@ void mrdump_reserve_memory(void);
 
 void mrdump_platform_init(struct mrdump_control_block *cblock, const struct mrdump_platform *plafrom);
 
+void __mrdump_create_oops_dump(AEE_REBOOT_MODE reboot_mode, struct pt_regs *regs, const char *msg, ...);
 #else
 
 static inline void mrdump_reserve_memory(void) {}
 
 static inline void mrdump_platform_init(struct mrdump_control_block *cblock, void (*hw_enable)(bool enabled)) {}
 
+static inline void __mrdump_create_oops_dump(AEE_REBOOT_MODE reboot_mode, struct pt_regs *regs, const char *msg, ...) {}
 #endif
 
 //#define DUMMY

@@ -338,28 +338,28 @@ static long TMD2771_enable_ps(struct i2c_client *client, int enable)
 			}
 
 			databuf[0] = TMD2771_CMM_INT_LOW_THD_LOW;	
-			databuf[1] = (u8)(750 & 0x00FF);
+			databuf[1] = (u8)(atomic_read(&obj->ps_thd_val_low) & 0x00FF);
 			res = TMD2771_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res < 0)
 			{
 				goto EXIT_ERR;
 			}
 			databuf[0] = TMD2771_CMM_INT_LOW_THD_HIGH;	
-			databuf[1] = (u8)((750 & 0xFF00) >> 8);
+			databuf[1] = (u8)((atomic_read(&obj->ps_thd_val_low) & 0xFF00) >> 8);
 			res = TMD2771_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res < 0)
 			{
 				goto EXIT_ERR;
 			}
 			databuf[0] = TMD2771_CMM_INT_HIGH_THD_LOW;	
-			databuf[1] = (u8)(900 & 0x00FF);
+			databuf[1] = (u8)(atomic_read(&obj->ps_thd_val_high) & 0x00FF);
 			res = TMD2771_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res < 0)
 			{
 				goto EXIT_ERR;
 			}
 			databuf[0] = TMD2771_CMM_INT_HIGH_THD_HIGH;	
-			databuf[1] = (u8)((900 & 0xFF00) >> 8);;
+			databuf[1] = (u8)((atomic_read(&obj->ps_thd_val_high) & 0xFF00) >> 8);;
 			res = TMD2771_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res < 0)
 			{
@@ -623,7 +623,7 @@ static int TMD2771_init_client(struct i2c_client *client)
 		else
 		{
 			databuf[0] = TMD2771_CMM_INT_LOW_THD_LOW;	
-			databuf[1] = (u8)(750 & 0x00FF);
+			databuf[1] = (u8)(atomic_read(&obj->ps_thd_val_low) & 0x00FF);
 			res = TMD2771_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res < 0)
 			{
@@ -631,7 +631,7 @@ static int TMD2771_init_client(struct i2c_client *client)
 				goto EXIT_ERR;
 			}
 			databuf[0] = TMD2771_CMM_INT_LOW_THD_HIGH;	
-			databuf[1] = (u8)((750 & 0xFF00) >> 8);
+			databuf[1] = (u8)((atomic_read(&obj->ps_thd_val_low) & 0xFF00) >> 8);
 			res = TMD2771_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res < 0)
 			{
@@ -639,7 +639,7 @@ static int TMD2771_init_client(struct i2c_client *client)
 				goto EXIT_ERR;
 			}
 			databuf[0] = TMD2771_CMM_INT_HIGH_THD_LOW;	
-			databuf[1] = (u8)(900 & 0x00FF);
+			databuf[1] = (u8)(atomic_read(&obj->ps_thd_val_high) & 0x00FF);
 			res = TMD2771_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res < 0)
 			{
@@ -647,7 +647,7 @@ static int TMD2771_init_client(struct i2c_client *client)
 				goto EXIT_ERR;
 			}
 			databuf[0] = TMD2771_CMM_INT_HIGH_THD_HIGH;	
-			databuf[1] = (u8)((900 & 0xFF00) >> 8);;
+			databuf[1] = (u8)((atomic_read(&obj->ps_thd_val_high) & 0xFF00) >> 8);;
 			res = TMD2771_i2c_master_operate(client, databuf, 0x2, I2C_FLAG_WRITE);
 			if(res < 0)
 			{

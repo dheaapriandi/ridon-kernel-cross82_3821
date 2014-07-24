@@ -401,6 +401,8 @@ struct mmc_async_req *mmc_start_req(struct mmc_host *host,
 {
 	int err = 0;
 	int start_err = 0;
+	int retry_times = 0;
+
 	struct mmc_async_req *data = host->areq;
 
 	/* Prepare a new request */
@@ -428,7 +430,8 @@ struct mmc_async_req *mmc_start_req(struct mmc_host *host,
 		host->ops->send_stop(host,host->areq->mrq); //add for MTK msdc host <Yuchi Xu>
 		do{
 			host->ops->tuning(host, host->areq->mrq);	//add for MTK msdc host <Yuchi Xu>
-		}while(host->ops->check_written_data(host,host->areq->mrq));
+			retry_times++;
+		}while((host->ops->check_written_data(host,host->areq->mrq))&&(retry_times<10));
 #ifdef MTK_IO_PERFORMANCE_DEBUG
         if ((1 == g_mtk_mmc_perf_dbg) && (2 == g_mtk_mmc_dbg_range)){
             if ((host->areq->mrq->cmd->arg >= g_dbg_range_start) && (host->areq->mrq->cmd->arg <= g_dbg_range_end) && (host->areq->mrq->data) && (host->areq->mrq->cmd->opcode == g_check_read_write)){ 

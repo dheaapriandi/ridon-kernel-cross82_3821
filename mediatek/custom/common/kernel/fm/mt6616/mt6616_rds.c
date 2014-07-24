@@ -1,7 +1,32 @@
+/* mt6616_rds.c
+ *
+ * (C) Copyright 2009 
+ * MediaTek <www.MediaTek.com>
+ * Chunhui <Chunhui.li@MediaTek.com>
+ *
+ * MT6516 MT6616 FM Radio Driver
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
 #include "mt6616_fm.h"
                   
 #if FM_RDS_ENABLE
+/******************************************************************************
+ * GLOBAL DATA
+ *****************************************************************************/
 #define MT6616_RDS_BLER_TH1 90
 #define MT6616_RDS_BLER_TH2 60
 #define MT6616_RDS_BLER_C1  12
@@ -18,6 +43,9 @@
 #define	FM_RDS_READ_DELAY	 (0x80)
 
 extern uint16_t g_dbg_level;
+/******************************************************************************
+ * GLOBAL VARIABLE
+ *****************************************************************************/
 static bool bRDS_FirstIn = false;
 static uint16_t RDS_Sync_Cnt = 0, RDS_Block_Reset_Cnt = 0;
 static bool PreTextABFlag;
@@ -29,6 +57,9 @@ uint16_t GOOD_BLK_CNT = 0, BAD_BLK_CNT = 0;
 uint8_t BAD_BLK_RATIO = 0;
 
 
+/******************************************************************************
+ * Local function extern
+ *****************************************************************************/
 static bool MT6616_RDS_support(struct i2c_client *client);
 static void MT6616_RDS_enable(struct i2c_client *client);
 static void MT6616_RDS_disable(struct i2c_client *client);

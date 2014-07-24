@@ -1,3 +1,22 @@
+/******************************************************************************
+ * mtk_tpd.c - MTK Android Linux Touch Panel Device Driver               *
+ *                                                                            *
+ * Copyright 2008-2009 MediaTek Co.,Ltd.                                      *
+ *                                                                            *
+ * DESCRIPTION:                                                               *
+ *     this file provide basic touch panel event to input sub system          *
+ *                                                                            *
+ * AUTHOR:                                                                    *
+ *     Kirby.Wu (mtk02247)                                                    *
+ *                                                                            *
+ * NOTE:                                                                      *
+ * 1. Sensitivity for touch screen should be set to edge-sensitive.           *
+ *    But in this driver it is assumed to be done by interrupt core,          *
+ *    though not done yet. Interrupt core may provide interface to            *
+ *    let drivers set the sensitivity in the future. In this case,            *
+ *    this driver should set the sensitivity of the corresponding IRQ         *
+ *    line itself.                                                            *
+ ******************************************************************************/
 
 #include "tpd.h"
 
@@ -233,6 +252,35 @@ int tpd_driver_remove(struct tpd_driver_t *tpd_drv)
 	return 0;
 }
 
+#if defined(TINNO_ANDROID_S9121)||defined(TINNO_ANDROID_S9320AE)
+char tpd_desc[50];
+int tpd_fw_version = 0;
+static ssize_t tpd_fw_version_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	printk("%s: tpd_fw_version=%d--Liu\n", 
+		__func__, tpd_fw_version);
+	return sprintf(buf, "%d\n", tpd_fw_version);
+}
+static DEVICE_ATTR(tpd_fw_version, 0444, tpd_fw_version_show, NULL);
+static ssize_t tpd_desc_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	return sprintf(buf, "%s\n", tpd_desc);
+}
+static DEVICE_ATTR(tpd_desc_info, 0444, tpd_desc_show, NULL);
+
+static ssize_t tpd_sw_version_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	return sprintf(buf, "%s\n", tpd_desc);
+}
+static DEVICE_ATTR(tpd_sw_version_info, 0444, tpd_sw_version_show, NULL);
+
+#endif
 static void tpd_create_attributes(struct device *dev, struct tpd_attrs *attrs)
 {
 	int num = attrs->num;
@@ -386,6 +434,18 @@ static int tpd_probe(struct platform_device *pdev) {
     {
     	tpd_button_init();
     }
+#if  defined (TINNO_ANDROID_S9121)|| (TINNO_ANDROID_S9320AE)
+	if(device_create_file(&pdev->dev, &dev_attr_tpd_fw_version)) {
+		TPD_DMESG("create fw_version file error--Liu\n");
+	}
+	if(device_create_file(&pdev->dev, &dev_attr_tpd_desc_info)) {
+		TPD_DMESG("create touch_info file error--Liu\n");
+	}
+
+	if(device_create_file(&pdev->dev, &dev_attr_tpd_sw_version_info)) {
+		TPD_DMESG("create touch_info file error--Liu\n");
+	}
+#endif
 
 	if (g_tpd_drv->attrs.num)
 		tpd_create_attributes(&pdev->dev, &g_tpd_drv->attrs);

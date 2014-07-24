@@ -1,14 +1,41 @@
+/* alps
+ *
+ * (C) Copyright 2009 
+ * MediaTek <www.MediaTek.com>
+ *
+ * Sensor helper
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 #include <linux/types.h>
 #include <linux/i2c.h>
 #include <linux/hwmsensor.h>
 #ifndef __HWMSEN_HELPER_H__
 #define __HWMSEN_HELPER_H__
+/******************************************************************************
+ * MACRO & DEFINITION
+******************************************************************************/ 
 #define C_I2C_FIFO_SIZE         8       /*according i2c_mt6516.c*/
 #define HWM_TAG					"<HWMSEN> "
 #define HWM_FUN(f)				printk(HWM_TAG"%s\n", __func__)
 #define HWM_ERR(fmt, args...)	printk(HWM_TAG"%s %d : "fmt, __func__, __LINE__, ##args)
 #define HWM_LOG(fmt, args...)	printk(HWM_TAG fmt, ##args)
 #define HWM_VER(fmt, args...)   printk(HWM_TAG"%s: "fmt, __func__, ##args) //((void)0)
+/******************************************************************************
+ * STRUCTURE & ENUMERATION
+******************************************************************************/ 
 struct hwmsen_reg{
     const char *name;
     u16 addr;
@@ -34,6 +61,21 @@ enum {
     REG_RW = REG_RO | REG_WO,
 };
 /*----------------------------------------------------------------------------*/
+/*
+ * @sign, map: only used in accelerometer/magnetic field
+ *      sometimes, the sensor output need to be remapped before reporting to framework.
+ *      the 'sign' is only -1 or +1 to align the sign for framework's coordinate system
+ *      the 'map'  align the value for framework's coordinate system. Take accelerometer
+ *      as an exmaple:
+ *      assume HAL receives original acceleration: acc[] = {100, 0, 100}
+ *      sign[] = {1, -1, 1, 0};
+ *      map[]  = {HWM_CODE_ACC_Y, HWM_CODE_ACC_X, HWM_CODE_ACC_Z, 0};
+ *      according to the above 'sign' & 'map', the sensor output need to remap as {y, -x, z}:
+ *      float resolution = unit_numerator*GRAVITY_EARTH/unit_denominator;
+ *      acc_x = sign[0]*acc[map[0]]*resolution;
+ *      acc_y = sign[1]*acc[map[1]]*resolution;
+ *      acc_z = sign[2]*acc[map[2]]*resolution; 
+ */
 struct hwmsen_convert {
     s8 sign[C_MAX_HWMSEN_EVENT_NUM];
     u8 map[C_MAX_HWMSEN_EVENT_NUM];

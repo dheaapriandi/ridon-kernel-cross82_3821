@@ -2260,33 +2260,7 @@ scanAddScanResult (
 
 } /* end of scanAddScanResult() */
 
-
 #if 1
-BOOLEAN scanCheckBssIsLegal(
-    IN P_ADAPTER_T prAdapter,
-    P_BSS_DESC_T prBssDesc
-)
-{
-    BOOLEAN fgAddToScanResult = FALSE;
-    ENUM_BAND_T eBand;
-    UINT_8 ucChannel;
-
-    ASSERT(prAdapter);
-    /* check the channel is in the legal doamin */
-    if (rlmDomainIsLegalChannel(prAdapter, prBssDesc->eBand, prBssDesc->ucChannelNum) == TRUE) {
-        /* check ucChannelNum/eBand for adjacement channel filtering */
-        if(cnmAisInfraChannelFixed(prAdapter, &eBand, &ucChannel) == TRUE &&
-        (eBand != prBssDesc->eBand || ucChannel != prBssDesc->ucChannelNum)){
-            fgAddToScanResult = FALSE;
-        }
-        else{
-            fgAddToScanResult = TRUE;
-        }
-    }
-     return fgAddToScanResult;
-
-}
-
 
 VOID
 scanReportBss2Cfg80211 (
@@ -2313,12 +2287,6 @@ scanReportBss2Cfg80211 (
 	if(SpecificprBssDesc)
 	{
 			{
-            /* check BSSID is legal channel */
-           if(!scanCheckBssIsLegal(prAdapter,SpecificprBssDesc)){
-               DBGLOG(SCN, TRACE, ("Remove specific SSID[%s %d]\n",
-                       prBssDesc->aucSSID, prBssDesc->ucChannelNum));
-                return;
-            }			
 				
 				DBGLOG(SCN, TRACE, ("Report Specific SSID[%s]\n",SpecificprBssDesc->aucSSID));
 				if(eBSSType==BSS_TYPE_INFRASTRUCTURE)
@@ -2353,15 +2321,6 @@ scanReportBss2Cfg80211 (
 	{
     	/* Search BSS Desc from current SCAN result list. */
     	LINK_FOR_EACH_ENTRY(prBssDesc, prBSSDescList, rLinkEntry, BSS_DESC_T) {
-            
-             /* check BSSID is legal channel */
-           if(!scanCheckBssIsLegal(prAdapter,prBssDesc)){
-               DBGLOG(SCN, TRACE, ("Remove SSID[%s %d]\n",
-                       prBssDesc->aucSSID, prBssDesc->ucChannelNum));
-                continue;
-            }
-
-
 	    	if((prBssDesc->eBSSType == eBSSType)
 #if CFG_ENABLE_WIFI_DIRECT
 				|| ((eBSSType == BSS_TYPE_P2P_DEVICE) &&
@@ -2561,10 +2520,20 @@ scanProcessBeaconAndProbeResp (
         if(prBssDesc->eBSSType == BSS_TYPE_INFRASTRUCTURE
                 || prBssDesc->eBSSType == BSS_TYPE_IBSS) {
             /* for AIS, send to host */
-            if (prConnSettings->fgIsScanReqIssued) {
+            if (prConnSettings->fgIsScanReqIssued &&
+                    rlmDomainIsLegalChannel(prAdapter, prBssDesc->eBand, prBssDesc->ucChannelNum) == TRUE) {
+                ENUM_BAND_T eBand;
+                UINT_8 ucChannel;
                 BOOLEAN fgAddToScanResult;
 
-                fgAddToScanResult = scanCheckBssIsLegal(prAdapter,prBssDesc);
+                /* check ucChannelNum/eBand for adjacement channel filtering */
+                if(cnmAisInfraChannelFixed(prAdapter, &eBand, &ucChannel) == TRUE &&
+                        (eBand != prBssDesc->eBand || ucChannel != prBssDesc->ucChannelNum)) {
+                    fgAddToScanResult = FALSE;
+                }
+                else {
+                    fgAddToScanResult = TRUE;
+                }
 
                 if(fgAddToScanResult == TRUE) {
                     rStatus = scanAddScanResult(prAdapter, prBssDesc, prSwRfb);

@@ -245,7 +245,7 @@ static void lcm_get_params(LCM_PARAMS *params)
 		//params->dsi.pll_div1=0;		// div1=0,1,2,3;div1_real=1,2,4,4 ----0: 546Mbps  1:273Mbps
 		//params->dsi.pll_div2=1;		// div2=0,1,2,3;div1_real=1,2,4,4	
 		//params->dsi.fbk_div =31;    // fref=26MHz, fvco=fref*(fbk_div+1)*2/(div1_real*div2_real)
-		params->dsi.PLL_CLOCK =LCM_DSI_6589_PLL_CLOCK_214_5; 
+		params->dsi.PLL_CLOCK =LCM_DSI_6589_PLL_CLOCK_201_5; 
     
 		params->dsi.CLK_ZERO = 47;
 		params->dsi.HS_ZERO = 36;

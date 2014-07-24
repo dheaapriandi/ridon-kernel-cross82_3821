@@ -2103,10 +2103,9 @@ p2pFuncParseBeaconContent (
             switch (IE_ID(pucIE)) {
             case ELEM_ID_SSID:   /* 0 */ /* V */ /* Done */
                 {
-                    //DBGLOG(P2P, TRACE, ("SSID update\n"));
-                    /* SSID is saved when start AP/GO */
-                    /* SSID IE set in beacon from supplicant will not always be true since hidden SSID case */
-                    /*
+                    DBGLOG(P2P, TRACE, ("SSID update\n"));
+
+                    /* Update when starting GO. */
                     COPY_SSID(prP2pBssInfo->aucSSID,
                                                 prP2pBssInfo->ucSSIDLen,
                                                 SSID_IE(pucIE)->aucSSID,
@@ -2116,7 +2115,7 @@ p2pFuncParseBeaconContent (
                                                 prP2pSpecificBssInfo->u2GroupSsidLen,
                                                 SSID_IE(pucIE)->aucSSID,
                                                 SSID_IE(pucIE)->ucLength);
-                    */
+
                 }
                 break;
             case ELEM_ID_SUP_RATES:  /* 1 */ /* V */ /* Done */

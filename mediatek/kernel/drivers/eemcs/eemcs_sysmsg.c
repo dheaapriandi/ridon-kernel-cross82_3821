@@ -39,7 +39,6 @@
 #include "eemcs_file_ops.h"
 #include "eemcs_sysmsg.h"
 #include "mach/mtk_eemcs_helper.h"
-#include "eemcs_state.h"
 
 static spinlock_t       sysmsg_fifo_lock = __SPIN_LOCK_UNLOCKED(sysmsg_fifo_lock);
 static struct kfifo     sysmsg_fifo;
@@ -137,17 +136,12 @@ static void eemcs_sysmsg_work(struct work_struct *work)
 
 static int send_eemcs_system_ch_msg(int md_id, unsigned int msg_id, unsigned int data)
 {
-    CCCI_BUFF_T * ccci_header;
+	CCCI_BUFF_T * ccci_header;
     struct sk_buff *new_skb;
     unsigned int skb_len = CCCI_SYSMSG_HEADER_ROOM;
     int ret = KAL_FAIL;
 
-    DBGLOG(SMSG, DBG, "send_eemcs_system_ch_msg"); 
-	
-    if (check_device_state() != EEMCS_BOOTING_DONE) {//modem not ready
-        DBGLOG(CHAR, ERR, "send sys msg(id=%d) fail when modem not ready", msg_id);
-        return -ENODEV;
-    }
+	DBGLOG(SMSG, DBG, "send_eemcs_system_ch_msg"); 
 
     while(NULL == (new_skb = dev_alloc_skb(skb_len)))
     {        
@@ -155,9 +149,8 @@ static int send_eemcs_system_ch_msg(int md_id, unsigned int msg_id, unsigned int
     }
 
     /* reserve SDIO_H and CCCI header room */
-    #ifdef CCCI_SDIO_HEAD
     skb_reserve(new_skb, sizeof(SDIO_H));
-    #endif
+
     ccci_header = (CCCI_BUFF_T *)skb_put(new_skb, sizeof(CCCI_BUFF_T)) ;
 
     

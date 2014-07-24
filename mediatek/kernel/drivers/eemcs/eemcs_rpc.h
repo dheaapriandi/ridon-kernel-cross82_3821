@@ -1,4 +1,22 @@
-
+/*****************************************************************************
+ *
+ * Filename:
+ * ---------
+ *   eemcs_rpc.h
+ *
+ * Project:
+ * --------
+ *   
+ *
+ * Description:
+ * ------------
+ *   
+ *
+ * Author:
+ * -------
+ *   
+ *
+ ****************************************************************************/
 
 #ifndef __EEMCS_RPC_H
 #define __EEMCS_RPC_H
@@ -15,6 +33,9 @@
 #define CCCI_SED_LEN_BYTES   16 
 typedef struct {unsigned char sed[CCCI_SED_LEN_BYTES]; }sed_t;
 #define SED_INITIALIZER { {[0 ... CCCI_SED_LEN_BYTES-1]=0}}
+/*******************************************************************************
+ * Define marco or constant.
+ *******************************************************************************/
 #define IPC_RPC_EXCEPT_MAX_RETRY     7
 #define IPC_RPC_MAX_RETRY            (0xFFFF)
 #define IPC_RPC_REQ_BUFFER_NUM       2 /* support 2 concurrently request*/
@@ -25,6 +46,9 @@ typedef struct {unsigned char sed[CCCI_SED_LEN_BYTES]; }sed_t;
 #define IPC_RPC_API_RESP_ID          0xFFFF0000
 #define IPC_RPC_INC_BUF_INDEX(x)     (x = (x + 1) % IPC_RPC_REQ_BUFFER_NUM)
 
+/*******************************************************************************
+ * Define data structure.
+ *******************************************************************************/
 typedef enum
 {
     IPC_RPC_CPSVC_SECURE_ALGO_OP = 0x2001,
@@ -120,11 +144,7 @@ typedef struct _eemcs_rpc_inst_t
     ccci_ch_set         ccci_ch;
 }eemcs_rpc_inst_t;
 
-#ifdef CCCI_SDIO_HEAD
 #define CCCI_RPC_HEADER_ROOM                          (sizeof(SDIO_H)+sizeof(CCCI_BUFF_T))
-#else
-#define CCCI_RPC_HEADER_ROOM                          (sizeof(CCCI_BUFF_T))
-#endif
 
 #define RPC_UT_SUCCESS									1
 #define RPC_UT_FAIL                                    -1 

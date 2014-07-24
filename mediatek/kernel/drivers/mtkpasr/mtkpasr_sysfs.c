@@ -18,6 +18,7 @@
 #include <linux/highmem.h>
 #include <linux/suspend.h>
 #include <asm/cacheflush.h>
+#include <mach/wd_api.h>
 
 #include "mtkpasr_drv.h"
 
@@ -100,7 +101,7 @@ static ssize_t membank_show(struct device *dev, struct device_attribute *attr, c
 #ifdef CONFIG_MTKPASR_MAFL
 static ssize_t page_reserved_show(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "Reserved pages [%lu]\n", mtkpasr_show_page_reserved());
+	return sprintf(buf, "Reserved pages [%lu]\n", (unsigned long)0/*mtkpasr_show_page_reserved()*/);
 }
 #endif
 
@@ -208,7 +209,7 @@ static ssize_t execstate_show(struct device *dev, struct device_attribute *attr,
 	len += tmp; 
 
 	/* Page reserved by MTKPASR */
-	tmp = sprintf(buf, "Reserved pages [%lu]\n", mtkpasr_show_page_reserved());
+	tmp = sprintf(buf, "Page reserved[%lu]\n", mtkpasr_show_page_reserved());
 	buf += tmp;
 	len += tmp; 
 
@@ -226,6 +227,21 @@ extern void mtkpasr_reset_state(void);
 /* Hook to Linux PM */
 void mtkpasr_phaseone_ops(void)
 {		
+	struct wd_api *wd_api = NULL;
+
+	/* To restart wdt */
+	if (get_wd_api(&wd_api) == 0) {
+		mtkpasr_log("PASR kicks WDT!\n");
+		wd_api->wd_restart(WD_TYPE_NORMAL);
+	}
+
+	IS_MTKPASR_ENABLED_NORV;
+	
+	/* It means no need to apply this op (Simply for paging or other periodic wakeups) */
+	if (is_mtkpasr_triggered()) {
+		return;
+	}
+
 	MTKPASR_START_PROFILE();
 
 #ifdef CONFIG_MTKPASR_MAFL

@@ -1,14 +1,64 @@
+/*
+** $Id: //Department/DaVinci/BRANCHES/MT6620_WIFI_DRIVER_V2_3/include/mgmt/mib.h#1 $
+*/
+
+/*! \file  mib.h
+    \brief This file contains the IEEE 802.11 family related MIB definition
+           for MediaTek 802.11 Wireless LAN Adapters.
+*/
 
 
 
-
+/*
+** $Log: mib.h $
+ *
+ * 11 08 2010 wh.su
+ * [WCXRP00000171] [MT6620 Wi-Fi][Driver] Add message check code same behavior as mt5921
+ * add the message check code from mt5921.
+ *
+ * 07 24 2010 wh.su
+ * 
+ * .support the Wi-Fi RSN
+ *
+ * 07 08 2010 cp.wu
+ *
+ * [WPD00003833] [MT6620 and MT5931] Driver migration - move to new repository.
+ *
+ * 06 07 2010 cp.wu
+ * [WPD00003833][MT6620 and MT5931] Driver migration
+ * add aa_fsm.h, ais_fsm.h, bss.h, mib.h and scan.h.
+ *
+ * 02 04 2010 kevin.huang
+ * [BORA00000603][WIFISYS] [New Feature] AAA Module Support
+ * Add AAA Module Support, Revise Net Type to Net Type Index for array lookup
+ *
+ * Nov 23 2009 mtk01461
+ * [BORA00000018] Integrate WIFI part into BORA for the 1st time
+ *
+*/
 
 #ifndef _MIB_H
 #define _MIB_H
 
+/*******************************************************************************
+*                         C O M P I L E R   F L A G S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                         D A T A   T Y P E S
+********************************************************************************
+*/
 /* Entry in SMT AuthenticationAlgorithms Table: dot11AuthenticationAlgorithmsEntry */
 typedef struct _DOT11_AUTHENTICATION_ALGORITHMS_ENTRY {
     BOOLEAN     dot11AuthenticationAlgorithmsEnable;    /* dot11AuthenticationAlgorithmsEntry 3 */
@@ -75,13 +125,33 @@ typedef const struct _NON_HT_ADHOC_MODE_ATTRIBUTE_T {
 
 typedef NON_HT_ADHOC_MODE_ATTRIBUTE_T NON_HT_AP_MODE_ATTRIBUTE_T;
 
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/
 extern NON_HT_PHY_ATTRIBUTE_T rNonHTPhyAttributes[];
 extern NON_HT_ADHOC_MODE_ATTRIBUTE_T rNonHTAdHocModeAttributes[];
 extern NON_HT_AP_MODE_ATTRIBUTE_T rNonHTApModeAttributes[];
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                  F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                              F U N C T I O N S
+********************************************************************************
+*/
 
 #endif /* _MIB_H */
 

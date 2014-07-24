@@ -1,5 +1,122 @@
+/*****************************************************************************
+*  Copyright Statement:
+*  --------------------
+*  This software is protected by Copyright and the information contained
+*  herein is confidential. The software may not be copied and the information
+*  contained herein may not be used or disclosed except with the written
+*  permission of MediaTek Inc. (C) 2008
+*
+*  BY OPENING THIS FILE, BUYER HEREBY UNEQUIVOCALLY ACKNOWLEDGES AND AGREES
+*  THAT THE SOFTWARE/FIRMWARE AND ITS DOCUMENTATIONS ("MEDIATEK SOFTWARE")
+*  RECEIVED FROM MEDIATEK AND/OR ITS REPRESENTATIVES ARE PROVIDED TO BUYER ON
+*  AN "AS-IS" BASIS ONLY. MEDIATEK EXPRESSLY DISCLAIMS ANY AND ALL WARRANTIES,
+*  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+*  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NONINFRINGEMENT.
+*  NEITHER DOES MEDIATEK PROVIDE ANY WARRANTY WHATSOEVER WITH RESPECT TO THE
+*  SOFTWARE OF ANY THIRD PARTY WHICH MAY BE USED BY, INCORPORATED IN, OR
+*  SUPPLIED WITH THE MEDIATEK SOFTWARE, AND BUYER AGREES TO LOOK ONLY TO SUCH
+*  THIRD PARTY FOR ANY WARRANTY CLAIM RELATING THERETO. MEDIATEK SHALL ALSO
+*  NOT BE RESPONSIBLE FOR ANY MEDIATEK SOFTWARE RELEASES MADE TO BUYER'S
+*  SPECIFICATION OR TO CONFORM TO A PARTICULAR STANDARD OR OPEN FORUM.
+*
+*  BUYER'S SOLE AND EXCLUSIVE REMEDY AND MEDIATEK'S ENTIRE AND CUMULATIVE
+*  LIABILITY WITH RESPECT TO THE MEDIATEK SOFTWARE RELEASED HEREUNDER WILL BE,
+*  AT MEDIATEK'S OPTION, TO REVISE OR REPLACE THE MEDIATEK SOFTWARE AT ISSUE,
+*  OR REFUND ANY SOFTWARE LICENSE FEES OR SERVICE CHARGE PAID BY BUYER TO
+*  MEDIATEK FOR SUCH MEDIATEK SOFTWARE AT ISSUE.
+*
+*  THE TRANSACTION CONTEMPLATED HEREUNDER SHALL BE CONSTRUED IN ACCORDANCE
+*  WITH THE LAWS OF THE STATE OF CALIFORNIA, USA, EXCLUDING ITS CONFLICT OF
+*  LAWS PRINCIPLES.  ANY DISPUTES, CONTROVERSIES OR CLAIMS ARISING THEREOF AND
+*  RELATED THERETO SHALL BE SETTLED BY ARBITRATION IN SAN FRANCISCO, CA, UNDER
+*  THE RULES OF THE INTERNATIONAL CHAMBER OF COMMERCE (ICC).
+*
+*****************************************************************************/
 
 
+/*******************************************************************************
+ *
+ * Filename:
+ * ---------
+ *   cfg_wifi_file.h
+ *
+ * Project:
+ * --------
+ *   DUMA
+ *
+ * Description:
+ * ------------
+ *    header file of main function
+ *
+ * Author:
+ * -------
+ *   Ning.F (MTK08139) 09/11/2008
+ *
+ *------------------------------------------------------------------------------
+ * $Revision:$
+ * $Modtime:$
+ * $Log:$
+ *
+ * 09 22 2011 cp.wu
+ * [ALPS00070736] MT6573W Wifi wƻݨD
+ * add fields for Wi-Fi regularity domain control.
+ *
+ * 05 27 2011 cp.wu
+ * [ALPS00050349] [Need Patch] [Volunteer Patch][MT6620 Wi-Fi][Driver] Add band edge tx power control to Wi-Fi NVRAM
+ * change size of reserved fields.
+ *
+ * 05 26 2011 cp.wu
+ * [ALPS00050349] [Need Patch] [Volunteer Patch][MT6620 Wi-Fi][Driver] Add band edge tx power control to Wi-Fi NVRAM
+ * update Wi-Fi NVRAM definition for band edge tx power control.
+ *
+ * 04 19 2011 cp.wu
+ * [ALPS00041285] [Need Patch] [Volunteer Patch][MT6620 Wi-Fi] Merge MT6620 Wi-Fi into mt6575_evb project
+ * 1. update init.rc for normal boot/meta/factory for MT6620 Wi-Fi related part.
+ * 2. update NVRAM structure definition and default value for MT6620 Wi-Fi
+ *
+ * 11 05 2010 renbang.jiang
+ * [ALPS00134025] [Wi-Fi] move Wi-Fi NVRAM definition source file to project folder from common folder
+ * .
+ *
+ * 11 05 2010 renbang.jiang
+ * [ALPS00134025] [Wi-Fi] move Wi-Fi NVRAM definition source file to project folder from common folder
+ * .
+ *
+ * 07 10 2010 renbang.jiang
+ * [ALPS00121785][Need Patch] [Volunteer Patch] use NVRAM to save Wi-Fi custom data 
+ * .
+ *
+ * Jul 9 2009 mtk80306
+ * [DUMA00122953] optimize nvram and change meta clean boot flag.
+ * modify wifi str
+ *
+ * Mar 21 2009 mtk80306
+ * [DUMA00112158] fix the code convention.
+ * fix the codeing convention.
+ *
+ * Mar 9 2009 mtk80306
+ * [DUMA00111088] nvram customization
+ * change wifi cmd structure.
+ *
+ * Dec 17 2008 mbj08139
+ * [DUMA00105099] create meta code
+ *
+ *
+ * Dec 8 2008 mbj08139
+ * [DUMA00105099] create meta code
+ *
+ *
+ * Nov 24 2008 mbj08139
+ * [DUMA00105099] create meta code
+ *
+ *
+ * Oct 29 2008 mbj08139
+ * [DUMA00105099] create meta code
+ *
+ *
+ *
+ *
+ *******************************************************************************/
 
 
 
@@ -7,15 +124,35 @@
 #define _CFG_WIFI_FILE_H
 
 // the record structure define of wifi nvram file
+/*******************************************************************************
+*                         C O M P I L E R   F L A G S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                             D A T A   T Y P E S
+********************************************************************************
+*/
 typedef signed char             INT_8, *PINT_8, **PPINT_8;
 typedef unsigned char           UINT_8, *PUINT_8, **PPUINT_8, *P_UINT_8;
 typedef unsigned short          UINT_16, *PUINT_16, **PPUINT_16;
 typedef unsigned long           ULONG, UINT_32, *PUINT_32, **PPUINT_32;
 
 
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/
 // duplicated from nic_cmd_event.h to avoid header dependency
 typedef struct _TX_PWR_PARAM_T {
     INT_8       cTxPwr2G4Cck;		/* signed, in unit of 0.5dBm */
@@ -125,14 +262,30 @@ typedef struct _WIFI_CUSTOM_PARAM_STRUCT
 
 
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
 #define CFG_FILE_WIFI_REC_SIZE           sizeof(WIFI_CFG_PARAM_STRUCT)
 #define CFG_FILE_WIFI_REC_TOTAL		       1
 
 #define CFG_FILE_WIFI_CUSTOM_REC_SIZE    sizeof(WIFI_CUSTOM_PARAM_STRUCT)
 #define CFG_FILE_WIFI_CUSTOM_REC_TOTAL   1
 
+/*******************************************************************************
+*                  F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 	
+/*******************************************************************************
+*                              F U N C T I O N S
+********************************************************************************
+*/
 
 
 #endif

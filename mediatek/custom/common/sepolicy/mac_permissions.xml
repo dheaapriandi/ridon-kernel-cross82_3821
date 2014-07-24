@@ -184,6 +184,11 @@
       </package>
     </signer>
 
+    <!-- mobile manager app -->
+    <signer signature="@MOBILEMANAGER" >
+      <seinfo value="mobilemanager" />
+    </signer>
+
     <!-- All other keys -->
     <default>
       <seinfo value="default" />

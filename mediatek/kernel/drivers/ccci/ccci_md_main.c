@@ -1,3 +1,19 @@
+/*****************************************************************************
+ *
+ * Filename:
+ * ---------
+ *   ccci_md.c
+ *
+ * Project:
+ * --------
+ *   ALPS
+ *
+ * Description:
+ * ------------
+ *   MT65XX MD initialization and handshake driver
+ *
+ *
+ ****************************************************************************/
 
 #include <linux/module.h>
 #include <linux/device.h>
@@ -17,6 +33,9 @@
 
 
 
+/****************************************************************************
+ * DEBUG UTILITIES
+ ****************************************************************************/
 
 char *ccci_version = "v1.4 20120618";
 
@@ -134,6 +153,11 @@ static int ccci_sys_smem_size;
 
 
 
+/** During modem booting, it would occupy much memory bandwidth with high
+    priority which would interfere with DPI display. To prevent from this
+    issue, disable MD high priority bit before modem booting is started 
+    and re-eanble it after modem booting is finished.
+*/
 void md_call_chain(MD_CALL_BACK_HEAD_T *head,unsigned long data)
 {
 	MD_CALL_BACK_QUEUE *queue;
@@ -278,6 +302,12 @@ int ccci_mdlog_base_req(void *addr_phy, int *len)
     return CCCI_SUCCESS;
 }
 
+/*
+ * ccci_pcm_base_reg: get PCM buffer information
+ * @addr: kernel space buffer to store the address of PCM buffer
+ * @len: kernel space buffer to store the length of PCM buffer
+ * return 0 for success; negative value for failure
+ */
 int ccci_pcm_base_req(void *addr_phy, int *len)
 {
     if (addr_phy == NULL) {
@@ -293,6 +323,13 @@ int ccci_pcm_base_req(void *addr_phy, int *len)
     return CCCI_SUCCESS;
 }
 
+/*
+ * ccci_uart_setup: setup TTY share buffer
+ * @port: UART port to setup
+ * @addr: physical address of TTY share buffer
+ * @len: length of TTY share buffer
+ * return 0 for success; negative value for failure
+ */
 int ccci_uart_setup(int port, int *addr_virt, int *addr_phy, int *len)
 {
     if (port >= CCCI_TTY_BUFF_NR) {
@@ -306,6 +343,13 @@ int ccci_uart_setup(int port, int *addr_virt, int *addr_phy, int *len)
     }
 }
 
+/*
+ * ccci_uart_base_req: get TTY share buffer information
+ * @port: UART port to get
+ * @addr: kernel space buffer to store the address of TTY share buffer
+ * @len: kernel space buffer to store the length of TTY share buffer
+ * return 0 for success; negative value for failure
+ */
 int ccci_uart_base_req(int port, void *addr_phy, int *len)
 {
     if (port >= CCCI_TTY_BUFF_NR) {
@@ -324,6 +368,12 @@ int ccci_uart_base_req(int port, void *addr_phy, int *len)
     return CCCI_SUCCESS;
 }
 
+/*
+ * ccci_fs_setup: setup CCCI_FS share buffer
+ * @addr: physical address of CCCI_FS share buffer
+ * @len: length of CCCI_FS share buffer
+ * return 0 for success; negative value for failure
+ */
 int ccci_fs_setup(int *addr_virt, int *addr_phy, int *len)
 {
 	*addr_virt = ccci_fs_smem_base_virt;
@@ -332,6 +382,12 @@ int ccci_fs_setup(int *addr_virt, int *addr_phy, int *len)
 	return CCCI_SUCCESS;
 }
 
+/*
+ * ccci_fs_base_req: get CCCI_FS share buffer information
+ * @addr: kernel space buffer to store the address of CCCI_FS share buffer
+ * @len: kernel space buffer to store the length of CCCI_FS share buffer
+ * return 0 for success; negative value for failure
+ */
 int ccci_fs_base_req(void *addr_phy, int *len)
 {
     if (addr_phy == NULL) {
@@ -346,6 +402,12 @@ int ccci_fs_base_req(void *addr_phy, int *len)
     return CCCI_SUCCESS;
 }
 
+/*
+ * ccci_rpc_setup: setup CCCI_FS share buffer
+ * @addr: physical address of CCCI_FS share buffer
+ * @len: length of CCCI_FS share buffer
+ * return 0 for success; negative value for failure
+ */
 int ccci_rpc_setup(int *addr_virt, int *addr_phy, int *len)
 {
 	*addr_virt = ccci_rpc_smem_base_virt;
@@ -353,6 +415,12 @@ int ccci_rpc_setup(int *addr_virt, int *addr_phy, int *len)
 	*len = ccci_rpc_smem_size;
 	return CCCI_SUCCESS;
 }
+/*
+ * ccci_rpc_base_req: get CCCI_FS share buffer information
+ * @addr: kernel space buffer to store the address of CCCI_FS share buffer
+ * @len: kernel space buffer to store the length of CCCI_FS share buffer
+ * return 0 for success; negative value for failure
+ */
 int ccci_rpc_base_req(void *addr_phy, int *len)
 {
     if (addr_phy == NULL) {
@@ -369,6 +437,12 @@ int ccci_rpc_base_req(void *addr_phy, int *len)
 
 
 
+/*
+ * ccci_pmic_setup: setup PMIC share buffer
+ * @addr: physical address of PMIC share buffer
+ * @len: length of PMIC share buffer
+ * return 0 for success; negative value for failure
+ */
 int ccci_pmic_setup(int *addr_virt, int *addr_phy, int *len)
 {
 	*addr_virt = ccci_pmic_smem_base_virt;
@@ -377,6 +451,12 @@ int ccci_pmic_setup(int *addr_virt, int *addr_phy, int *len)
 	return CCCI_SUCCESS;
 }
 
+/*
+ * ccci_pmic_base_req: get PMIC share buffer information
+ * @addr: kernel space buffer to store the address of PMIC share buffer
+ * @len: kernel space buffer to store the length of PMIC share buffer
+ * return 0 for success; negative value for failure
+ */
 int ccci_pmic_base_req(void *addr_phy, int *len)
 {
     if (addr_phy == NULL) {
@@ -416,6 +496,10 @@ int ccci_ipc_base_req( void *addr_phy, int *len)
     return CCCI_SUCCESS;
 }
 
+/*
+ * read2boot: check if system is ready to boot up MODEM
+ * return 1 for success; return 0 for failure
+ */
 
 static int ready2boot(void)
 {
@@ -452,8 +536,35 @@ static int ready2boot(void)
 }
 
 #if 0
+/*
+static void dump_firmware(void)
+{
+    int i;
+    printk(KERN_ERR "CCCI_MD: [Exception] Mem dump:\n");
+    for(i = 0; i < (MD_IMG_DUMP_SIZE / 4); i += 4)
+    {
+        printk(KERN_ERR "0x%08X %08X %08X %08X %08X\n", 
+	       (unsigned int)&md_img_vir[i],
+               md_img_vir[i], md_img_vir[i + 1],
+               md_img_vir[i + 2], md_img_vir[i + 3]);
+    }
+#if defined(CONFIG_ARCH_MT6573)
+    printk(KERN_ERR "CCCI_MD: [Exception] DSP dump:\n");
+    for(i = 0; i < (MD_IMG_DUMP_SIZE / 4); i += 4)
+    {
+        printk(KERN_ERR "0x%08X %08X %08X %08X %08X\n", 
+	       (unsigned int)&dsp_img_vir[i],
+               dsp_img_vir[i], dsp_img_vir[i + 1],
+               dsp_img_vir[i + 2], dsp_img_vir[i + 3]);
+    }
+#endif
+}
+*/
 #endif
 
+/*
+ * ccci_md_exception: handle modem exception
+ */
 
 static void ccci_md_exception(unsigned int trusted)
 {
@@ -623,6 +734,11 @@ static void md_boot_up_timeout_func(unsigned long data  __always_unused)
 	ccci_system_message(&sys_msg);
 }
 
+/*
+ * ccci_md_ctrl_cb: CCCI_CONTROL_RX callback function for MODEM
+ * @buff: pointer to a CCCI buffer
+ * @private_data: pointer to private data of CCCI_CONTROL_RX
+ */
 extern void ccif_send_wakeup_md_msg(void);
 static volatile int wakeup_md_is_safe = 0;
 void ccci_md_ctrl_cb(CCCI_BUFF_T *buff, void *private_data)
@@ -718,6 +834,10 @@ void ccci_md_ctrl_cb(CCCI_BUFF_T *buff, void *private_data)
 }
 
 
+/*
+ * set_md_runtime: setup MODEM runtime data
+ * return 0 for success; return negative value for failure
+ */
 static int set_md_runtime(void)
 {
     int i, addr, len;
@@ -824,6 +944,10 @@ static int set_md_runtime(void)
 }
 
 
+/*
+ * boot_md: boot-up MODEM
+ * return 0 for success; return negative values for failure
+ */
 static int boot_md(void)
 {
     int ret=0;
@@ -921,6 +1045,11 @@ static int boot_md(void)
 }
 
 
+/*
+ * ccci_reset_register: register a user for ccci reset
+ * @name: user name
+ * return a handle if success; return negative value if failure
+ */
 int ccci_reset_register(char *name)
 {
     int handle, i;
@@ -964,6 +1093,10 @@ int ccci_reset_register(char *name)
     }
 }
 
+/*
+ * reset_md: reset modem
+ * return 0 if success; return negative value if failure
+ */
 int reset_md(void)
 {
     CCCI_BUFF_T sys_msg;
@@ -997,6 +1130,10 @@ int reset_md(void)
     return CCCI_SUCCESS;
 }
 
+/*
+ * send_stop_md_request:
+ * return 0 if success; return negative value if failure
+ */
 int send_stop_md_request(void)
 {
 	CCCI_BUFF_T sys_msg;
@@ -1025,6 +1162,10 @@ int send_stop_md_request(void)
 	return CCCI_SUCCESS;
 }
 
+/*
+ * send_start_md_request:
+ * return 0 if success; return negative value if failure
+ */
 int send_start_md_request(void)
 {
 	CCCI_BUFF_T sys_msg;
@@ -1035,6 +1176,11 @@ int send_start_md_request(void)
 	return CCCI_SUCCESS;
 }
 
+/*
+ * ccci_reset_request: request to reset CCCI
+ * @handle: a user handle gotten from ccci_reset_register()
+ * return 0 if CCCI is reset; return negative value for failure
+ */
 int ccci_reset_request(int handle)
 {
     int i;
@@ -1104,6 +1250,10 @@ int ccci_reset_request(int handle)
     return CCCI_SUCCESS;
 }
 
+/*
+ * ccci_stop_modem:
+ * Do stop modem operation
+ */
 int ccci_stop_modem(void)
 {
 	int i, ret;
@@ -1145,6 +1295,10 @@ int ccci_stop_modem(void)
 	return CCCI_SUCCESS;
 }
 
+/*
+ * ccci_stop_modem:
+ * Do start modem operation
+ */
 int ccci_start_modem(void)
 {
 	ccci_enable();
@@ -1155,6 +1309,10 @@ int ccci_start_modem(void)
 	return CCCI_SUCCESS;
 }
 
+/*
+ * ccci_do_modem_reset:
+ * Do reset work by operate the rgu register
+ */
 int ccci_do_modem_reset(void)
 {
 	CCCI_MSG_INF("ctl", "Begin to reset MD\n");
@@ -1167,6 +1325,10 @@ int ccci_do_modem_reset(void)
 	return CCCI_SUCCESS;
 }
 
+/*
+ * ccci_send_run_time_data
+ * return 0 for success; return negative values for failure
+ */
 int ccci_send_run_time_data(void)
 {
 	int ret=0;
@@ -1199,11 +1361,20 @@ int ccci_send_run_time_data(void)
 	return ret;
 }
 
+/*
+ * boot_md_show
+ * @buf:
+ */
 static ssize_t boot_md_show(char *buf)
 {
     return sprintf(buf, "%d\n", md_boot_stage);
 }
 
+/*
+ * boot_md_store
+ * @buf:
+ * @count:
+ */
 static ssize_t boot_md_store(const char *buf, size_t count)
 {
     if (down_interruptible(&ccci_mb_mutex)) {
@@ -1373,6 +1544,12 @@ void unlock_md_dormant(void)
 }
 
 	
+/*
+ccci_dormancy
+When "data_connect_sta" is not zero, which means there are data connection exist
+So the suspend function should call this API to notify modem disconnect data 
+connection before enter suspend state to save power. axs
+ */
  
 int ccci_dormancy(char *buf, unsigned int len)
 {
@@ -1388,6 +1565,10 @@ int ccci_dormancy(char *buf, unsigned int len)
 	return 0;
 	//unlock_md_dormant();
 }
+/*
+When data channel coming, the "data_connect_sta" should be mark
+This function called in IRQ_handler function. axs
+*/
 void check_data_connected(int channel)
 {
 	if(channel >= CCCI_CCMNI1_RX && channel <= CCCI_CCMNI3_TX_ACK)
@@ -1557,6 +1738,9 @@ size_t ccci_ch_filter_show(char buf[], size_t len)
 	return ret;
 }
 
+/*
+ * ccci_md_init_mod_init: module init function
+ */
 int __init ccci_md_init_mod_init(void)
 {
     int ret;
@@ -1616,6 +1800,9 @@ int __init ccci_md_init_mod_init(void)
 }
 
 
+/*
+ * ccci_md_init_mod_exit: module exit function
+ */
 void __exit ccci_md_init_mod_exit(void)
 {
     //iounmap(md_img_vir);

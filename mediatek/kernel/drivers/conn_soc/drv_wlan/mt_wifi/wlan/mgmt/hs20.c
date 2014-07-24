@@ -1,25 +1,79 @@
+/*
+** $Id: //Department/DaVinci/BRANCHES/HS2_DEV_SW/MT6620_WIFI_DRIVER_V2_1_HS_2_0/mgmt/hs20.c#2 $
+*/
+
+/*! \file   "hs20.c"
+    \brief  This file including the hotspot 2.0 related function.
+
+    This file provided the macros and functions library support for the
+    protocol layer hotspot 2.0 related function.
+
+*/
 
 
 
-
+/*
+** $Log: hs20.c $
+ *
+ */
 
  /*******************************************************************************
 *                         C O M P I L E R   F L A G S
 ********************************************************************************
 */
 
+/*******************************************************************************
+*                    E X T E R N A L   R E F E R E N C E S
+********************************************************************************
+*/
 #include "precomp.h"
 
 #if CFG_SUPPORT_HOTSPOT_2_0
 
+/*******************************************************************************
+*                              C O N S T A N T S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                             D A T A   T Y P E S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                            P U B L I C   D A T A
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                           P R I V A T E   D A T A
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                                 M A C R O S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                   F U N C T I O N   D E C L A R A T I O N S
+********************************************************************************
+*/
 
+/*******************************************************************************
+*                              F U N C T I O N S
+********************************************************************************
+*/
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief    This function is called to generate Interworking IE for Probe Rsp, Bcn, Assoc Req/Rsp.
+*
+* \param[in] prAdapter  Pointer of ADAPTER_T
+* \param[out] prMsduInfo  Pointer of the Msdu Info
+*
+* \return VOID
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 hs20GenerateInterworkingIE (
@@ -30,6 +84,14 @@ hs20GenerateInterworkingIE (
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief    This function is called to generate Roaming Consortium IE for Probe Rsp, Bcn, Assoc Req/Rsp.
+*
+* \param[in] prAdapter  Pointer of ADAPTER_T
+* \param[out] prMsduInfo  Pointer of the Msdu Info
+*
+* \return VOID
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 hs20GenerateRoamingConsortiumIE (
@@ -40,6 +102,14 @@ hs20GenerateRoamingConsortiumIE (
 }
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief    This function is called to generate HS2.0 IE for Probe Rsp, Bcn, Assoc Req/Rsp.
+*
+* \param[in] prAdapter  Pointer of ADAPTER_T
+* \param[out] prMsduInfo  Pointer of the Msdu Info
+*
+* \return VOID
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 hs20GenerateHS20IE (
@@ -109,6 +179,14 @@ hs20FillExtCapIE (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief    This function is called to fill up the content of Ext Cap IE bit 31.
+*
+* \param[in] prAdapter  Pointer of ADAPTER_T
+* \param[out] pucIE  Pointer of the IE buffer
+*
+* \return VOID
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 hs20FillProreqExtCapIE(
@@ -141,6 +219,14 @@ hs20FillProreqExtCapIE(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief    This function is called to fill up the content of HS2.0 IE.
+*
+* \param[in] prAdapter  Pointer of ADAPTER_T
+* \param[out] pucIE  Pointer of the IE buffer
+*
+* \return VOID
+*/
 /*----------------------------------------------------------------------------*/
 VOID
 hs20FillHS20IE(
@@ -167,6 +253,14 @@ hs20FillHS20IE(
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief    This function is called while calculating length of hotspot 2.0 indication IE for Probe Request.
+*
+* \param[in] prAdapter  Pointer of ADAPTER_T
+* \param[in] pucTargetBSSID  Pointer of target HESSID
+*
+* \return the length of composed HS20 IE
+*/
 /*----------------------------------------------------------------------------*/
 UINT_32
 hs20CalculateHS20RelatedIEForProbeReq (
@@ -190,6 +284,15 @@ hs20CalculateHS20RelatedIEForProbeReq (
 
 
 /*----------------------------------------------------------------------------*/
+/*!
+* \brief    This function is called while composing hotspot 2.0 indication IE for Probe Request.
+*
+* \param[in] prAdapter  Pointer of ADAPTER_T
+* \param[in] pucTargetBSSID  Pointer of target HESSID
+* \param[out] prIE  Pointer of the IE buffer
+*
+* \return the wlan status
+*/
 /*----------------------------------------------------------------------------*/
 WLAN_STATUS
 hs20GenerateHS20RelatedIEForProbeReq (
