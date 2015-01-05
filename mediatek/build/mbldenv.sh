@@ -11,7 +11,8 @@ ANDROID_JAVA_HOME=/mtkoss/jdk/1.6.0_45-ubuntu-10.04/x86_64
 export ANDROID_JAVA_HOME
 
 # Overwrite PATH environment setting for JDK & arm-eabi if already exists
-PATH=/mtkoss/jdk/1.6.0_45-ubuntu-10.04/x86_64/bin:$PWD/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.7/bin:$PWD/prebuilts/gcc/linux-x86/arm/arm-eabi-4.7/bin:$PWD/prebuilts/misc/linux-x86/make:$PATH
+RIDON=~/src/replicant/ridon-5.0
+PATH=/mtkoss/jdk/1.6.0_45-ubuntu-10.04/x86_64/bin:$RIDON/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.8/bin:$RIDON/prebuilts/gcc/linux-x86/arm/arm-eabi-4.8/bin:$RIDON/prebuilts/misc/linux-x86/make:/usr/bin:/bin:/usr/local/bin
 export PATH
 
 # Add MediaTek developed Python libraries path into PYTHONPATH

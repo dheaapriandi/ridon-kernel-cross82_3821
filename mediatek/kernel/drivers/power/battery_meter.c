@@ -3325,14 +3325,14 @@ static int battery_meter_resume(struct platform_device *dev)
     		}
     		else
     		{
-    			 oam_car_1 = oam_car_1 + (33* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
-    		     oam_car_2 = oam_car_2 + (33* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
+    			 oam_car_1 = oam_car_1 + (33* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
+    		     oam_car_2 = oam_car_2 + (33* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
     		}
     	}
     	else
     	{
-    			oam_car_1 = oam_car_1 + (33* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
-    			oam_car_2 = oam_car_2 + (33* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
+    			oam_car_1 = oam_car_1 + (33* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
+    			oam_car_2 = oam_car_2 + (33* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
     	}
 #else
 #ifdef  SUPPORT_TINNO_BATTERY_COMPENSATE		
@@ -3418,7 +3418,7 @@ static int battery_meter_resume(struct platform_device *dev)
 #endif
 		
         bm_print(BM_LOG_CRTI, "sleeptime=(%d)s, be_ocv=(%d), af_ocv=(%d), D0=(%d), car1=(%d), car2=(%d) \n",
-    		tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec, g_hw_ocv_before_sleep, hw_ocv_after_sleep,gFG_DOD0, oam_car_1, oam_car_2);
+    		rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec, g_hw_ocv_before_sleep, hw_ocv_after_sleep,gFG_DOD0, oam_car_1, oam_car_2);
     }
 #endif		
     bm_print(BM_LOG_CRTI, "[battery_meter_resume]\n");

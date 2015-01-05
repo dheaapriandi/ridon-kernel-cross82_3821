@@ -629,6 +629,7 @@ PMU_STATUS BAT_PreChargeModeAction(void)
 
     /*  Enable charger */
     pchr_turn_on_charging();            
+#ifdef SUPPORT_TINNO_BQ27541
 		if(check_bq27541_state())
 		{
 			if (extend_ui_soc == 100)
@@ -641,7 +642,9 @@ PMU_STATUS BAT_PreChargeModeAction(void)
 			{
 				BMT_status.bat_charging_state = CHR_CC;
 			}
-		}else {
+		}else 
+#else
+        {
 				if (BMT_status.UI_SOC == 100)
 				{
 					BMT_status.bat_charging_state = CHR_BATFULL;
@@ -653,6 +656,7 @@ PMU_STATUS BAT_PreChargeModeAction(void)
 					BMT_status.bat_charging_state = CHR_CC;
 				}
 			}
+#endif
 
     return PMU_STATUS_OK;        
 } 

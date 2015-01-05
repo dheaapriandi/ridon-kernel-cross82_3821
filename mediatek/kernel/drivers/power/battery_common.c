@@ -98,21 +98,6 @@ extern int read_battery_temp(void);
 extern int read_battery_soc(void);
 extern int check_bq27541_state(void);
 #else
-int read_battery_temp(void)
-{
-	return 0;
-}
-
-int read_battery_soc(void)
-{
-	return 0;
-}
-
-int check_bq27541_state(void)
-{
-	return 0;
-}
-
 
 #endif
 
@@ -510,12 +495,7 @@ static int battery_get_property(struct power_supply *psy,
 		 	}
 	 }
 #else
-	if(check_bq27541_state())
-	{
-		val->intval = read_battery_soc();
-	}else{
 		val->intval = data->BAT_CAPACITY;
-	}
 #endif	 
         break;        
     case POWER_SUPPLY_PROP_batt_vol:
@@ -1383,14 +1363,19 @@ static void mt_battery_update_EM(struct battery_data *bat_data)
     bat_data->capacity_2nd = g_capacity_2nd;
     bat_data->present_2nd = g_present_2nd;
 	battery_xlog_printk(BAT_LOG_FULL, "Power/Battery", "status_2nd = %d, capacity_2nd = %d, present_2nd = %d\n", bat_data->status_2nd, bat_data->capacity_2nd, bat_data->present_2nd);
+#ifdef SUPPORT_TINNO_BQ27541
 	 if(check_bq27541_state())
 	 {
 		if((extend_ui_soc == 100) && (BMT_status.charger_exist == KAL_TRUE))
 			bat_data->BAT_STATUS = POWER_SUPPLY_STATUS_FULL;
-	 }else{
+	 }else {
 			if((BMT_status.UI_SOC == 100) && (BMT_status.charger_exist == KAL_TRUE))
 				 bat_data->BAT_STATUS = POWER_SUPPLY_STATUS_FULL;
 	 	}
+#else
+if((BMT_status.UI_SOC == 100) && (BMT_status.charger_exist == KAL_TRUE))
+    bat_data->BAT_STATUS = POWER_SUPPLY_STATUS_FULL;
+#endif
 
 	#ifdef MTK_DISABLE_POWER_ON_OFF_VOLTAGE_LIMITATION
 	if(bat_data->BAT_CAPACITY <=0)
@@ -1618,15 +1603,19 @@ static void battery_update(struct battery_data *bat_data)
 				low_power_count++;
 				printk("there is no charger ? \n");
 				if(low_power_count>6){
+#ifdef SUPPORT_TINNO_BQ27541
 					if(check_bq27541_state())
 					{
 						if(read_battery_soc()==0)
 						{
 							battery_charging_control(CHARGING_CMD_SET_POWER_OFF,NULL);
 						}
-					}else{
+					}else
+#else 
+                    {
 						battery_charging_control(CHARGING_CMD_SET_POWER_OFF,NULL);
 					}
+#endif
 					
 				}	
 			}else{
@@ -1675,6 +1664,7 @@ static void battery_update(struct battery_data *bat_data)
 	
 	mt_battery_update_EM(bat_data);
 
+#ifdef SUPPORT_TINNO_BQ27541
      if(check_bq27541_state())
      {
 		extend_real_soc=read_battery_soc();
@@ -1719,6 +1709,7 @@ static void battery_update(struct battery_data *bat_data)
 			}
 		}
      }
+#endif
     power_supply_changed(bat_psy);    
 }
 
@@ -2535,6 +2526,7 @@ void do_chrdet_int_task(void)
 		//Place charger detection and battery update here is used to speed up charging icon display.
 			
 		mt_battery_charger_detect_check();
+#ifdef SUPPORT_TINNO_BQ27541
 		if(check_bq27541_state())
 		{
 				if (extend_ui_soc == 100 && BMT_status.charger_exist == KAL_TRUE)
@@ -2543,7 +2535,9 @@ void do_chrdet_int_task(void)
 					BMT_status.bat_full = KAL_TRUE;
 					g_charging_full_reset_bat_meter = KAL_TRUE;
 				}
-		}else{
+		}else
+#else
+        {
 				if (BMT_status.UI_SOC == 100 && BMT_status.charger_exist == KAL_TRUE)
 				{
 					BMT_status.bat_charging_state = CHR_BATFULL;
@@ -2551,6 +2545,7 @@ void do_chrdet_int_task(void)
 					g_charging_full_reset_bat_meter = KAL_TRUE;
 				}
     			}
+#endif
 		mt_battery_update_status();
         wake_up_bat();
     }    

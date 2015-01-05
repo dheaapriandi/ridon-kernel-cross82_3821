@@ -720,7 +720,7 @@ kal_bool charging_type_detection_done(void)
     }
 #endif
 
-    if(g_charger_type!=CHARGER_UNKNOWN && g_charger_type!=WIRELESS_CHARGER)
+    if(g_charger_type!=CHARGER_UNKNOWN)
     {
         *(CHARGER_TYPE*)(data) = g_charger_type;
         battery_xlog_printk(BAT_LOG_CRTI, "return %d!\r\n", g_charger_type);

@@ -295,6 +295,7 @@
 #define SENSOR_DRVNAME_IMX179_MIPI_RAW   "imx179mipiraw"
 #define SENSOR_DRVNAME_IMX178_MIPI_RAW   "imx178mipiraw"
 #define SENSOR_DRVNAME_OV16825_MIPI_RAW  "ov16825mipiraw"
+#define SENSOR_DRVNAME_GC0313MIPI_YUV      "gc0313mipiyuv"
 #define SENSOR_DRVNAME_OV16826_MIPI_RAW  "ov16826mipiraw"
 /*******************************************************************************
 *
