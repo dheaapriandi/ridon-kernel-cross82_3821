@@ -14,6 +14,25 @@ It could break your device.
 1. Partition is wrongly populated, e.g. we can't get the /emmc@android link yet
 1. Peripherals are not yet verified. Notably the screen is not yet working.
 
+## Known information
+1. LCM driver #1: `nt35590_hd720_dsi_vdo_truly` (driver available)
+2. LCM driver #2 (?): `otm1283a` (driver not available)
+2. Modem: ?
+3. Bluetooth: ?
+4. WiFi: ?
+5. Touch panel: ?
+6. USB: ?
+7. Vibrator: ?
+8. GPU: ?
+9. PMIC: ?
+10. NFC: none
+11. LED: ?
+12. Thermal: ?
+13. MMC: ?
+14. NAND: ?
+15. RTC: ?
+16. Sound: ?
+
 ## How can you help
 You can help in many ways. Either:
 1. Try to get the source code from MediaTek
