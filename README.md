@@ -1,7 +1,11 @@
-ALPS.KK1.MP1.V2.10 - wiko highway (MT6592)
+# WIP: Evercoss Elevate Y A66A kernel
 
-build with this command :
+This is a work-in-progress. There are still reverse engineering process to be done. Some drivers might be missing or not configured properly.
+It could break your device.
 
-    ./mk wiko n k
+1. Adjust PATH in mbldenv to point to your toolchain
+1. Do the dance
 
-from http://www.wikogeek.com/
+```
+./mk cross82_3821 n k
+```
