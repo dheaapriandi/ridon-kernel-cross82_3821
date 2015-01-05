@@ -10,6 +10,10 @@ It could break your device.
 ./mk cross82_3821 n k
 ```
 
+## What's missing
+1. Partition is wrongly populated, e.g. we can't get the /emmc@android link yet
+1. Peripherals are not yet verified. Notably the screen is not yet working.
+
 ## How can you help
 You can help in many ways. Either:
 1. Try to get the source code from MediaTek
