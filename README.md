@@ -35,6 +35,8 @@ It could break your device.
 | NAND | Not configured | - | - |
 | RTC | `mtk_rtc_common.c` | Yes | ? |
 | Audio | `AudioMTKBTCVSD` | Yes | ? |
+| Back camera | `OV8850` | No | ? |
+| Front camera | `GC2235` | No | ? |
 
 ## How can you help
 You can help in many ways. Either:
