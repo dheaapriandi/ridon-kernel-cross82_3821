@@ -37,6 +37,7 @@ It could break your device.
 | Audio | `AudioMTKBTCVSD` | Yes | ? |
 | Back camera | `OV8850` | No | ? |
 | Front camera | `GC2235` | No | ? |
+| Accelerometer | `BM222` | Yes | ? |
 
 ## How can you help
 You can help in many ways. Either:
