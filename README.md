@@ -15,23 +15,26 @@ It could break your device.
 1. Peripherals are not yet verified. Notably the screen is not yet working.
 
 ## Known information
-1. LCM driver #1: `nt35590_hd720_dsi_vdo_truly` (driver available)
-2. LCM driver #2 (?): `otm1283a` (driver not available)
-2. Modem: ?
-3. Bluetooth: ?
-4. WiFi: ?
-5. Touch panel: ?
-6. USB: ?
-7. Vibrator: ?
-8. GPU: ?
-9. PMIC: ?
-10. NFC: none
-11. LED: ?
-12. Thermal: ?
-13. MMC: ?
-14. NAND: ?
-15. RTC: ?
-16. Sound: ?
+| Subsystem | Driver name | Availability | Working |
+|-----------|-------------|--------------|---------|
+| LCM driver #1 | `nt35590_hd720_dsi_vdo_truly` | Yes | No |
+| LCM driver #2 | `otm1283a_hd720_dsi_vdo`| No| - |
+| LCM driver #3 | `nt35521_hd720_dsi_vdo` | No | - |
+| Modem | ? | ? | ? |
+| Bluetooth | `mt_consys_mt6582` | Yes | ? |
+| WiFi | `mt_consys_mt6582` | Yes | ? |
+| Touch panel | `GT9XX` | Yes | ? |
+| USB | ? | Yes | Yes |
+| Vibrator | `vibrator` | Yes | ? |
+| GPU | `mali` | Yes | ? |
+| PMIC | `mt6323` | Yes | ? |
+| NFC | `mt6605` | Yes | - |
+| LED | `mt65xx` | Yes | ? |
+| Thermal | `mtk_thermal` | Yes | ? |
+| MMC | `emmc` | Yes | No |
+| NAND | Not configured | - | - |
+| RTC | `mtk_rtc_common.c` | Yes | ? |
+| Audio | `AudioMTKBTCVSD` | Yes | ? |
 
 ## How can you help
 You can help in many ways. Either:
