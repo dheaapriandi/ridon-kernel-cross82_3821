@@ -38,6 +38,7 @@ It could break your device.
 | Back camera | `OV8850` | No | ? |
 | Front camera | `GC2235` | No | ? |
 | Accelerometer | `BM222` | Yes | ? |
+| ALS/PS | `em3071` | No | ? |
 
 ## How can you help
 You can help in many ways. Either:
