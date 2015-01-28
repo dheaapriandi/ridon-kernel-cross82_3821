@@ -29,7 +29,7 @@ BUILD_PRELOADER=yes
 BUILD_UBOOT=no
 
 # User can input ASCII string which is showed in About phone and bootimg header.
-CUSTOM_BUILD_VERNO=
+CUSTOM_BUILD_VERNO=Ridon-5.0
 
 # it is used to decide MT6620 combo chip BT and WiFi antenna architecture.  The meaning of each value is defined as follows. Please note that "CUSTOM_HAL_ANT" setting must be consistent with customer's MT6620 antenna architecture layout. Improper setting may lead to BT/WiFi malfunctions
 CUSTOM_HAL_ANT=mt6582_ant_m1
@@ -182,7 +182,7 @@ CUSTOM_KERNEL_USB=mt6577
 CUSTOM_KERNEL_VIBRATOR=vibrator
 
 # To choose LK LCM driver name
-CUSTOM_LK_LCM=nt35517_qhd_dsi_vdo hx8389b_byd_qhd_dsi_vdo
+CUSTOM_LK_LCM=otm1283a_hd720_dsi_vdo
 
 # A mechanism for customer to enable their own sign key.
 CUSTOM_PRELOADER_CUSTOM=custom
@@ -674,9 +674,9 @@ MTK_EMULATOR_SUPPORT=no
 
 # MPEG4 ASP/ Divx/ Xvid decoder.
 MTK_ENABLE_DIVX_DECODER=no
-MTK_ENABLE_MD1=no
-MTK_ENABLE_MD2=no
-MTK_ENABLE_MD5=yes
+MTK_ENABLE_MD1=yes
+MTK_ENABLE_MD2=yes
+MTK_ENABLE_MD5=no
 
 # Sorenson H.263.
 MTK_ENABLE_S263_DECODER=no
@@ -1572,10 +1572,10 @@ MTK_HDMI_SUPPORT=no
 BOOT_LOGO=qhd
 
 # To choose kernel LCM driver name
-CUSTOM_KERNEL_LCM=nt35590_hd720_dsi_vdo_truly
+CUSTOM_KERNEL_LCM=otm1283a_hd720_dsi_vdo
 
 # To choose uboot LCM driver name
-CUSTOM_UBOOT_LCM=nt35590_hd720_dsi_vdo_truly 
+CUSTOM_UBOOT_LCM=otm1283a_hd720_dsi_vdo
 
 # To set LCM resolution height size
 LCM_HEIGHT=1280

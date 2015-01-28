@@ -78,6 +78,7 @@ static bool dsi_log_on = false;
 static bool glitch_log_on = false;
 static bool force_transfer = false;
 extern BOOL is_early_suspended;
+static bool g_hs_mode = false;
 
 typedef struct
 {
@@ -3403,7 +3404,10 @@ UINT32 DSI_dcs_read_lcm_reg_v2(UINT8 cmd, UINT8 *buffer, UINT8 buffer_size)
 
        _WaitForEngineNotBusy();
 
-       t0.CONFG = 0x04;        ///BTA
+       if(g_hs_mode)
+           t0.CONFG = 0x0C;
+       else     
+           t0.CONFG = 0x04;        ///BTA
        t0.Data0 = cmd;
        if (buffer_size < 0x3)
            t0.Data_ID = DSI_DCS_READ_PACKET_ID;
@@ -4262,4 +4266,22 @@ void fbconfig_DSI_Continuous_HS(int enable)
     OUTREG32(&DSI_REG->DSI_TXRX_CTRL, AS_UINT32(&tmp_reg));
 }
 
+void Tinno_set_HS_read()
+{    
+    DSI_TXRX_CTRL_REG tmp_reg = DSI_REG->DSI_TXRX_CTRL;
 
+    tmp_reg.HSTX_CKLP_EN = 0;
+    OUTREG32(&DSI_REG->DSI_TXRX_CTRL, AS_UINT32(&tmp_reg));
+    DSI_clk_HS_mode(1);
+    DSI_EnableClk();
+    g_hs_mode = true;
+}
+
+void Tinno_restore_HS_read()
+{    
+    DSI_TXRX_CTRL_REG tmp_reg = DSI_REG->DSI_TXRX_CTRL;
+
+    tmp_reg.HSTX_CKLP_EN = 1;
+    OUTREG32(&DSI_REG->DSI_TXRX_CTRL, AS_UINT32(&tmp_reg));
+    g_hs_mode = false;
+}
