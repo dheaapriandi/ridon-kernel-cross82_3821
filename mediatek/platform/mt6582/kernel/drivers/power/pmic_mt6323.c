@@ -64,8 +64,6 @@
 #include "mach/mt_gpt.h"
 #endif
 
-#include <cust_pmic.h>
-
 extern int Enable_BATDRV_LOG;
 
 //#include <mach/mt_clock_manager.h>
@@ -185,7 +183,7 @@ void PMIC_IMM_PollingAuxadcChannel(void)
 {
 	kal_uint32 ret=0;
     
-	 //xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[PMIC_IMM_PollingAuxadcChannel] before:%d ",upmu_get_rg_adc_deci_gdly());
+	//xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[PMIC_IMM_PollingAuxadcChannel] before:%d ",upmu_get_rg_adc_deci_gdly());
 
 	if (upmu_get_rg_adc_deci_gdly()==1)
 	{
@@ -541,112 +539,20 @@ void upmu_interrupt_chrdet_int_en(kal_uint32 val)
 EXPORT_SYMBOL(upmu_interrupt_chrdet_int_en);
 
 //==============================================================================
-// Low battery call back function
-//==============================================================================
-#define LBCB_NUM 16
-
-#ifndef DISABLE_LOW_BATTERY_PROTECT
-#define LOW_BATTERY_PROTECT
-#endif
-
-#define INT_BUCK_HV_THD   0x78E //3.4V
-#define INT_BUCK_LV_1_THD 0x771 //3.35V
-#define INT_BUCK_LV_2_THD 0x71C //3.2V
-
-int g_low_battery_level=0;
-int g_low_battery_stop=0;
-
-struct low_battery_callback_table
-{
-    void *lbcb;
-};
-
-struct low_battery_callback_table lbcb_tb[] ={
-    {NULL},{NULL},{NULL},{NULL},{NULL},{NULL},{NULL},{NULL},
-    {NULL},{NULL},{NULL},{NULL},{NULL},{NULL},{NULL},{NULL}    
-};
-
-void (*low_battery_callback)(LOW_BATTERY_LEVEL);
-
-void register_low_battery_notify( void (*low_battery_callback)(LOW_BATTERY_LEVEL), LOW_BATTERY_PRIO prio_val )
-{
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[register_low_battery_notify] start\n");
-
-    lbcb_tb[prio_val].lbcb = low_battery_callback;
-    
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[register_low_battery_notify] prio_val=%d\n",prio_val);
-}
-
-void exec_low_battery_callback(LOW_BATTERY_LEVEL low_battery_level) //0:no limit
-{
-    int i=0;
-
-    if(g_low_battery_stop==1)
-    {
-        xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[exec_low_battery_callback] g_low_battery_stop=%d\n", g_low_battery_stop);
-    }
-    else
-    {
-        for(i=0 ; i<LBCB_NUM ; i++) 
-        {
-            if(lbcb_tb[i].lbcb != NULL)
-            {
-                low_battery_callback = lbcb_tb[i].lbcb;
-                low_battery_callback(low_battery_level);
-                xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[exec_low_battery_callback] prio_val=%d,low_battery=%d\n",i,low_battery_level);
-            }        
-        }
-    }
-}
-
-void lbat_min_en_setting(int en_val)
-{
-    upmu_set_rg_lbat_en_min(en_val);
-    upmu_set_rg_lbat_irq_en_min(en_val);
-    upmu_set_rg_int_en_bat_l(en_val);
-}
-
-void lbat_max_en_setting(int en_val)
-{
-    upmu_set_rg_lbat_en_max(en_val);
-    upmu_set_rg_lbat_irq_en_max(en_val);
-    upmu_set_rg_int_en_bat_h(en_val);
-}
-
-void low_battery_protect_init(void)
-{
-    //default setting
-    upmu_set_rg_lbat_debt_min(0);
-    upmu_set_rg_lbat_debt_max(0);
-    upmu_set_rg_lbat_det_prd_15_0(1);
-    upmu_set_rg_lbat_det_prd_19_16(0);
-
-    upmu_set_rg_lbat_volt_max(INT_BUCK_HV_THD);
-    upmu_set_rg_lbat_volt_min(INT_BUCK_LV_1_THD);  
-
-    lbat_min_en_setting(1);
-    lbat_max_en_setting(0);
-    
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[low bat protect] Reg[0x%x]=0x%x, Reg[0x%x]=0x%x, Reg[0x%x]=0x%x\n", 
-        AUXADC_CON6, upmu_get_reg_value(AUXADC_CON6),
-        AUXADC_CON5, upmu_get_reg_value(AUXADC_CON5),
-        INT_CON0, upmu_get_reg_value(INT_CON0)
-        );
-
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[low_battery_protect_init] Done\n");
-}
-
-//==============================================================================
 // PMIC Interrupt service
 //==============================================================================
+int pmic_thread_timeout=0;
 static DEFINE_MUTEX(pmic_mutex);
-static struct task_struct *pmic_thread_handle = NULL;
+static DECLARE_WAIT_QUEUE_HEAD(pmic_thread_wq);
+
 
 void wake_up_pmic(void)
 {
     xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[wake_up_pmic]\r\n");
-    wake_up_process(pmic_thread_handle);
+    pmic_thread_timeout = 1;
+    wake_up(&pmic_thread_wq);
     wake_lock(&pmicThread_lock);
+	
 }
 EXPORT_SYMBOL(wake_up_pmic);
 
@@ -655,15 +561,11 @@ EXPORT_SYMBOL(wake_up_pmic);
 
 void cust_pmic_interrupt_en_setting(void)
 {
+#if 1
     upmu_set_rg_int_en_spkl_ab(0);
     upmu_set_rg_int_en_spkl(0);
-#ifdef LOW_BATTERY_PROTECT
-    //upmu_set_rg_int_en_bat_l(1);
-    //upmu_set_rg_int_en_bat_h(1);
-#else
     upmu_set_rg_int_en_bat_l(0);
     upmu_set_rg_int_en_bat_h(0);
-#endif
     upmu_set_rg_int_en_watchdog(0);
     upmu_set_rg_int_en_pwrkey(1);
     upmu_set_rg_int_en_thr_l(0);
@@ -680,7 +582,8 @@ void cust_pmic_interrupt_en_setting(void)
     upmu_set_rg_int_en_rtc(1);
     upmu_set_rg_int_en_vproc(0);
     upmu_set_rg_int_en_vsys(0);
-    upmu_set_rg_int_en_vpa(0);      
+    upmu_set_rg_int_en_vpa(0);     
+#endif    
 }
 
 void spkl_ab_int_handler(void)
@@ -707,41 +610,8 @@ void bat_l_int_handler(void)
 
     xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[bat_l_int_handler]....\n");
 
-#ifdef LOW_BATTERY_PROTECT
-    g_low_battery_level++;
-    if(g_low_battery_level > 2)
-       g_low_battery_level = 2; 
 
-    if(g_low_battery_level==1)      
-        exec_low_battery_callback(LOW_BATTERY_LEVEL_1);
-    else if(g_low_battery_level==2) 
-        exec_low_battery_callback(LOW_BATTERY_LEVEL_2);
-    else                            
-        xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[bat_l_int_handler]err,g_low_battery_level=%d\n", g_low_battery_level);
-
-#if 0
-    lbat_min_en_setting(0);
-    mdelay(1);
-    lbat_max_en_setting(1);
-#else
-    upmu_set_rg_lbat_volt_min(INT_BUCK_LV_2_THD);
-
-    lbat_min_en_setting(0);
-    lbat_max_en_setting(0);
-    mdelay(1);
-    if(g_low_battery_level<2)
-    {
-        lbat_min_en_setting(1);
-    }
-    lbat_max_en_setting(1);
-#endif
-
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "Reg[0x%x]=0x%x, Reg[0x%x]=0x%x, Reg[0x%x]=0x%x\n", 
-            AUXADC_CON6, upmu_get_reg_value(AUXADC_CON6),
-            AUXADC_CON5, upmu_get_reg_value(AUXADC_CON5),
-            INT_CON0, upmu_get_reg_value(INT_CON0)
-            );
-#endif 
+    upmu_set_rg_lbat_irq_en_min(0);	
 	
     ret=pmic_config_interface(INT_STATUS0,0x1,0x1,2);    
 }
@@ -752,29 +622,7 @@ void bat_h_int_handler(void)
 
     xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[bat_h_int_handler]....\n");
 
-#ifdef LOW_BATTERY_PROTECT
-    g_low_battery_level=0;
-    exec_low_battery_callback(LOW_BATTERY_LEVEL_0);
-
-#if 0
-    lbat_max_en_setting(0);
-    mdelay(1);
-    lbat_min_en_setting(1);
-#else
-    upmu_set_rg_lbat_volt_min(INT_BUCK_LV_1_THD);
-
-    lbat_min_en_setting(0);
-    lbat_max_en_setting(0);
-    mdelay(1);
-    lbat_min_en_setting(1);   
-#endif
-    
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "Reg[0x%x]=0x%x, Reg[0x%x]=0x%x, Reg[0x%x]=0x%x\n", 
-            AUXADC_CON6, upmu_get_reg_value(AUXADC_CON6),
-            AUXADC_CON5, upmu_get_reg_value(AUXADC_CON5),
-            INT_CON0, upmu_get_reg_value(INT_CON0)
-            );
-#endif  
+    upmu_set_rg_lbat_irq_en_max(0);
 	
     ret=pmic_config_interface(INT_STATUS0,0x1,0x1,3);    
 }
@@ -795,7 +643,7 @@ void pwrkey_int_handler(void)
     kal_uint32 ret=0;
 
     xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[pwrkey_int_handler]....\n");
-    
+   
 		if(upmu_get_pwrkey_deb()==1)    	    	
     {
         xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[pwrkey_int_handler] Release pwrkey\n");
@@ -883,9 +731,6 @@ void chrdet_int_handler(void)
         
         if(boot_mode == KERNEL_POWER_OFF_CHARGING_BOOT || boot_mode == LOW_POWER_OFF_CHARGING_BOOT)
         {
-		#ifdef CHARGING_IOCHARGRE_RESET
-		    reset_charging_iocharger();
-		#endif
             xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[chrdet_int_handler] Unplug Charger/USB In Kernel Power Off Charging Mode!  Shutdown OS!\r\n");
             mt_power_off();
         }
@@ -1025,13 +870,10 @@ void vpa_oc_int_handler(void)
 
 static int pmic_thread_kthread(void *x)
 {
+
     kal_uint32 ret=0;
     kal_uint32 int_status_val_0=0;
     kal_uint32 int_status_val_1=0;
-    struct sched_param param = { .sched_priority = 98 };
-
-    sched_setscheduler(current, SCHED_FIFO, &param);
-    set_current_state(TASK_INTERRUPTIBLE);
 
     xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[pmic_thread_kthread] enter\n");
 
@@ -1074,6 +916,8 @@ static int pmic_thread_kthread(void *x)
 
         mdelay(1);
         
+        mt_eint_unmask(CUST_EINT_MT6323_PMIC_NUM);
+
         //set INT_EN, in PMIC_EINT_SETTING()
         cust_pmic_interrupt_en_setting();
 
@@ -1082,16 +926,15 @@ static int pmic_thread_kthread(void *x)
 
         ret=pmic_read_interface(INT_STATUS1,(&int_status_val_1),0xFFFF,0x0);
         xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[INT] after ,int_status_val_1=0x%x\n", int_status_val_1);
+
 	
         mutex_unlock(&pmic_mutex);
 
         wake_unlock(&pmicThread_lock);
 
-        set_current_state(TASK_INTERRUPTIBLE);
-        
-        mt_eint_unmask(CUST_EINT_MT6323_PMIC_NUM);
+        wait_event(pmic_thread_wq, pmic_thread_timeout);
 
-        schedule();
+        pmic_thread_timeout=0;
     }
 
 
@@ -1359,83 +1202,6 @@ static ssize_t store_pmic_access(struct device *dev,struct device_attribute *att
     return size;
 }
 static DEVICE_ATTR(pmic_access, 0664, show_pmic_access, store_pmic_access); //664
-
-//==============================================================================
-// low battery protect UT
-//==============================================================================
-static ssize_t show_low_battery_protect_ut(struct device *dev,struct device_attribute *attr, char *buf)
-{
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[show_low_battery_protect_ut] g_low_battery_level=%d\n", g_low_battery_level);
-    return sprintf(buf, "%u\n", g_low_battery_level);
-}
-static ssize_t store_low_battery_protect_ut(struct device *dev,struct device_attribute *attr, const char *buf, size_t size)
-{
-    char *pvalue = NULL;
-    U32 val = 0;
-    
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[store_low_battery_protect_ut] \n");
-    
-    if(buf != NULL && size != 0)
-    {
-        xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[store_low_battery_protect_ut] buf is %s and size is %d \n",buf,size);
-        val = simple_strtoul(buf,&pvalue,16);
-        if(val<=2)
-        {
-            xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[store_low_battery_protect_ut] your input is %d\n", val);
-            exec_low_battery_callback(val);
-        }
-        else
-        {
-            xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[store_low_battery_protect_ut] wrong number (%d)\n", val);
-        }
-    }
-    return size;
-}
-static DEVICE_ATTR(low_battery_protect_ut, 0664, show_low_battery_protect_ut, store_low_battery_protect_ut); //664
-
-//==============================================================================
-// low battery protect stop
-//==============================================================================
-static ssize_t show_low_battery_protect_stop(struct device *dev,struct device_attribute *attr, char *buf)
-{
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[show_low_battery_protect_stop] g_low_battery_stop=%d\n", g_low_battery_stop);
-    return sprintf(buf, "%u\n", g_low_battery_stop);
-}
-static ssize_t store_low_battery_protect_stop(struct device *dev,struct device_attribute *attr, const char *buf, size_t size)
-{
-    char *pvalue = NULL;
-    U32 val = 0;
-    
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[store_low_battery_protect_stop] \n");
-    
-    if(buf != NULL && size != 0)
-    {
-        xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[store_low_battery_protect_stop] buf is %s and size is %d \n",buf,size);
-        val = simple_strtoul(buf,&pvalue,16);
-        if( (val!=0) && (val!=1) )
-            val=0;
-        g_low_battery_stop = val;
-        xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[store_low_battery_protect_stop] g_low_battery_stop=%d\n", g_low_battery_stop);
-    }
-    return size;
-}
-static DEVICE_ATTR(low_battery_protect_stop, 0664, show_low_battery_protect_stop, store_low_battery_protect_stop); //664
-
-//==============================================================================
-// low battery protect level
-//==============================================================================
-static ssize_t show_low_battery_protect_level(struct device *dev,struct device_attribute *attr, char *buf)
-{
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[show_low_battery_protect_level] g_low_battery_level=%d\n", g_low_battery_level);
-    return sprintf(buf, "%u\n", g_low_battery_level);
-}
-static ssize_t store_low_battery_protect_level(struct device *dev,struct device_attribute *attr, const char *buf, size_t size)
-{
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[store_low_battery_protect_level] g_low_battery_level=%d\n", g_low_battery_level);
-   
-    return size;
-}
-static DEVICE_ATTR(low_battery_protect_level, 0664, show_low_battery_protect_level, store_low_battery_protect_level); //664
 
 //==============================================================================
 // LDO EN APIs
@@ -3787,38 +3553,21 @@ static int pmic_mt6323_probe(struct platform_device *dev)
     //pmic setting with RTC
     //pmic_setting_depends_rtc();
     
-    pmic_thread_handle = kthread_create(pmic_thread_kthread, (void *) NULL, "pmic_thread_kthread");
-    if (IS_ERR(pmic_thread_handle)) 
-    {
-        pmic_thread_handle = NULL;
-        xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[pmic_thread_kthread] creation fails\n");        
-    }
-    else
-    {
-        wake_up_process(pmic_thread_handle);
-        xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[pmic_thread_kthread] kthread_create Done\n");
-    }
-    
     //PMIC Interrupt Service
     PMIC_EINT_SETTING();
     xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[PMIC_EINT_SETTING] Done\n");
     
+    kthread_run(pmic_thread_kthread, NULL, "pmic_thread_kthread");
+    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[pmic_thread_kthread] Done\n");
+
+    //Dump register
+    //#ifndef USER_BUILD_KERNEL
+    //PMIC_DUMP_ALL_Register();
+    //#endif
+
     dump_ldo_status_read_debug();
     pmic_debug_init();
     xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[PMIC] pmic_debug_init : done.\n" );
-
-    #ifdef MTK_ENABLE_MD5
-    pmic_config_interface(0x402,0x0,0x1,0); // [0:0]: VTCXO_LP_SEL; 
-    pmic_config_interface(0x402,0x1,0x1,11); // [11:11]: VTCXO_ON_CTRL;
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[PMIC] VTCXO control by SRCLKEM due to MTK_ENABLE_MD5, Reg[0x402]=0x%x\n",
-        upmu_get_reg_value(0x402));
-    #endif
-
-#ifdef LOW_BATTERY_PROTECT
-    low_battery_protect_init();
-#else
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[PMIC] no define LOW_BATTERY_PROTECT\n" );
-#endif
 
     return 0;
 }
@@ -3848,16 +3597,6 @@ static int pmic_mt6323_suspend(struct platform_device *dev, pm_message_t state)
 	upmu_set_rg_auxadc_sdm_ck_pdn(0);
 	upmu_set_rg_auxadc_sdm_ck_wake_pdn(0);
 
-#ifdef LOW_BATTERY_PROTECT
-    lbat_min_en_setting(0);
-    lbat_max_en_setting(0);
-    
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[low bat protect] Reg[0x%x]=0x%x, Reg[0x%x]=0x%x, Reg[0x%x]=0x%x\n", 
-        AUXADC_CON6, upmu_get_reg_value(AUXADC_CON6),
-        AUXADC_CON5, upmu_get_reg_value(AUXADC_CON5),
-        INT_CON0, upmu_get_reg_value(INT_CON0)
-        );
-#endif
 
     return 0;
 }
@@ -3874,36 +3613,6 @@ static int pmic_mt6323_resume(struct platform_device *dev)
 	upmu_set_rg_auxadc_sdm_ck_sel(0);
 	upmu_set_rg_auxadc_sdm_ck_pdn(0);
 	upmu_set_rg_auxadc_sdm_ck_wake_pdn(1);
-
-#ifdef LOW_BATTERY_PROTECT
-    lbat_min_en_setting(0);
-    lbat_max_en_setting(0);
-    mdelay(1);
-
-    if(g_low_battery_level==1)
-    {
-        lbat_min_en_setting(1);
-        lbat_max_en_setting(1);
-    }
-    else if(g_low_battery_level==2)
-    {
-        //lbat_min_en_setting(0);
-        lbat_max_en_setting(1);
-    }
-    else //0
-    {
-        lbat_min_en_setting(1);
-        //lbat_max_en_setting(0);
-    }
-    
-    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[low bat protect] Reg[0x%x]=0x%x, Reg[0x%x]=0x%x, Reg[0x%x]=0x%x, g_low_battery_level=%d\n", 
-        AUXADC_CON6, upmu_get_reg_value(AUXADC_CON6),
-        AUXADC_CON5, upmu_get_reg_value(AUXADC_CON5),
-        INT_CON0, upmu_get_reg_value(INT_CON0),
-        g_low_battery_level
-        );
-#endif
-    
     return 0;
 }
 
@@ -3994,9 +3703,6 @@ static int mt_pmic_probe(struct platform_device *dev)
 	
     ret_device_file = device_create_file(&(dev->dev), &dev_attr_BUCK_CURRENT_METER);
 
-    ret_device_file = device_create_file(&(dev->dev), &dev_attr_low_battery_protect_ut);
-    ret_device_file = device_create_file(&(dev->dev), &dev_attr_low_battery_protect_stop);
-    ret_device_file = device_create_file(&(dev->dev), &dev_attr_low_battery_protect_level);
 
     return 0;
 }

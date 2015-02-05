@@ -86,6 +86,7 @@ extern LCM_DRIVER gn_ssd2825_smd_s6e8aa;
 extern LCM_DRIVER nt35517_dsi_vdo_lcm_drv;
 extern LCM_DRIVER hx8369_dsi_bld_lcm_drv;
 extern LCM_DRIVER hx8369_dsi_tm_lcm_drv;
+extern LCM_DRIVER otm1283a_hd720_dsi_vdo_lcm_drv;	 
 extern LCM_DRIVER otm1280a_hd720_dsi_cmd_drv;	 
 extern LCM_DRIVER otm8018b_dsi_vdo_lcm_drv;	 
 extern LCM_DRIVER nt35512_dsi_vdo_lcm_drv;
@@ -456,6 +457,10 @@ LCM_DRIVER* lcm_driver_list[] =
 
 #if defined(OTM1280A_HD720_DSI_CMD)	
 	&otm1280a_hd720_dsi_cmd_drv, 
+#endif
+
+#if defined(OTM1283A_HD720_DSI_VDO)	
+	&otm1283a_hd720_dsi_vdo_lcm_drv, 
 #endif
 
 #if defined(OTM8018B_DSI_VDO)	

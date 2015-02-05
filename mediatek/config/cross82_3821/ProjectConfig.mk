@@ -65,7 +65,7 @@ CUSTOM_HAL_MAIN_BACKUP_IMGSENSOR=ov5648st_mipi_raw
 CUSTOM_HAL_MAIN_BACKUP_LENS=bu6424staf
 
 # User space image sensor  driver: Main camera (rear camera) used sensor related tuning, setting and calibration information.Value is used main sensor name.
-CUSTOM_HAL_MAIN_IMGSENSOR=ov5648qt_mipi_raw
+CUSTOM_HAL_MAIN_IMGSENSOR=ov8850_mipi_raw
 
 # lens driver config for main camera
 CUSTOM_HAL_MAIN_LENS=bu6424qtaf

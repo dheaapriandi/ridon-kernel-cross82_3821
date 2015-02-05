@@ -16,7 +16,6 @@
 #include <linux/proc_fs.h>
 #include <linux/rtc.h>
 #include <linux/xlog.h>
-#include <linux/time.h>
 
 #include <asm/uaccess.h>
 #include <mach/mt_typedefs.h>
@@ -28,79 +27,20 @@
 #include <mach/battery_meter_hal.h>
 #include "cust_battery_meter.h"
 #include "cust_battery_meter_table.h"
-#include "mach/mtk_rtc.h"
-
-
-
-#ifdef SUPPORT_TINNO_BQ27541
-//extern void bq27541_parameter_dump(void);
-extern int read_battery_temp(void);
-extern int read_battery_soc(void);
-extern int check_bq27541_state(void);
-#else
-int read_battery_temp(void)
-{
-	return 0;
-}
-
-int read_battery_soc(void)
-{
-	return 0;
-}
-
-int check_bq27541_state(void)
-{
-	return 0;
-}
-
-
-#endif
 
 // ============================================================ //
 // define
 // ============================================================ //
 static DEFINE_MUTEX(FGADC_mutex);
 
-int Enable_FGADC_LOG = 1; /*modify by alik ,for debug*/
+int Enable_FGADC_LOG = 1;
 
-#ifdef SUPPORT_TINNO_BATTERY_COMPENSATE
-#define  TINNO_NEW_FUNC_INIT_TABLE
-//#ifdef TINNO_NEW_FUNC_INIT_TABLE
-//#define TINNO_TABLE_TEST
-//#endif
-#define MTK_BAT_R_COMPENSTAE
-#ifdef MTK_BAT_R_COMPENSTAE
-extern bool upmu_is_chr_det(void);
-#endif
-#define TINNO_BAT_R_COMPENSTAE
-
-#define TINNO_SUSPEND_CAR_COUNT
-#ifdef  TINNO_SUSPEND_CAR_COUNT
-#define TINNO_STAND_CURRENT  150
-int  g_suspend_oam_car2=0;
-int  g_suspend_oam_car1=0;
-#endif
-
-#ifdef TINNO_BAT_R_COMPENSTAE
-#define TINNO_BAT_CAP_SCALES
-void table_init(void);
-#define TEMP_COMPENSATE_RANGE  3
-#define BATTERY_HIGH_CURRENT_COMPENSATE   15
-int g_per_adc_voltage=0;
-int g_table_temp=0;
-int high_curent_compensate=15;
-#endif
-
-extern u32 g_battery_init_voltage;
- kal_bool  _gFG_chg_state_s=KAL_FALSE;
- #define LK_CURRENT  1800
-#endif
 // ============================================================ //
 // global variable
 // ============================================================ //
 BATTERY_METER_CONTROL battery_meter_ctrl = NULL;
 
-//static struct proc_dir_entry *proc_entry_fgadc;
+static struct proc_dir_entry *proc_entry_fgadc;
 static char proc_fgadc_data[32]; 
 
 kal_bool gFG_Is_Charging = KAL_FALSE;
@@ -196,10 +136,8 @@ kal_int32 d5_count_time_rate=1;
 kal_int32 g_d_hw_ocv=0;
 kal_int32 g_vol_bat_hw_ocv=0;
 kal_int32 g_hw_ocv_before_sleep=0;
-struct timespec g_rtc_time_before_sleep;
-struct timespec tinno_g_rtc_time_before_sleep;
+kal_uint32 g_rtc_time_before_sleep=0;
 kal_int32 g_sw_vbat_temp=0;
-struct timespec last_oam_run_time;
 // ============================================================ //
 // function prototype
 // ============================================================ //
@@ -211,13 +149,10 @@ struct timespec last_oam_run_time;
 // ============================================================ //
 // extern function
 // ============================================================ //
-//extern int get_rtc_spare_fg_value(void);
-//extern unsigned long rtc_read_hw_time(void);
+extern int get_rtc_spare_fg_value(void);
+extern unsigned long rtc_read_hw_time(void);
 
-#ifdef SUPPORT_TINNO_BATTERY_DEBUG
-extern int use_fake_temp_flag;
-extern int fake_temp;
-#endif	  
+
 
 // ============================================================ //
 int get_r_fg_value(void)
@@ -230,22 +165,21 @@ int BattThermistorConverTemp(int Res)
     int i=0;
     int RES1=0,RES2=0;
     int TBatt_Value=-200,TMP1=0,TMP2=0;
-    int table_size=0;
-    table_size=sizeof(Batt_Temperature_Table)/sizeof(BATT_TEMPERATURE);
+
     if(Res>=Batt_Temperature_Table[0].TemperatureR)
     {
-        TBatt_Value = Batt_Temperature_Table[0].BatteryTemp;
+        TBatt_Value = -20;
     }
-    else if(Res<=Batt_Temperature_Table[table_size-1].TemperatureR)
+    else if(Res<=Batt_Temperature_Table[16].TemperatureR)
     {
-        TBatt_Value = Batt_Temperature_Table[table_size-1].BatteryTemp;;
+        TBatt_Value = 60;
     }
     else
     {
         RES1=Batt_Temperature_Table[0].TemperatureR;
         TMP1=Batt_Temperature_Table[0].BatteryTemp;
 
-        for(i=0;i<table_size;i++)
+        for(i=0;i<=16;i++)
         {
             if(Res>=Batt_Temperature_Table[i].TemperatureR)
             {
@@ -283,16 +217,7 @@ int BattVoltToTemp(int dwVolt)
 
     /* convert register to temperature */
     sBaTTMP = BattThermistorConverTemp((int)TRes);
-#ifdef SUPPORT_TINNO_BATTERY_DEBUG
-	if(use_fake_temp_flag!=0)
-	return fake_temp;
-#endif	  
-
-	if(check_bq27541_state())
-	{
-		sBaTTMP= read_battery_temp();
-	}
-
+      
     return sBaTTMP;
 }
 
@@ -497,50 +422,6 @@ kal_int32 fgauge_read_v_by_capacity(int bat_capacity)
     return ret_volt;
 }
 
-#ifdef TINNO_NEW_FUNC_INIT_TABLE
-kal_int32 fgauge_read_d_by_v_by_table(BATTERY_PROFILE_STRUC_P profile_p,kal_int32 volt_bat)
-{
-    int i = 0, saddles = 0;
-    kal_int32 ret_d = 0;
-    if (profile_p == NULL)
-    {
-        bm_print(BM_LOG_CRTI, "[FGADC] fgauge get ZCV profile : fail !\r\n");
-        return 100;
-    }
-
-    saddles = fgauge_get_saddles();
-
-    if (volt_bat > (profile_p+0)->voltage)
-    {
-        return 0; 
-    }    
-    if (volt_bat < (profile_p+saddles-1)->voltage)
-    {
-        return 100; 
-    }
-
-    for (i = 0; i < saddles - 1; i++)
-    {
-        if ((volt_bat <= (profile_p+i)->voltage) && (volt_bat >= (profile_p+i+1)->voltage))
-        {
-            ret_d = (profile_p+i)->percentage +
-                (
-                    (
-                        ( ((profile_p+i)->voltage) - volt_bat ) * 
-                        ( ((profile_p+i+1)->percentage) - ((profile_p + i)->percentage) ) 
-                    ) /
-                    ( ((profile_p+i)->voltage) - ((profile_p+i+1)->voltage) )
-                );         
-            
-            break;
-        }
-        
-    }
-
-    return ret_d;
-}
-#endif
-
 kal_int32 fgauge_read_d_by_v(kal_int32 volt_bat)
 {    
     int i = 0, saddles = 0;
@@ -630,48 +511,6 @@ kal_int32 fgauge_read_v_by_d(int d_val)
     return ret_volt;
 }
 
-#ifdef TINNO_NEW_FUNC_INIT_TABLE
-kal_int32 fgauge_read_r_bat_by_v_by_table(R_PROFILE_STRUC_P profile_p,kal_int32 voltage){
- int i = 0, saddles = 0;
-    kal_int32 ret_r = 0;
-
-    if (profile_p == NULL)
-    {
-        bm_print(BM_LOG_CRTI, "[FGADC] fgauge get R-Table profile : fail !\r\n");
-        return 0;
-    }
-
-    saddles = fgauge_get_saddles_r_table();
-
-    if (voltage > (profile_p+0)->voltage)
-    {
-        return (profile_p+0)->resistance; 
-    }    
-    if (voltage < (profile_p+saddles-1)->voltage)
-    {
-        return (profile_p+saddles-1)->resistance; 
-    }
-
-    for (i = 0; i < saddles - 1; i++)
-    {
-        if ((voltage <= (profile_p+i)->voltage) && (voltage >= (profile_p+i+1)->voltage))
-        {
-            ret_r = (profile_p+i)->resistance +
-                (
-                    (
-                        ( ((profile_p+i)->voltage) - voltage ) * 
-                        ( ((profile_p+i+1)->resistance) - ((profile_p + i)->resistance) ) 
-                    ) /
-                    ( ((profile_p+i)->voltage) - ((profile_p+i+1)->voltage) )
-                );
-            break;
-        }
-    }
-    return ret_r;
-}
-#endif
-
-
 kal_int32 fgauge_read_r_bat_by_v(kal_int32 voltage)
 {    
     int i = 0, saddles = 0;
@@ -711,132 +550,11 @@ kal_int32 fgauge_read_r_bat_by_v(kal_int32 voltage)
             break;
         }
     }
-#ifdef MTK_BAT_R_COMPENSTAE
-if(upmu_is_chr_det() == KAL_FALSE)
-{
-	ret_r=(ret_r*4)/5;
-}
-#endif
 
     return ret_r;
 }
 
-#ifdef TINNO_NEW_FUNC_INIT_TABLE
-void fgauge_construct_battery_profile(kal_int32 temperature, BATTERY_PROFILE_STRUC_P temp_profile_p)
-{
-    BATTERY_PROFILE_STRUC_P low_profile_p, high_profile_p;
-    kal_int32 low_temperature, high_temperature;
-    int i, saddles;
-    kal_int32 temp_d_1 = 0, temp_d_2 = 0;
-    kal_int32 high_profile_d = 0, low_profile_d = 0;
 
-    if (temperature <= TEMPERATURE_T1)
-    {
-        low_profile_p    = fgauge_get_profile(TEMPERATURE_T0);
-        high_profile_p   = fgauge_get_profile(TEMPERATURE_T1);
-        low_temperature  = (-10);
-        high_temperature = TEMPERATURE_T1;
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else if (temperature <= TEMPERATURE_T2)
-    {
-        low_profile_p    = fgauge_get_profile(TEMPERATURE_T1);
-        high_profile_p   = fgauge_get_profile(TEMPERATURE_T2);
-        low_temperature  = TEMPERATURE_T1;
-        high_temperature = TEMPERATURE_T2;
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else
-    {
-        low_profile_p    = fgauge_get_profile(TEMPERATURE_T2);
-        high_profile_p   = fgauge_get_profile(TEMPERATURE_T3);
-        low_temperature  = TEMPERATURE_T2;
-        high_temperature = TEMPERATURE_T3;
-        
-        if(temperature > high_temperature)
-        {
-            temperature = high_temperature;
-        }
-    }
-
-    saddles = fgauge_get_saddles();
-
-    for (i = 0; i < saddles; i++)
-    {
-            (temp_profile_p + i)->voltage =(high_profile_p + i)->voltage;
-
-     }
-
-
-
-    /* Interpolation for R_BAT */
-    for (i = 0; i < saddles; i++)
-    {
-	high_profile_d=fgauge_read_d_by_v_by_table(high_profile_p,(temp_profile_p + i)->voltage);
-	low_profile_d=fgauge_read_d_by_v_by_table(low_profile_p,(temp_profile_p + i)->voltage);
-	
-        if( high_profile_d>low_profile_d)
-        {
-            temp_d_1 = high_profile_d;
-            temp_d_2 =low_profile_d;    
-
-            (temp_profile_p + i)->percentage = temp_d_2 +
-            (
-                (
-                    (temperature - low_temperature) * 
-                    (temp_d_1 - temp_d_2)
-                ) / 
-                (high_temperature - low_temperature)                
-            );
-        }
-        else
-        {
-            temp_d_1 =low_profile_d;
-            temp_d_2 =high_profile_d;
-
-            (temp_profile_p + i)->percentage= temp_d_2 +
-            (
-                (
-                    (high_temperature - temperature) * 
-                    (temp_d_1 - temp_d_2)
-                ) / 
-                (high_temperature - low_temperature)                
-            );
-        }
-
-
-	
-
-#if 0        
-        (temp_profile_p + i)->voltage = temp_v_2 +
-            (
-                (
-                    (temperature - low_temperature) * 
-                    (temp_v_1 - temp_v_2)
-                ) / 
-                (high_temperature - low_temperature)                
-            );
-#endif
-    }
-
-    
-    // Dumpt new battery profile
-    for (i = 0; i < saddles ; i++)
-    {
-        bm_print(BM_LOG_CRTI, "<DOD,Voltage> at %d = <%d,%d>\r\n",
-            temperature, (temp_profile_p+i)->percentage, (temp_profile_p+i)->voltage);
-    }
-    
-}
-#else
 void fgauge_construct_battery_profile(kal_int32 temperature, BATTERY_PROFILE_STRUC_P temp_profile_p)
 {
     BATTERY_PROFILE_STRUC_P low_profile_p, high_profile_p;
@@ -936,121 +654,7 @@ void fgauge_construct_battery_profile(kal_int32 temperature, BATTERY_PROFILE_STR
     }
     
 }
-#endif
 
-#ifdef TINNO_NEW_FUNC_INIT_TABLE
-void fgauge_construct_r_table_profile(kal_int32 temperature, R_PROFILE_STRUC_P temp_profile_p)
-{
-    R_PROFILE_STRUC_P low_profile_p, high_profile_p;
-    kal_int32 low_temperature, high_temperature;
-    int i, saddles;
-    kal_int32 high_profile_r = 0, low_profile_r = 0;
-    kal_int32 temp_r_1 = 0, temp_r_2 = 0;
-    
-
-    if (temperature <= TEMPERATURE_T1)
-    {
-        low_profile_p    = fgauge_get_profile_r_table(TEMPERATURE_T0);
-        high_profile_p   = fgauge_get_profile_r_table(TEMPERATURE_T1);
-        low_temperature  = (-10);
-        high_temperature = TEMPERATURE_T1;
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else if (temperature <= TEMPERATURE_T2)
-    {
-        low_profile_p    = fgauge_get_profile_r_table(TEMPERATURE_T1);
-        high_profile_p   = fgauge_get_profile_r_table(TEMPERATURE_T2);
-        low_temperature  = TEMPERATURE_T1;
-        high_temperature = TEMPERATURE_T2;
-        
-        if(temperature < low_temperature)
-        {
-            temperature = low_temperature;
-        }
-    }
-    else
-    {
-        low_profile_p    = fgauge_get_profile_r_table(TEMPERATURE_T2);
-        high_profile_p   = fgauge_get_profile_r_table(TEMPERATURE_T3);
-        low_temperature  = TEMPERATURE_T2;
-        high_temperature = TEMPERATURE_T3;
-        
-        if(temperature > high_temperature)
-        {
-            temperature = high_temperature;
-        }
-    }
-
-    saddles = fgauge_get_saddles_r_table();
-
-/*use the high temp voltage*/
- for (i = 0; i < saddles; i++){
-	 (temp_profile_p + i)->voltage =(high_profile_p + i)->voltage;
- }
-
-
-    /* Interpolation for R_BAT */
-    for (i = 0; i < saddles; i++)
-    {
-	high_profile_r=fgauge_read_r_bat_by_v_by_table(high_profile_p,(temp_profile_p + i)->voltage);
-	low_profile_r=fgauge_read_r_bat_by_v_by_table(low_profile_p,(temp_profile_p + i)->voltage);
-	
-        if( high_profile_r>low_profile_r)
-        {
-            temp_r_1 = high_profile_r;
-            temp_r_2 =low_profile_r;    
-
-            (temp_profile_p + i)->resistance = temp_r_2 +
-            (
-                (
-                    (temperature - low_temperature) * 
-                    (temp_r_1 - temp_r_2)
-                ) / 
-                (high_temperature - low_temperature)                
-            );
-        }
-        else
-        {
-            temp_r_1 =low_profile_r;
-            temp_r_2 =high_profile_r;
-
-            (temp_profile_p + i)->resistance = temp_r_2 +
-            (
-                (
-                    (high_temperature - temperature) * 
-                    (temp_r_1 - temp_r_2)
-                ) / 
-                (high_temperature - low_temperature)                
-            );
-        }
-
-#if 0    
-        //(temp_profile_p + i)->voltage = (high_profile_p + i)->voltage;
-        
-        (temp_profile_p + i)->resistance = temp_r_2 +
-            (
-                (
-                    (temperature - low_temperature) * 
-                    (temp_r_1 - temp_r_2)
-                ) / 
-                (high_temperature - low_temperature)                
-            );
-#endif
-    }
-
-    // Dumpt new r-table profile
-    for (i = 0; i < saddles ; i++)
-    {
-        bm_print(BM_LOG_CRTI, "<Rbat,VBAT> at %d = <%d,%d>\r\n",
-            temperature, (temp_profile_p+i)->resistance, (temp_profile_p+i)->voltage);
-    }
-    
-}
-#else 
 void fgauge_construct_r_table_profile(kal_int32 temperature, R_PROFILE_STRUC_P temp_profile_p)
 {
     R_PROFILE_STRUC_P low_profile_p, high_profile_p;
@@ -1200,8 +804,6 @@ void fgauge_construct_r_table_profile(kal_int32 temperature, R_PROFILE_STRUC_P t
 }
 
 
-#endif
-
 void fg_qmax_update_for_aging(void)
 {
 #if defined(CONFIG_POWER_EXT)
@@ -1268,53 +870,19 @@ void dod_init(void)
     #endif
     if(g_rtc_fg_soc >= gFG_capacity_by_v)
     {
-//	if(((g_rtc_fg_soc != 0) && ((g_rtc_fg_soc-gFG_capacity_by_v) < 10)&&(( gFG_capacity_by_v > 5 || bat_is_charger_exist() == KAL_TRUE))))
-        if(((g_rtc_fg_soc != 0) && ((g_rtc_fg_soc-gFG_capacity_by_v) < CUST_POWERON_DELTA_CAPACITY_TOLRANCE) &&(( gFG_capacity_by_v > CUST_POWERON_LOW_CAPACITY_TOLRANCE /*|| bat_is_charger_exist() == KAL_TRUE*/)))
-			|| ((g_rtc_fg_soc != 0) &&(g_boot_reason == BR_WDT_BY_PASS_PWK || g_boot_reason == BR_WDT || g_boot_reason == BR_TOOL_BY_PASS_PWK || g_boot_reason == BR_2SEC_REBOOT || g_boot_mode == RECOVERY_BOOT)))
+        if(((g_rtc_fg_soc != 0) && ((g_rtc_fg_soc-gFG_capacity_by_v) < CUST_POWERON_DELTA_CAPACITY_TOLRANCE) &&(( gFG_capacity_by_v > CUST_POWERON_LOW_CAPACITY_TOLRANCE || bat_is_charger_exist() == KAL_TRUE)))
+			|| ((g_rtc_fg_soc != 0) &&(g_boot_reason == BR_WDT_BY_PASS_PWK || g_boot_reason == BR_WDT)))
             
         {
-//modify by alik
-           if((g_rtc_fg_soc-gFG_capacity_by_v) >((CUST_POWERON_DELTA_CAPACITY_TOLRANCE*2)/3))
-           {
-		gFG_capacity_by_v=(g_rtc_fg_soc*2+gFG_capacity_by_v)/3;
-	    }
-	     else if((g_rtc_fg_soc-gFG_capacity_by_v) >(CUST_POWERON_DELTA_CAPACITY_TOLRANCE/2))
-		{
-		gFG_capacity_by_v=(g_rtc_fg_soc+gFG_capacity_by_v)/2;
-	    }else
-		 {
-            		gFG_capacity_by_v = g_rtc_fg_soc;
-	     	}
-//modify end		 
+            gFG_capacity_by_v = g_rtc_fg_soc;            
         }
     }
     else
     {
-    	if(((g_rtc_fg_soc != 0) && ((gFG_capacity_by_v-g_rtc_fg_soc) < CUST_POWERON_DELTA_CAPACITY_TOLRANCE) &&(( gFG_capacity_by_v > CUST_POWERON_LOW_CAPACITY_TOLRANCE /*|| bat_is_charger_exist() == KAL_TRUE*/)))
-			|| ((g_rtc_fg_soc != 0) &&(g_boot_reason == BR_WDT_BY_PASS_PWK || g_boot_reason == BR_WDT || g_boot_reason == BR_TOOL_BY_PASS_PWK || g_boot_reason == BR_2SEC_REBOOT || g_boot_mode == RECOVERY_BOOT)))
+    	if(((g_rtc_fg_soc != 0) && ((gFG_capacity_by_v-g_rtc_fg_soc) < CUST_POWERON_DELTA_CAPACITY_TOLRANCE) &&(( gFG_capacity_by_v > CUST_POWERON_LOW_CAPACITY_TOLRANCE || bat_is_charger_exist() == KAL_TRUE)))
+			|| ((g_rtc_fg_soc != 0) &&(g_boot_reason == BR_WDT_BY_PASS_PWK || g_boot_reason == BR_WDT)))
         {
-#if 0    /* do not allowed the  gFG_capacity_by_v >g_rtc_fg_soc */
- //modify by alik       
-		if((gFG_capacity_by_v-g_rtc_fg_soc) >((CUST_POWERON_DELTA_CAPACITY_TOLRANCE*2)/3))
-		{
-			gFG_capacity_by_v=(g_rtc_fg_soc*2+gFG_capacity_by_v)/3;
-		}	  
-		else if((gFG_capacity_by_v-g_rtc_fg_soc) >(CUST_POWERON_DELTA_CAPACITY_TOLRANCE/2))
-		{
-			gFG_capacity_by_v=(g_rtc_fg_soc+gFG_capacity_by_v)/2;
-		}
-		else{
-			gFG_capacity_by_v = g_rtc_fg_soc;
-		}      
-//modify end	
-#else
-			if((g_rtc_fg_soc==1)&&(gFG_capacity_by_v>=4))
-			{
-				gFG_capacity_by_v=4;
-			}else{
-				gFG_capacity_by_v = g_rtc_fg_soc;
-			}
-#endif
+            gFG_capacity_by_v = g_rtc_fg_soc;            
         }
     }        
 
@@ -1387,26 +955,14 @@ void oam_init(void)
     int ret=0;
 	int vol_bat=0;
 	kal_int32 vbat_capacity = 0;
-#ifdef SUPPORT_TINNO_BATTERY_COMPENSATE
-        int hw_ocv_vol=0;
-#endif
+
 	vol_bat = 5; //set avg times
     ret = battery_meter_ctrl(BATTERY_METER_CMD_GET_ADC_V_BAT_SENSE, &vol_bat);
     ret = battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_OCV, &gFG_voltage);
-	
-#ifdef SUPPORT_TINNO_BATTERY_COMPENSATE
-        hw_ocv_vol=gFG_voltage;
-        bm_print(BM_LOG_CRTI, "[oam_init_tinno] hw_ocv_vol gFG_voltage=%d \n",gFG_voltage);
-	    gFG_voltage=g_battery_init_voltage;
-	  bm_print(BM_LOG_CRTI, "[oam_init_tinno] before tracking gFG_voltage=%d \n",gFG_voltage);
-	    gFG_voltage = gFG_voltage + mtk_imp_tracking(gFG_voltage,LK_CURRENT,5); //mV  
-	  bm_print(BM_LOG_CRTI, "[oam_init_tinno] after tracking gFG_voltage=%d ,hw_ocv_vol=%d , distance:%d \n",gFG_voltage,hw_ocv_vol,(hw_ocv_vol-gFG_voltage));
-	   
-#endif
-	gFG_capacity_by_v = fgauge_read_capacity_by_v(gFG_voltage);
 
-#ifndef SUPPORT_TINNO_BATTERY_COMPENSATE
+	gFG_capacity_by_v = fgauge_read_capacity_by_v(gFG_voltage);
 	vbat_capacity = fgauge_read_capacity_by_v(vol_bat);
+	
     if(bat_is_charger_exist() == KAL_TRUE)
     {
     	bm_print(BM_LOG_CRTI, "[oam_init_inf] gFG_capacity_by_v=%d, vbat_capacity=%d, \n",gFG_capacity_by_v,vbat_capacity);
@@ -1421,7 +977,6 @@ void oam_init(void)
 			gFG_capacity_by_v = vbat_capacity;
     	}   	
     }    
-#endif	
 	
     gFG_capacity_by_v_init = gFG_capacity_by_v;
 
@@ -1475,128 +1030,25 @@ void oam_run(void)
     //int d_hw_ocv=0;
     int charging_current=0;
     int ret=0;
-	//kal_uint32 now_time;
-	struct timespec now_time;
-	kal_int32 delta_time = 0;
-
-	//now_time = rtc_read_hw_time();
-	getrawmonotonic(&now_time);
-
-	//delta_time = now_time - last_oam_run_time;
-	delta_time = now_time.tv_sec - last_oam_run_time.tv_sec;
-
-	bm_print(BM_LOG_FULL, "[oam_run_time] last time=%d, now time=%d, delta time=%d\n", 
-	last_oam_run_time.tv_sec, now_time.tv_sec, delta_time);
+    
 	
-	last_oam_run_time = now_time;
-		
     vol_bat = 15; //set avg times
     ret = battery_meter_ctrl(BATTERY_METER_CMD_GET_ADC_V_BAT_SENSE, &vol_bat);
 
     //ret = battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_OCV, &vol_bat_hw_ocv);
     //d_hw_ocv = fgauge_read_d_by_v(vol_bat_hw_ocv);
 
-#ifdef TINNO_BAT_R_COMPENSTAE
-    int temperature = force_get_tbat();
-	if(temperature>=25)
-     {
-    	if(((temperature-g_table_temp)>TEMP_COMPENSATE_RANGE)||((g_table_temp-temperature)>TEMP_COMPENSATE_RANGE))
-    	{
-	   	 table_init();
-	    	bm_print(BM_LOG_CRTI,"before temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
-		oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	 
-	    oam_r_1 = fgauge_read_r_bat_by_v(oam_v_ocv_1);
-	    oam_v_ocv_2 = fgauge_read_v_by_d(oam_d_2);
-	    oam_r_2 = fgauge_read_r_bat_by_v(oam_v_ocv_2);    
-		bm_print(BM_LOG_CRTI,"after temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
-		oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	 
-		 
-	}
-    }else{
-                if(temperature!=g_table_temp)
-                {
-		  	table_init();
-			bm_print(BM_LOG_CRTI,"before temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
-			oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	 
-			oam_r_1 = fgauge_read_r_bat_by_v(oam_v_ocv_1);
-			oam_v_ocv_2 = fgauge_read_v_by_d(oam_d_2);
-			oam_r_2 = fgauge_read_r_bat_by_v(oam_v_ocv_2);    
-			bm_print(BM_LOG_CRTI,"after temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
-			oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);
-                }
-	}
-#endif
-    
     oam_i_1 = (((oam_v_ocv_1-vol_bat)*1000)*10) / oam_r_1;    //0.1mA
     oam_i_2 = (((oam_v_ocv_2-vol_bat)*1000)*10) / oam_r_2;    //0.1mA
 
+    oam_car_1 = (oam_i_1*10/3600) + oam_car_1; //0.1mAh
+    oam_car_2 = (oam_i_2*10/3600) + oam_car_2; //0.1mAh
 
-#ifdef TINNO_BAT_R_COMPENSTAE
-
-    //oam_i_1 = (oam_i_1*110)/100
-   // oam_i_2 = (oam_i_2*110)/100;    //0.1mA
-
-	if(oam_i_2>=0)/*not chging */
-	{	
-	   if(oam_i_2<2000)
-	   {
-		high_curent_compensate=5;
-	   }else if(oam_i_2<5000)
-	   	{
-			high_curent_compensate=10;
-	   	}else{
-			high_curent_compensate=15;
-		}
-	}else{/*chging*/
-		if(oam_i_2>(-2000))
-	   {
-		high_curent_compensate=-5;
-	   }else if(oam_i_2>(-5000))
-	   	{
-			high_curent_compensate=-10;
-	   	}else{
-			high_curent_compensate=-15;
-		}
-	}
-	bm_print(BM_LOG_CRTI,"before high curent compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,high_curent_compensate=%d \n",
-		oam_v_ocv_1,oam_v_ocv_2,high_curent_compensate);
-	oam_v_ocv_1=oam_v_ocv_1-high_curent_compensate;
-	oam_v_ocv_2=oam_v_ocv_2-high_curent_compensate;
-
-    oam_i_1 = (((oam_v_ocv_1-vol_bat)*1000)*10) / oam_r_1;    //0.1mA
-    oam_i_2 = (((oam_v_ocv_2-vol_bat)*1000)*10) / oam_r_2;    //0.1mA
-
-	bm_print(BM_LOG_CRTI,"after high curent compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,high_curent_compensate=%d \n",
-	oam_v_ocv_1,oam_v_ocv_2,high_curent_compensate);
-	
-    #endif
-
-    oam_car_1 = (oam_i_1*delta_time/3600) + oam_car_1; //0.1mAh
-    oam_car_2 = (oam_i_2*delta_time/3600) + oam_car_2; //0.1mAh
-
-#ifdef TINNO_BAT_CAP_SCALES
-if(oam_i_1>0)
-{
-    oam_d_1 = oam_d0 + (oam_car_1*1000)/(gFG_BATT_CAPACITY_aging*95);
-}else{
     oam_d_1 = oam_d0 + (oam_car_1*100/10)/gFG_BATT_CAPACITY_aging;
-}
-#else
-    oam_d_1 = oam_d0 + (oam_car_1*100/10)/gFG_BATT_CAPACITY_aging;
-#endif
     if(oam_d_1 < 0)   oam_d_1 = 0;
     if(oam_d_1 > 100) oam_d_1 = 100;
-	
-#ifdef TINNO_BAT_CAP_SCALES
-if(oam_i_2>0)
-{
-    oam_d_2 = oam_d0 + (oam_car_2*1000)/(gFG_BATT_CAPACITY_aging*95);
-}else{
+    
     oam_d_2 = oam_d0 + (oam_car_2*100/10)/gFG_BATT_CAPACITY_aging;
-}
-#else
-    oam_d_2 = oam_d0 + (oam_car_2*100/10)/gFG_BATT_CAPACITY_aging;
-#endif
     if(oam_d_2 < 0)   oam_d_2 = 0;
     if(oam_d_2 > 100) oam_d_2 = 100;
     
@@ -1641,7 +1093,7 @@ if(oam_i_2>0)
         d5_count_time = d5_count_time_rate;
     }
 #else
-    d5_count_time = 30;
+    d5_count_time = 60;
 #endif    
 
     if(d5_count >= d5_count_time)
@@ -1740,34 +1192,15 @@ void table_init(void)
 {
     BATTERY_PROFILE_STRUC_P profile_p;
     R_PROFILE_STRUC_P profile_p_r_table;
-#ifdef TINNO_NEW_FUNC_INIT_TABLE
-#ifdef TINNO_TABLE_TEST
-	int i=0;
-#endif
-#endif
-    int temperature = force_get_tbat();
 
-#ifdef TINNO_BAT_R_COMPENSTAE
-	g_table_temp=temperature;
-#endif
+    int temperature = force_get_tbat();
+    
     // Re-constructure r-table profile according to current temperature
     profile_p_r_table = fgauge_get_profile_r_table(TEMPERATURE_T);
     if (profile_p_r_table == NULL)
     {
         bm_print(BM_LOG_CRTI, "[FGADC] fgauge_get_profile_r_table : create table fail !\r\n");
     }
-
-#ifdef TINNO_NEW_FUNC_INIT_TABLE
-	#ifdef TINNO_TABLE_TEST
-   bm_print(BM_LOG_CRTI, "[FGADC] start test r table !\r\n");
-   for(i=-10;i<50;i+=5)
-   {
-    	fgauge_construct_r_table_profile(i, profile_p_r_table);
-   }	
-   bm_print(BM_LOG_CRTI, "[FGADC] stop test r table !\r\n");
-	#endif
-#endif
-	
     fgauge_construct_r_table_profile(temperature, profile_p_r_table);
 
     // Re-constructure battery profile according to current temperature
@@ -1776,18 +1209,6 @@ void table_init(void)
     {
         bm_print(BM_LOG_CRTI, "[FGADC] fgauge_get_profile : create table fail !\r\n");
     }
-#ifdef TINNO_NEW_FUNC_INIT_TABLE
-	#ifdef TINNO_TABLE_TEST
-   bm_print(BM_LOG_CRTI, "[FGADC] start test v table !\r\n");
-   for(i=-10;i<50;i+=5)
-   {
-    fgauge_construct_battery_profile(i, profile_p);
-   }	
-   bm_print(BM_LOG_CRTI, "[FGADC] stop test  v table !\r\n");
-	#endif
-#endif
-
-	
     fgauge_construct_battery_profile(temperature, profile_p);
 }
 
@@ -2150,12 +1571,10 @@ kal_int32 fgauge_read_capacity(kal_int32 type)
     kal_int32 voltage;
     kal_int32 temperature;
     kal_int32 dvalue = 0;
-
-#ifndef CUST_DISABLE_CAPACITY_OCV2CV_TRANSFORM    
+    
     kal_int32 C_0mA=0;
     kal_int32 C_400mA=0;
     kal_int32 dvalue_new=0;
-#endif    
     
     kal_int32 temp_val = 0;
 
@@ -2174,7 +1593,6 @@ kal_int32 fgauge_read_capacity(kal_int32 type)
 
     gFG_DOD1 = dvalue;
 
-#ifndef CUST_DISABLE_CAPACITY_OCV2CV_TRANSFORM
     //User View on HT~LT----------------------------------------------------------
     gFG_temp = battery_meter_get_battery_temperature();
     C_0mA = fgauge_get_Q_max(gFG_temp);
@@ -2187,7 +1605,6 @@ kal_int32 fgauge_read_capacity(kal_int32 type)
     bm_print(BM_LOG_FULL, "[fgauge_read_capacity] %d,%d,%d,%d,%d,D1=%d,D0=%d\r\n", 
             gFG_temp, C_0mA, C_400mA, dvalue, dvalue_new, gFG_DOD1, gFG_DOD0);
     //----------------------------------------------------------------------------
-#endif /* CUST_DISABLE_CAPACITY_OCV2CV_TRANSFORM */
 
     #if 0
     //Battery Aging update ----------------------------------------------------------
@@ -2494,9 +1911,9 @@ kal_int32 get_dynamic_period(int first_use, int first_wakeup_time, int battery_c
 
     kal_int32 car_instant=0;
     kal_int32 current_instant=0;
-    static kal_int32 car_sleep=0;
+    kal_int32 car_sleep=0;
     kal_int32 car_wakeup=0;
-    static kal_int32 last_time=0;
+    kal_int32 last_time=0;
 
     kal_int32 ret_val=-1;
     int check_fglog=0;
@@ -2985,8 +2402,8 @@ kal_int32 battery_meter_get_VSense(void)
 }
 
 // ============================================================ //
-static ssize_t fgadc_log_write( struct file *filp, const char __user *buff,
-                        size_t len, loff_t *data )
+ssize_t fgadc_log_write( struct file *filp, const char __user *buff,
+                        unsigned long len, void *data )
 {
     if (copy_from_user( &proc_fgadc_data, buff, len )) {
         bm_print(BM_LOG_CRTI, "fgadc_log_write error.\n");
@@ -3007,18 +2424,9 @@ static ssize_t fgadc_log_write( struct file *filp, const char __user *buff,
     return len;
 }
 
-static const struct file_operations fgadc_proc_fops = { 
-    .write = fgadc_log_write,
-};
-
 int init_proc_log_fg(void)
 {
     int ret=0;
-
-#if 1
-    proc_create("fgadc_log", 0644, NULL, &fgadc_proc_fops);
-    bm_print(BM_LOG_CRTI, "proc_create fgadc_proc_fops\n");
-#else
     proc_entry_fgadc = create_proc_entry( "fgadc_log", 0644, NULL );
     
     if (proc_entry_fgadc == NULL) {
@@ -3028,7 +2436,6 @@ int init_proc_log_fg(void)
         proc_entry_fgadc->write_proc = fgadc_log_write;
         bm_print(BM_LOG_CRTI, "init_proc_log_fg loaded.\n");
     }
-#endif
   
     return ret;
 }
@@ -3200,16 +2607,12 @@ static int battery_meter_probe(struct platform_device *dev)
 {
     int ret_device_file = 0;
 
-	battery_meter_ctrl = bm_ctrl_cmd;
-
-    bm_print(BM_LOG_CRTI, "[battery_meter_probe] probe\n");
+    bm_print(BM_LOG_CRTI, "[battery_meter_probe] probe\n");    
     //select battery meter control method
-     battery_meter_ctrl = bm_ctrl_cmd;
+	battery_meter_ctrl = bm_ctrl_cmd;
     //LOG System Set
     init_proc_log_fg();
-
-	//last_oam_run_time = rtc_read_hw_time(); 
-	getrawmonotonic(&last_oam_run_time);
+		
     //Create File For FG UI DEBUG
     ret_device_file = device_create_file(&(dev->dev), &dev_attr_FG_Current);    
     ret_device_file = device_create_file(&(dev->dev), &dev_attr_FG_g_fg_dbg_bat_volt);
@@ -3251,15 +2654,8 @@ static int battery_meter_suspend(struct platform_device *dev, pm_message_t state
 #if defined(CONFIG_POWER_EXT)
 
 #elif defined(SOC_BY_SW_FG)
-	//g_rtc_time_before_sleep = rtc_read_hw_time(); 
-	getrawmonotonic(&g_rtc_time_before_sleep);
+	g_rtc_time_before_sleep = rtc_read_hw_time(); 
 	battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_OCV, &g_hw_ocv_before_sleep);
-
-#ifdef SUPPORT_TINNO_BATTERY_COMPENSATE
-	  struct timespec xts,tom;
-        get_xtime_and_monotonic_and_sleep_offset(&xts, &tom, &tinno_g_rtc_time_before_sleep);
-#endif
-
 #endif	
 
     bm_print(BM_LOG_CRTI, "[battery_meter_suspend]\n");
@@ -3272,20 +2668,12 @@ static int battery_meter_resume(struct platform_device *dev)
 
 #elif defined(SOC_BY_SW_FG)
 	kal_int32 hw_ocv_after_sleep;
-	//kal_uint32 rtc_time_after_sleep;
-    struct timespec rtc_time_after_sleep;
-//    kal_int32 sw_vbat;
-//    kal_int32 vbat_diff = 200;
+	kal_uint32 rtc_time_after_sleep;
+    kal_int32 sw_vbat;
+    kal_int32 vbat_diff = 200;
  
-	battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_OCV, &hw_ocv_after_sleep);
-
-#ifdef SUPPORT_TINNO_BATTERY_COMPENSATE
-    struct timespec xts,tom;
-    struct timespec tinno_rtc_time_after_sleep;
-	get_xtime_and_monotonic_and_sleep_offset(&xts, &tom, &tinno_rtc_time_after_sleep);
-#endif
-
-#if 0    
+	battery_meter_ctrl(BATTERY_METER_CMD_GET_HW_OCV, &hw_ocv_after_sleep);    
+#if 1    
     sw_vbat = battery_meter_get_battery_voltage();
     
     bm_print(BM_LOG_CRTI, "HW_OCV=%d, SW_VBAT=%d\n", hw_ocv_after_sleep, sw_vbat);
@@ -3300,125 +2688,31 @@ static int battery_meter_resume(struct platform_device *dev)
     }
     else
 #endif        
-    {
-        //rtc_time_after_sleep = rtc_read_hw_time();
-		getrawmonotonic(&rtc_time_after_sleep);
-
-
-
-#ifndef TINNO_CALIBRATION_DOD
-
-#ifdef  SUPPORT_TINNO_BATTERY_COMPENSATE		
-    	if(tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec > 1200)/*SLEEP 10 MINE ,THE BATTERY CAN BACK TO ZCV*/
-#else
-    	if(rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec > 3600)
-#endif
+    {    
+        rtc_time_after_sleep = rtc_read_hw_time();
+        
+    	if(rtc_time_after_sleep - g_rtc_time_before_sleep > 3600)	//1hr
     	{
     		if(hw_ocv_after_sleep != g_hw_ocv_before_sleep)
     		{
     			 gFG_DOD0 = fgauge_read_d_by_v(hw_ocv_after_sleep); 
     			 oam_v_ocv_2 = oam_v_ocv_1 = hw_ocv_after_sleep;
-			 oam_d0=gFG_DOD0;
-			 oam_d_5=oam_d0;
     			 oam_car_1 = 0;
     			 oam_car_2 = 0;
     		}
     		else
     		{
-    			 oam_car_1 = oam_car_1 + (33* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
-    		     oam_car_2 = oam_car_2 + (33* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
+    			 oam_car_1 = oam_car_1 + (40* (rtc_time_after_sleep - g_rtc_time_before_sleep)/3600); //0.1mAh
+    		     oam_car_2 = oam_car_2 + (40* (rtc_time_after_sleep - g_rtc_time_before_sleep)/3600); //0.1mAh	
     		}
     	}
     	else
     	{
-    			oam_car_1 = oam_car_1 + (33* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
-    			oam_car_2 = oam_car_2 + (33* (rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
-    	}
-#else
-#ifdef  SUPPORT_TINNO_BATTERY_COMPENSATE		
-    	if(tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec > 1200)/*SLEEP 10 MINE ,THE BATTERY CAN BACK TO ZCV*/
-#else
-    	if(rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec > 3600)
-#endif
-
-	{
-#ifdef TINNO_BAT_R_COMPENSTAE
-	    int temperature = force_get_tbat();
-		if(temperature>=25)
-	     {
-	    	if(((temperature-g_table_temp)>TEMP_COMPENSATE_RANGE)||((g_table_temp-temperature)>TEMP_COMPENSATE_RANGE))
-	    	{
-		   	 table_init();
-		    	bm_print(BM_LOG_CRTI,"resume before temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
-			oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	 
-			gFG_DOD0 = fgauge_read_d_by_v(hw_ocv_after_sleep); 
-			oam_v_ocv_2 = oam_v_ocv_1 = hw_ocv_after_sleep;
-			oam_r_1 = fgauge_read_r_bat_by_v(oam_v_ocv_1);
-			oam_r_2 = fgauge_read_r_bat_by_v(oam_v_ocv_2);    
-			bm_print(BM_LOG_CRTI,"resume after temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
-			oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	 
-			 
-		}
-	    }else{
-	                if(temperature!=g_table_temp)
-	                {
-			  	table_init();
-				bm_print(BM_LOG_CRTI,"resume before temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
-				oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);	
-				gFG_DOD0 = fgauge_read_d_by_v(hw_ocv_after_sleep); 
-    			 	oam_v_ocv_2 = oam_v_ocv_1 = hw_ocv_after_sleep;
-				oam_r_1 = fgauge_read_r_bat_by_v(oam_v_ocv_1);
-				oam_r_2 = fgauge_read_r_bat_by_v(oam_v_ocv_2);  
-				bm_print(BM_LOG_CRTI,"resume after temp compensate oam_v_ocv_1=%d,oam_v_ocv_2=%d,oam_r_1=%d,oam_r_2=%d \n",
-				oam_v_ocv_1,oam_v_ocv_2,oam_r_1,oam_r_2);
-	                }
-		}
-#endif
-			 gFG_DOD0 = fgauge_read_d_by_v(hw_ocv_after_sleep); 
-    			 oam_v_ocv_2 = oam_v_ocv_1 = hw_ocv_after_sleep;
-			 oam_d0=gFG_DOD0;
-			 oam_d_5=oam_d0;
-    			 oam_car_1 = 0;
-    			 oam_car_2 = 0;
-#ifdef  TINNO_SUSPEND_CAR_COUNT
-			g_suspend_oam_car2=0;
-			g_suspend_oam_car1=0;
-#endif
-	  }else{
-	  #ifdef  TINNO_SUSPEND_CAR_COUNT
-
-			if(tinno_rtc_time_after_sleep.tv_sec==tinno_g_rtc_time_before_sleep.tv_sec)
-			{
-					g_suspend_oam_car2=g_suspend_oam_car2+TINNO_STAND_CURRENT*1;
-					g_suspend_oam_car1=g_suspend_oam_car1+TINNO_STAND_CURRENT*1;
-			}else{
-					g_suspend_oam_car2=g_suspend_oam_car2+TINNO_STAND_CURRENT* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec);
-					g_suspend_oam_car1=g_suspend_oam_car1+TINNO_STAND_CURRENT* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec);
-				}
-
-			if(g_suspend_oam_car2>=3600)
-			{
-				g_suspend_oam_car2=g_suspend_oam_car2-3600;
-				oam_car_2 = oam_car_2 + 1; //0.1mAh	
-			}
-
-			if(g_suspend_oam_car1>=3600)
-			{
-				g_suspend_oam_car1=g_suspend_oam_car1-3600;
-				oam_car_1 = oam_car_1 +1; //0.1mAh
-			}
-
-		bm_print(BM_LOG_CRTI, "g_suspend_oam_car1=(%d)s, g_suspend_oam_car1=(%d),  \n",g_suspend_oam_car1,g_suspend_oam_car2);
-			
-         #else
-		     oam_car_1 = oam_car_1 + (TINNO_STAND_CURRENT* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh
-    		     oam_car_2 = oam_car_2 + (TINNO_STAND_CURRENT* (tinno_rtc_time_after_sleep.tv_sec - tinno_g_rtc_time_before_sleep.tv_sec)/3600); //0.1mAh	
-    	  #endif	     
-	  }
-#endif
-		
+    			oam_car_1 = oam_car_1 + (20* (rtc_time_after_sleep - g_rtc_time_before_sleep)/3600); //0.1mAh
+    			oam_car_2 = oam_car_2 + (20* (rtc_time_after_sleep - g_rtc_time_before_sleep)/3600); //0.1mAh	
+    	}	
         bm_print(BM_LOG_CRTI, "sleeptime=(%d)s, be_ocv=(%d), af_ocv=(%d), D0=(%d), car1=(%d), car2=(%d) \n",
-    		rtc_time_after_sleep.tv_sec - g_rtc_time_before_sleep.tv_sec, g_hw_ocv_before_sleep, hw_ocv_after_sleep,gFG_DOD0, oam_car_1, oam_car_2);
+    		rtc_time_after_sleep - g_rtc_time_before_sleep, g_hw_ocv_before_sleep, hw_ocv_after_sleep,gFG_DOD0, oam_car_1, oam_car_2);
     }
 #endif		
     bm_print(BM_LOG_CRTI, "[battery_meter_resume]\n");
