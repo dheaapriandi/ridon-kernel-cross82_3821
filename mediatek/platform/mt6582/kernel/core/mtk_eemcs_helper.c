@@ -906,7 +906,7 @@ static int __init eemcs_helper_init(void)
 		return ret;
 	}
 
-	register_low_battery_notify(&eemcs_low_battery_cb, LOW_BATTERY_PRIO_MD5);
+	//register_low_battery_notify(&eemcs_low_battery_cb, LOW_BATTERY_PRIO_MD5);
 	
 	return 0;
 }

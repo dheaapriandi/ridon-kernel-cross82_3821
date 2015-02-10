@@ -70,13 +70,6 @@
 	 
 #define BMA2XX_BUFSIZE				256
 
-#define BMA2X2_INT1_PAD_SEL_REG   0x19
-#define BMA2X2_INT2_PAD_SEL_REG   0x1B
-#define BMA2X2_INT_CTRL_REG       0x21 
-#define BMA2X2_SLOPE_DURN_REG     0x27
-#define BMA2X2_SLOPE_THRES_REG    0x28
-
-
 extern struct acc_hw* bma2xx_get_cust_acc_hw(void);
 
 #endif

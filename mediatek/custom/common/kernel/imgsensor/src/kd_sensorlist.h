@@ -71,6 +71,9 @@ UINT32 IMX178_MIPI_RAW_SensorInit(PSENSOR_FUNCTION_STRUCT *pfFunc);
 UINT32 OV16825MIPISensorInit(PSENSOR_FUNCTION_STRUCT *pfFunc);
 UINT32 OV16826MIPISensorInit(PSENSOR_FUNCTION_STRUCT *pfFunc);
 
+UINT32 OV8858_MIPI_RAW_SensorInit(PSENSOR_FUNCTION_STRUCT *pfFunc);
+UINT32 GC2235MIPISensorInit(PSENSOR_FUNCTION_STRUCT *pfFunc);
+
 //! Add Sensor Init function here
 //! Note:
 //! 1. Add by the resolution from ""large to small"", due to large sensor
@@ -290,6 +293,17 @@ ACDK_KD_SENSOR_INIT_FUNCTION_STRUCT kdSensorList[MAX_NUM_OF_SUPPORT_SENSOR+1] =
 #if defined(OV2722_MIPI_RAW)
 	{OV2722MIPI_SENSOR_ID, SENSOR_DRVNAME_OV2722_MIPI_RAW, OV2722MIPI_RAW_SensorInit}, 
 #endif
+
+#if defined(OV8858_MIPI_RAW)
+            {OV8858_SENSOR_ID, SENSOR_DRVNAME_OV8858_MIPI_RAW, OV8858_MIPI_RAW_SensorInit}, 
+#endif
+
+#if defined(GC2235_MIPI_RAW)
+        {GC2235MIPI_SENSOR_ID, SENSOR_DRVNAME_GC2235_MIPI_RAW, GC2235MIPISensorInit},
+#endif
+
+
+
 /*  ADD sensor driver before this line */
     {0,{0},NULL}, //end of list
 };

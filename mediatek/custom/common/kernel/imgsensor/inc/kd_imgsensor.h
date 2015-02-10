@@ -223,6 +223,12 @@
 #define IMX178_SENSOR_ID                        0x0178
 #define OV16825MIPI_SENSOR_ID					          0x0168
 #define OV16826MIPI_SENSOR_ID					          0x0169
+
+#define OV8858_SENSOR_ID                        0x8858
+#define GC2235_SENSOR_ID                        0x2235
+#define GC2235MIPI_SENSOR_ID                        0x2235
+
+
 /* CAMERA DRIVER NAME */
 #define CAMERA_HW_DEVNAME            "kd_camera_hw"
 
@@ -297,6 +303,11 @@
 #define SENSOR_DRVNAME_OV16825_MIPI_RAW  "ov16825mipiraw"
 #define SENSOR_DRVNAME_GC0313MIPI_YUV      "gc0313mipiyuv"
 #define SENSOR_DRVNAME_OV16826_MIPI_RAW  "ov16826mipiraw"
+
+#define SENSOR_DRVNAME_OV8858_MIPI_RAW   "ov8858mipiraw"
+#define SENSOR_DRVNAME_GC2235_RAW       "gc2235raw"
+#define SENSOR_DRVNAME_GC2235_MIPI_RAW      "gc2235mipiraw"
+
 /*******************************************************************************
 *
 ********************************************************************************/

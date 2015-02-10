@@ -72,7 +72,7 @@
  //extern variable
  // ============================================================ //
  extern int g_platform_boot_mode;
- 
+
  // ============================================================ //
  //extern function
  // ============================================================ //
@@ -118,7 +118,11 @@ static BATTERY_VOLTAGE_ENUM select_jeita_cv(void)
     }
     else if(g_temp_status == TEMP_POS_10_TO_POS_45)
     {
+        #ifdef HIGH_BATTERY_VOLTAGE_SUPPORT
+        cv_voltage = BATTERY_VOLT_04_350000_V;
+        #else
         cv_voltage = JEITA_TEMP_POS_10_TO_POS_45_CV_VOLTAGE;
+        #endif
     }
     else if(g_temp_status == TEMP_POS_0_TO_POS_10)
     {
@@ -181,7 +185,11 @@ PMU_STATUS do_jeita_state_machine(void)
             battery_xlog_printk(BAT_LOG_CRTI, "[BATTERY] Battery Normal Temperature between %d and %d !!\n\r", TEMP_POS_10_THRESHOLD, TEMP_POS_45_THRESHOLD); 
                             
             g_temp_status = TEMP_POS_10_TO_POS_45;
+            #ifdef HIGH_BATTERY_VOLTAGE_SUPPORT
+            g_jeita_recharging_voltage = 4200;
+            #else
             g_jeita_recharging_voltage = JEITA_TEMP_POS_10_TO_POS_45_RECHARGE_VOLTAGE;
+            #endif
             v_cc2topoff_threshold = JEITA_TEMP_POS_10_TO_POS_45_CC2TOPOFF_THRESHOLD;  
 	    charging_full_current = CHARGING_FULL_CURRENT;
         }

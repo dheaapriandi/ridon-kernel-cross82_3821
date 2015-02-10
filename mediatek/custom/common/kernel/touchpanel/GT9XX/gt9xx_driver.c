@@ -104,6 +104,10 @@ static DOZE_T doze_status = DOZE_DISABLED;
 static s8 gtp_enter_doze(struct i2c_client *client);
 #endif
 
+#ifdef GTP_GESTURE_APP
+struct input_dev *gesture_dev;
+#endif
+
 #if GTP_CHARGER_SWITCH
     #ifdef MT6573
         #define CHR_CON0      (0xF7000000+0x2FA00)
@@ -1383,9 +1387,9 @@ reset_proc:
 
 #if 1
     // power on CTP
-    mt_set_gpio_mode(GPIO_CTP_EN_PIN, GPIO_CTP_EN_PIN_M_GPIO);
-    mt_set_gpio_dir(GPIO_CTP_EN_PIN, GPIO_DIR_OUT);
-    mt_set_gpio_out(GPIO_CTP_EN_PIN, GPIO_OUT_ONE);
+    //mt_set_gpio_mode(GPIO_CTP_EN_PIN, GPIO_CTP_EN_PIN_M_GPIO);
+    //mt_set_gpio_dir(GPIO_CTP_EN_PIN, GPIO_DIR_OUT);
+    //mt_set_gpio_out(GPIO_CTP_EN_PIN, GPIO_OUT_ONE);
 
 #else   // ( defined(MT6575) || defined(MT6577) || defined(MT6589) )
 
@@ -1826,6 +1830,195 @@ exit_clk_proc:
 }
 
 #endif
+
+#ifdef GTP_GESTURE_APP
+
+#define  KEY_GESTURE_DOUBLECLICK     0x222
+#define  KEY_GESTURE_UP     KEY_UP
+#define  KEY_GESTURE_DOWN   KEY_DOWN
+#define  KEY_GESTURE_LEFT   KEY_LEFT 
+#define  KEY_GESTURE_RIGHT  KEY_RIGHT             
+#define  KEY_GESTURE_A      KEY_A
+#define  KEY_GESTURE_B      KEY_B
+#define  KEY_GESTURE_C      KEY_C
+#define  KEY_GESTURE_D      KEY_D
+#define  KEY_GESTURE_E      KEY_E
+#define  KEY_GESTURE_G      KEY_G
+#define  KEY_GESTURE_H      KEY_H
+#define  KEY_GESTURE_M      KEY_M 
+#define  KEY_GESTURE_O      KEY_O
+#define  KEY_GESTURE_Q      KEY_Q
+#define  KEY_GESTURE_S      KEY_S 
+#define  KEY_GESTURE_V      KEY_V
+#define  KEY_GESTURE_W      KEY_W     
+#define  KEY_GESTURE_Y      KEY_Y     
+#define  KEY_GESTURE_Z      KEY_Z     
+
+static const u16 gesture_keymap[] = {
+    KEY_GESTURE_DOUBLECLICK, KEY_GESTURE_LEFT, KEY_GESTURE_RIGHT, KEY_GESTURE_UP, KEY_GESTURE_DOWN, 
+    KEY_GESTURE_A, KEY_GESTURE_B, KEY_GESTURE_C, KEY_GESTURE_D,
+    KEY_GESTURE_E, KEY_GESTURE_G, KEY_GESTURE_H, KEY_GESTURE_M,
+    KEY_GESTURE_O, KEY_GESTURE_Q, KEY_GESTURE_S, KEY_GESTURE_V,
+    KEY_GESTURE_W, KEY_GESTURE_Y, KEY_GESTURE_Z,
+};
+
+static void gtp_gesture_init(void)
+{
+    s32 ret = 0;
+    int i = 0;
+    
+    gesture_dev = input_allocate_device();
+    if (gesture_dev == NULL)
+    {
+        GTP_ERROR("Failed to allocate input device for gesture.\n");
+        return;
+    }
+    
+    gesture_dev->evbit[0] = BIT_MASK(EV_SYN) | BIT_MASK(EV_KEY);
+    
+	for (i = 0; i < ARRAY_SIZE(gesture_keymap); i++)
+	    set_bit(gesture_keymap[i], gesture_dev->keybit);
+
+    gesture_dev->name = "miki-gesture";
+    gesture_dev->id.bustype = BUS_I2C;
+    
+    ret = input_register_device(gesture_dev);
+    if (ret)
+    {
+        GTP_ERROR("Register %s input device failed", gesture_dev->name);
+        return;
+    }
+}
+
+static void gtp_gesture_up(u8 type)
+{
+    switch (type)
+    {
+        case 0xCC:
+            input_report_key(gesture_dev, KEY_GESTURE_DOUBLECLICK, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_DOUBLECLICK, 0);
+            input_sync(gesture_dev);
+            break;
+        case 0: 
+            input_report_key(gesture_dev, KEY_GESTURE_RIGHT, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_RIGHT, 0);
+            input_sync(gesture_dev);
+            break;
+        case 1: 
+            input_report_key(gesture_dev, KEY_GESTURE_DOWN, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_DOWN, 0);
+            input_sync(gesture_dev);
+            break;
+        case 2: 
+            input_report_key(gesture_dev, KEY_GESTURE_UP, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_UP, 0);
+            input_sync(gesture_dev);
+            break;
+        case 3: 
+            input_report_key(gesture_dev, KEY_GESTURE_LEFT, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_LEFT, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'a':
+            input_report_key(gesture_dev, KEY_GESTURE_A, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_A, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'b':
+            input_report_key(gesture_dev, KEY_GESTURE_B, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_B, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'c':
+            input_report_key(gesture_dev, KEY_GESTURE_C, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_C, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'd':
+            input_report_key(gesture_dev, KEY_GESTURE_D, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_D, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'e':
+            input_report_key(gesture_dev, KEY_GESTURE_E, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_E, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'g':
+            input_report_key(gesture_dev, KEY_GESTURE_G, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_G, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'h':
+            input_report_key(gesture_dev, KEY_GESTURE_H, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_H, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'm':
+            input_report_key(gesture_dev, KEY_GESTURE_M, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_M, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'o':
+            input_report_key(gesture_dev, KEY_GESTURE_O, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_O, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'q':
+            input_report_key(gesture_dev, KEY_GESTURE_Q, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_Q, 0);
+            input_sync(gesture_dev);
+            break;
+        case 's':
+            input_report_key(gesture_dev, KEY_GESTURE_S, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_S, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'v':
+            input_report_key(gesture_dev, KEY_GESTURE_V, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_V, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'w':
+            input_report_key(gesture_dev, KEY_GESTURE_W, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_W, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'y':
+            input_report_key(gesture_dev, KEY_GESTURE_Y, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_Y, 0);
+            input_sync(gesture_dev);
+            break;
+        case 'z':
+            input_report_key(gesture_dev, KEY_GESTURE_Z, 1);
+            input_sync(gesture_dev);
+            input_report_key(gesture_dev, KEY_GESTURE_Z, 0);
+            input_sync(gesture_dev);
+            break;
+        defaullt:
+            GTP_ERROR("wrong gesture\n");
+    }
+}
+#endif
 //************* For GT9XXF End **********************//
 
 #if GTP_WITH_PEN
@@ -1916,7 +2109,8 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
     if (ret < 0)
     {
         GTP_ERROR("I2C communication ERROR!");
-    }
+    	return -1;
+	}
     
 #ifdef VELOCITY_CUSTOM
 
@@ -1976,6 +2170,10 @@ static s32 tpd_i2c_probe(struct i2c_client *client, const struct i2c_device_id *
     input_set_capability(tpd->dev, EV_KEY, KEY_POWER);
 #endif
     
+#ifdef GTP_GESTURE_APP
+    gtp_gesture_init();
+#endif
+
 #if GTP_WITH_PEN
     gtp_pen_init();
 #endif
@@ -2076,7 +2274,7 @@ static void force_reset_guitar(void)
     GTP_GPIO_OUTPUT(GTP_INT_PORT, 0);
 #if 1
     //Power off TP
-    mt_set_gpio_mode(GPIO_CTP_EN_PIN, GPIO_CTP_EN_PIN_M_GPIO);
+    //mt_set_gpio_mode(GPIO_CTP_EN_PIN, GPIO_CTP_EN_PIN_M_GPIO);
     mt_set_gpio_dir(GPIO_CTP_EN_PIN, GPIO_DIR_OUT);
     mt_set_gpio_out(GPIO_CTP_EN_PIN, GPIO_OUT_ZERO);  
     msleep(30);
@@ -2451,11 +2649,16 @@ static int touch_event_handler(void *unused)
                     {
                         GTP_INFO("Wakeup by gesture(^), light up the screen!");
                     }
+		    #if 0
                     doze_status = DOZE_WAKEUP;
                     input_report_key(tpd->dev, KEY_POWER, 1);
                     input_sync(tpd->dev);
                     input_report_key(tpd->dev, KEY_POWER, 0);
                     input_sync(tpd->dev);
+		    #endif
+                    #ifdef GTP_GESTURE_APP
+                    gtp_gesture_up(doze_buf[2]);
+		    #endif
                     // clear 0x814B
                     doze_buf[2] = 0x00;
                     gtp_i2c_write(i2c_client_point, doze_buf, 3);
@@ -2467,11 +2670,16 @@ static int touch_event_handler(void *unused)
                     u8 type = ((doze_buf[2] & 0x0F) - 0x0A) + (((doze_buf[2] >> 4) & 0x0F) - 0x0A) * 2;
                     
                     GTP_INFO("%s slide to light up the screen!", direction[type]);
-                    doze_status = DOZE_WAKEUP;
+                    #if 0
+		    doze_status = DOZE_WAKEUP;
                     input_report_key(tpd->dev, KEY_POWER, 1);
                     input_sync(tpd->dev);
                     input_report_key(tpd->dev, KEY_POWER, 0);
                     input_sync(tpd->dev);
+		    #endif
+                    #ifdef GTP_GESTURE_APP
+                    gtp_gesture_up(doze_buf[2]);
+		    #endif
                     // clear 0x814B
                     doze_buf[2] = 0x00;
                     gtp_i2c_write(i2c_client_point, doze_buf, 3);
@@ -2479,11 +2687,16 @@ static int touch_event_handler(void *unused)
                 else if (0xCC == doze_buf[2])
                 {
                     GTP_INFO("Double click to light up the screen!");
+		    #if 0
                     doze_status = DOZE_WAKEUP;
                     input_report_key(tpd->dev, KEY_POWER, 1);
                     input_sync(tpd->dev);
                     input_report_key(tpd->dev, KEY_POWER, 0);
                     input_sync(tpd->dev);
+		    #endif
+                    #ifdef GTP_GESTURE_APP
+                    gtp_gesture_up(doze_buf[2]);
+		    #endif
                     // clear 0x814B
                     doze_buf[2] = 0x00;
                     gtp_i2c_write(i2c_client_point, doze_buf, 3);

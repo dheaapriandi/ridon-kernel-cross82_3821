@@ -989,34 +989,7 @@ UINT32 GC2235MIPIGetInfo(MSDK_SCENARIO_ID_ENUM ScenarioId,
 	memcpy(pSensorConfigData, &GC2235MIPI_sensor.cfg_data, sizeof(MSDK_SENSOR_CONFIG_STRUCT));
   return ERROR_NONE;
 }	/* GC2235MIPIGetInfo() */
-UINT32 GC2235MIPI_SetTestPatternMode(kal_bool bEnable)
-{
-    kal_uint16 temp;
 
-    SENSORDB("bEnable: %d", bEnable);
-
-    if(bEnable) 
-    {
-        GC2235MIPI_write_cmos_sensor(0xfe, 0x00);
-        GC2235MIPI_write_cmos_sensor(0x8b, 0x10);
-        GC2235MIPI_write_cmos_sensor(0xb3, 0x40);
-        GC2235MIPI_write_cmos_sensor(0xb4, 0x40);
-        GC2235MIPI_write_cmos_sensor(0xb5, 0x40);
-        GC2235MIPI_write_cmos_sensor(0x03, 0x00);
-        GC2235MIPI_write_cmos_sensor(0x04, 0x00);
-       //GC2235MIPI_write_cmos_sensor(0x8c, 0x10);
-   }
-   else        
-   {
-       //GC2235MIPI_write_cmos_sensor(0x8c, 0x00);
-   }
-
-   return ERROR_NONE;
-}
-                                                                                                
-//#define GC2235MIPI_TEST_PATTERN_CHECKSUM (0x1a884aad)
-#define GC2235MIPI_TEST_PATTERN_CHECKSUM (0x3ef10f8f)
-                                                                                                
 
 UINT32 GC2235MIPIControl(MSDK_SCENARIO_ID_ENUM ScenarioId, MSDK_SENSOR_EXPOSURE_WINDOW_STRUCT *pImageWindow,
 					  MSDK_SENSOR_CONFIG_STRUCT *pSensorConfigData)
@@ -1052,6 +1025,43 @@ UINT32 GC2235MIPIControl(MSDK_SCENARIO_ID_ENUM ScenarioId, MSDK_SENSOR_EXPOSURE_
 
 UINT32 GC2235MIPISetVideoMode(UINT16 u2FrameRate)
 {};
+/*
+P0:0xfe	0x00
+P0:0x8b	0x10
+
+P0:0xb3	0x40
+P0:0x54	0x40
+P0:0xb5	0x40
+P0:0x03	0x00
+P0:0x04 0x00 
+*/
+UINT32 GC2235MIPI_SetTestPatternMode(kal_bool bEnable)
+{
+    kal_uint16 temp;
+
+    SENSORDB("bEnable: %d", bEnable);
+
+	if(bEnable) 
+	{
+		GC2235MIPI_write_cmos_sensor(0xfe, 0x00);
+		GC2235MIPI_write_cmos_sensor(0x8b, 0x10);
+		GC2235MIPI_write_cmos_sensor(0xb3, 0x40);
+		GC2235MIPI_write_cmos_sensor(0xb4, 0x40);
+		GC2235MIPI_write_cmos_sensor(0xb5, 0x40);
+		GC2235MIPI_write_cmos_sensor(0x03, 0x00);
+		GC2235MIPI_write_cmos_sensor(0x04, 0x00);
+        	//GC2235MIPI_write_cmos_sensor(0x8c, 0x10);
+	}
+	else        
+	{
+        	//GC2235MIPI_write_cmos_sensor(0x8c, 0x00);
+	}
+    
+    return ERROR_NONE;
+}
+
+//#define GC2235MIPI_TEST_PATTERN_CHECKSUM (0x1a884aad)
+#define GC2235MIPI_TEST_PATTERN_CHECKSUM (0x3ef10f8f)
 
 UINT32 GC2235MIPIFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
 							 UINT8 *pFeaturePara,UINT32 *pFeatureParaLen)
@@ -1175,13 +1185,14 @@ UINT32 GC2235MIPIFeatureControl(MSDK_SENSOR_FEATURE_ENUM FeatureId,
 			break; 
 		case SENSOR_FEATURE_SET_AUTO_FLICKER_MODE:
 			break;
-        case SENSOR_FEATURE_SET_TEST_PATTERN:
-            GC2235MIPI_SetTestPatternMode((BOOL)*pFeatureData16);
-            break;
-        case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE://for factory mode auto testing             
-            *pFeatureReturnPara32= GC2235MIPI_TEST_PATTERN_CHECKSUM;
-            *pFeatureParaLen=4;                             
-            break;
+		case SENSOR_FEATURE_SET_TEST_PATTERN:
+        		GC2235MIPI_SetTestPatternMode((BOOL)*pFeatureData16);
+        		break;
+    		case SENSOR_FEATURE_GET_TEST_PATTERN_CHECKSUM_VALUE://for factory mode auto testing             
+        		*pFeatureReturnPara32= GC2235MIPI_TEST_PATTERN_CHECKSUM;
+        		*pFeatureParaLen=4;                             
+         		break;
+
 		default:
 			break;
 	}

@@ -203,7 +203,7 @@ typedef struct _sensor_data_struct
 #define GC2235MIPI_READ_ID  (0x79)
 
 /* SENSOR ID */
-//#define GC2235MIPI_SENSOR_ID						(0x2235)
+#define GC2235MIPI_SENSOR_ID						(0x2235)
 
 /* SENSOR PRIVATE STRUCT */
 typedef enum {

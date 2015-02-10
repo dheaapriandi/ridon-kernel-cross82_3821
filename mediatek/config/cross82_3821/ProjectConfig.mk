@@ -88,10 +88,10 @@ CUSTOM_HAL_SUB_IMGSENSOR=
 CUSTOM_HAL_SUB_LENS=dummy_lens
 
 # accelerometer sensor to detect accelerometer from x y z axis.
-CUSTOM_KERNEL_ACCELEROMETER=bma250
+CUSTOM_KERNEL_ACCELEROMETER=bma2xx_auto
 
 # ALSPS sensor driverto detect ambint light and the object is close or far awary from device
-CUSTOM_KERNEL_ALSPS=stk3x1x
+CUSTOM_KERNEL_ALSPS=ltr559_auto
 
 # Pressure sensor driver to detect pressure
 CUSTOM_KERNEL_BAROMETER=
@@ -125,7 +125,7 @@ CUSTOM_KERNEL_FLASHLIGHT=constant_flashlight
 CUSTOM_KERNEL_HEADSET=accdet
 
 # Kernel space image sensor driver. Define  project used all image sensors .The value is combination of CUSTOM_KERNEL_MAIN_IMGSENSOR, CUSTOM_KERNEL_MAIN_BACKUP_IMGSENSOR, CUSTOM_KERNEL_SUB_IMGSENSOR, and CUSTOM_KERNEL_SUB_BACKUP_IMGSENSOR
-CUSTOM_KERNEL_IMGSENSOR=
+CUSTOM_KERNEL_IMGSENSOR=gc2235_mipi_raw ov8858_mipi_raw
 #ov5648qt_mipi_raw ov5648st_mipi_raw gc0313_mipi_yuv
 
 # key pad driver to report key event
@@ -138,19 +138,19 @@ CUSTOM_KERNEL_LEDS=mt65xx
 CUSTOM_KERNEL_LENS=bu6424qtaf bu6424staf dummy_lens
 
 # compass driver to detect compass raw data and report orientatino data
-CUSTOM_KERNEL_MAGNETOMETER=mmc3416x
+CUSTOM_KERNEL_MAGNETOMETER=s62x_auto
 CUSTOM_KERNEL_GYROSCOPE=
 CUSTOM_KERNEL_MAIN2_BACKUP_IMGSENSOR=
 CUSTOM_KERNEL_MAIN2_IMGSENSOR=
 
 # Kernel space image sensor  driver:Main camera (rear camera) used backup sensor driver.Value is used main backup sensor name.
-CUSTOM_KERNEL_MAIN_BACKUP_IMGSENSOR=ov5648st_mipi_raw
+CUSTOM_KERNEL_MAIN_BACKUP_IMGSENSOR=ov8850_mipi_raw
 
 # lens driver config for main camera (2nd solution)
 CUSTOM_KERNEL_MAIN_BACKUP_LENS=bu6424staf
 
 # Kernel space image sensor driver:Main camera (rear camera) used sensor driver.Value is used main sensor name.
-CUSTOM_KERNEL_MAIN_IMGSENSOR=ov5648qt_mipi_raw
+CUSTOM_KERNEL_MAIN_IMGSENSOR=ov8850_mipi_raw
 
 # lens driver config for main camera
 CUSTOM_KERNEL_MAIN_LENS=bu6424qtaf
@@ -167,7 +167,7 @@ CUSTOM_KERNEL_SUB_BACKUP_IMGSENSOR=
 CUSTOM_KERNEL_SUB_BACKUP_LENS=
 
 # Kernel space image sensor driver:Sub camera (front camera) used sensor driver.Value is used sub sensor name.
-CUSTOM_KERNEL_SUB_IMGSENSOR=
+CUSTOM_KERNEL_SUB_IMGSENSOR=gc2235_mipi_raw
 
 # lens driver config for video telephony camera
 CUSTOM_KERNEL_SUB_LENS=dummy_lens
@@ -354,11 +354,11 @@ MTK_AUTOIP_SUPPORT=yes
 MTK_AUTORAMA_SUPPORT=yes
 
 # one load to support different accelerometer sensor
-MTK_AUTO_DETECT_ACCELEROMETER=no
-MTK_AUTO_DETECT_ALSPS=no
+MTK_AUTO_DETECT_ACCELEROMETER=yes
+MTK_AUTO_DETECT_ALSPS=yes
 
 # one load to support different magnetometer sensor
-MTK_AUTO_DETECT_MAGNETOMETER=no
+MTK_AUTO_DETECT_MAGNETOMETER=yes
 
 # This feature enables basic configuration checks after bootup. If the configuration is incorrect, an AEE exception is thrown.
 MTK_AUTO_SANITY=yes

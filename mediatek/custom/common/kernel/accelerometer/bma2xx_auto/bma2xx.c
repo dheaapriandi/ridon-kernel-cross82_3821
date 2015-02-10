@@ -39,19 +39,6 @@
 #include <linux/sensors_io.h>
 #include "bma2xx.h"
 #include <linux/hwmsen_helper.h>
-
-//add by liuhuan
-#if defined(MIKI_YUANZHENG_SUPPORT)
-#include <mach/mt_pwm.h>
-#include <mach/upmu_common_sw.h>
-#include <mach/upmu_hw.h>
-
-#endif
-//end
-#include "cust_gpio_usage.h"
-#include "cust_eint.h"
-
-
 /*----------------------------------------------------------------------------*/
 #define DEBUG 1
 /*----------------------------------------------------------------------------*/
@@ -68,32 +55,7 @@
 
 #define BMA2XX_RETRY_MAX	10
 
-
-
 /*----------------------------------------------------------------------------*/
-extern s32 mt_set_gpio_pull_select_ext(u32 pin, u32 select);
-extern s32 mt_set_gpio_mode_ext(u32 pin, u32 mode);
-extern s32 mt_set_gpio_dir_ext(u32 pin, u32 dir);
-extern s32 mt_set_gpio_pull_enable_ext(u32 pin, u32 enable);
-extern s32 mt_set_gpio_out_ext(u32 pin, u32 output);
-
-extern s32 mt_get_gpio_mode_ext(u32 pin);
-extern s32 mt_get_gpio_dir_ext(u32 pin);
-extern s32 mt_get_gpio_pull_enable_ext(u32 pin);
-extern s32 mt_get_gpio_pull_select_ext(u32 pin);
-extern s32 mt_get_gpio_out_ext(u32 pin);
-
-
-
-extern void mt65xx_eint_unmask(unsigned int line);
-extern void mt65xx_eint_mask(unsigned int line);
-
-extern void mt65xx_eint_set_hw_debounce(unsigned int eint_num, unsigned int ms);
-extern unsigned int mt65xx_eint_set_sens(unsigned int eint_num, unsigned int sens);
-
-extern void mt65xx_eint_registration(unsigned int eint_num, unsigned int is_deb_en,
-			  unsigned int pol, void (EINT_FUNC_PTR) (void),
-			  unsigned int is_auto_umask);
 
 /*----------------------------------------------------------------------------*/
 static const struct i2c_device_id bma2xx_i2c_id[] = {{BMA2XX_DEV_NAME,0},{}};
@@ -950,59 +912,19 @@ static int BMA2XX_SetBWRate(struct i2c_client *client, u8 bwrate)
 
 	return res;    
 }
-#if defined(MIKI_YUANZHENG_SUPPORT)
-/*----------------------------------------------------------------------------*/
-static int BMA2XX_SetIntMode(struct i2c_client *client, u8 mode)
-{
-    u8 data=0;
-	int res =0;	
-	res = bma2xx_i2c_read_block(client, BMA2X2_INT_CTRL_REG ,&data, 0x01);
-    if(res < 0)
-    {
-   		printk("BMA2XX_SetIntMode read err\n"); 
-		return res;
-	}
-
-	//data |=0x01; //temporary 250ms
-	data = (data&(~0x0f))|(mode&0x0f);
-
-	res = bma2xx_i2c_write_block(client, BMA2X2_INT_CTRL_REG, &data, 0x01);
-    if(res < 0) 
-    {
-        miki_gs_err("i2c write error\n");
-        return res;
-    }
-	printk("BMA2XX_SetIntMode ok\n");
-
-	return res;
-}
-#endif
-
 /*----------------------------------------------------------------------------*/
 static int BMA2XX_SetIntEnable(struct i2c_client *client, u8 intenable)
 {
     int res = 0;
     u8 data = 0x00;
-#if defined(MIKI_YUANZHENG_SUPPORT)
-    data = 0x03;
-	res = bma2xx_i2c_write_block(client, BMA2XX_INT_REG_1, &data, 0x01);
-    if(res < 0) 
-    {
-        miki_gs_err("i2c write error\n");
-        return res;
-    }
-	printk("liuhuan --------- set reg:0x16 val:0x03 enable x y z INT func---\n");
-#else
-
     res = bma2xx_i2c_write_block(client, BMA2XX_INT_REG_1, &data, 0x01);
     if(res < 0) 
     {
         miki_gs_err("i2c write error\n");
         return res;
     }
-#endif
-    data=0x00;
-	res = bma2xx_i2c_write_block(client, BMA2XX_INT_REG_2, &data, 0x01);
+
+    res = bma2xx_i2c_write_block(client, BMA2XX_INT_REG_2, &data, 0x01);
     if(res < 0 ) 
     {
         miki_gs_err("i2c write error\n");
@@ -1016,76 +938,6 @@ static int BMA2XX_SetIntEnable(struct i2c_client *client, u8 intenable)
     return BMA2XX_SUCCESS;	  
 }
 
-#if defined(MIKI_YUANZHENG_SUPPORT)
-/*----------------------------------------------------------------------------*/
-static int BMA2XX_SetInt2_SlopeEnable(struct i2c_client *client, u8 int2sel)
-{
-    u8 data=0;
-	int res = 0;	
-	res = bma2xx_i2c_read_block(client, BMA2X2_INT1_PAD_SEL_REG,&data, 0x01);
-    if(res < 0)
-    {
-   		printk("BMA2XX_SetIntMode read err\n"); 
-		return res;
-	}
-
-	data = (data&(~0x04))|((int2sel<<2)&0x04);
-
-	res = bma2xx_i2c_write_block(client, BMA2X2_INT1_PAD_SEL_REG, &data, 0x01);
-    if(res < 0) 
-    {
-        miki_gs_err("i2c write error\n");
-        return res;
-    }
-	printk("BMA2XX_SetIntMode ok\n");
-}
-/*----------------------------------------------------------------------------*/
-static int bma2x2_set_slope_threshold(struct i2c_client *client, u8 threshold)
-{
-    u8 data=0;
-	int res = 0;	
-	res = bma2xx_i2c_read_block(client,BMA2X2_SLOPE_THRES_REG,&data, 0x01);
-    if(res < 0)
-    {
-   		printk("bma2x2_set_slope_threshold read err\n"); 
-		return res;
-	}
-
-	printk("liuhuan--------read slope threshold: %d   \n",data);
-
-	res = bma2xx_i2c_write_block(client,BMA2X2_SLOPE_THRES_REG, &threshold, 0x01);
-    if(res < 0) 
-    {
-        miki_gs_err("i2c write error\n");
-        return res;
-    }
-	printk("bma2x2_set_slope_threshold ok\n");
-	return res;
-
-}
-/*----------------------------------------------------------------------------*/
-static int bma2x2_set_slope_duration(struct i2c_client *client, u8 duration)
-{
-    u8 data=0;
-	int res = 0;	
-	res = bma2xx_i2c_read_block(client,BMA2X2_SLOPE_DURN_REG,&data, 0x01);
-    if(res < 0)
-    {
-   		printk("bma2x2_set_slope_duration read err\n"); 
-		return res;
-	}
-
-	printk("liuhuan--------read slope duration: %d   \n",data);
-	data = (data&~0x03)|(duration&0x03);
-	res = bma2xx_i2c_write_block(client,BMA2X2_SLOPE_DURN_REG, &data, 0x01);
-    if(res < 0) 
-    {
-        miki_gs_err("i2c write error\n");
-        return res;
-    }
-	printk("bma2x2_set_slope_duration ok\n");
-}
-#endif
 /*----------------------------------------------------------------------------*/
 static int bma2xx_init_client(struct i2c_client *client, int reset_cali)
 {
@@ -1127,37 +979,7 @@ static int bma2xx_init_client(struct i2c_client *client, int reset_cali)
     
     gsensor_gain.x = gsensor_gain.y = gsensor_gain.z = obj->reso->sensitivity;
 
-#if defined(MIKI_YUANZHENG_SUPPORT) 
-	res=bma2x2_set_slope_threshold(client, 0x5);
-    if(res != BMA2XX_SUCCESS)
-    {
-        miki_gs_err("BMA2XX bma2x2_set_slope_threshold error---\n");
-        return res;
-    }
-	
-	res=bma2x2_set_slope_duration(client, 0x01);
-    if(res != BMA2XX_SUCCESS)
-    {
-        miki_gs_err("BMA2XX bma2x2_set_slope_duration error---\n");
-        return res;
-    }
-
-	res=BMA2XX_SetIntMode(client, 0x00);//250ms
-    if(res != BMA2XX_SUCCESS)
-    {
-        miki_gs_err("BMA2XX BMA2XX_SetIntMode error---\n");
-        return res;
-    }
-
-	res=BMA2XX_SetInt2_SlopeEnable(client, 0x01);
-    if(res != BMA2XX_SUCCESS)
-    {
-        miki_gs_err("BMA2XX BMA2XX_SetInt2_SlopeEnable error---\n");
-        return res;
-    }
-#endif
-	
-	res = BMA2XX_SetIntEnable(client, 0x00);        
+    res = BMA2XX_SetIntEnable(client, 0x00);        
     if(res != BMA2XX_SUCCESS)
     {
         miki_gs_err("BMA2XX disable interrupt function error---\n");
@@ -1371,7 +1193,7 @@ static ssize_t show_regs_value(struct device_driver *ddri, char *buf)
 {
 	struct i2c_client *client = bma2xx_i2c_client;
 
-#if 0
+#if 1
 	int err = 0, i;
 	u8 regsbuf[0x14];
 	char strbuf[BMA2XX_BUFSIZE] = {0};
@@ -1393,7 +1215,7 @@ static ssize_t show_regs_value(struct device_driver *ddri, char *buf)
 
 
 //add by liuhuan
-#if 1
+#if 0
     u8 test_buf[64]={0};
     int test_err = 0;
     int j,k;
@@ -1401,12 +1223,12 @@ static ssize_t show_regs_value(struct device_driver *ddri, char *buf)
     {
         if((test_err = bma2xx_i2c_read_block(client, k*8, test_buf, 8))<0)
         {
-            printk("ERROR : %d \n", test_err);
+            miki_gs_err("ERROR : %d \n", test_err);
         }
         mdelay(1);
         for(j=0;j<8;j++)
         {
-            printk("REG:[0x%x]------->VAL:[0x%x]\n", (k*8+j), test_buf[j]);
+            GSE_LOG("REG:[0x%x]------->VAL:[0x%x]\n", (k*8+j), test_buf[j]);
         }
     }
 #endif    
@@ -1519,37 +1341,6 @@ static ssize_t show_firlen_value(struct device_driver *ddri, char *buf)
 	return snprintf(buf, PAGE_SIZE, "not support\n");
 #endif
 }
-
-#if defined(MIKI_YUANZHENG_SUPPORT)
-/*----------------------------------------------------------------------------*/
-static ssize_t store_slope_threshold_value(struct device_driver *ddri, const char *buf, size_t count)
-{
-	struct i2c_client *client = bma2xx_i2c_client;  
-	struct bma2xx_i2c_data *obj = i2c_get_clientdata(client);
-	unsigned char threshold;
-	unsigned char data;
-	int err;
-	if(1 != sscanf(buf, "%d", &threshold))
-	{
-		GSE_ERR("invallid format\n");
-	}
-	
-	err = bma2x2_set_slope_threshold(client, threshold);	
-	if(err <0)
-	{
-		printk("store_slope_threshold_value err\n");
-			}
-		
-	err = bma2xx_i2c_read_block(client,BMA2X2_SLOPE_THRES_REG,&data, 0x01);
-    if(err < 0)
-    {
-   		printk("bma2x2_set_slope_threshold read err\n"); 
-	}
-	printk("liuhuan-------read the slope threshold: %d ---\n",data);	
-	
-	return count;
-}
-#endif
 /*----------------------------------------------------------------------------*/
 static ssize_t store_firlen_value(struct device_driver *ddri, const char *buf, size_t count)
 {
@@ -1756,178 +1547,6 @@ static ssize_t store_power_mode_value(struct device_driver *ddri, char *buf, siz
 	return count;
 }
 
-//add by liuhuan for test
-#if defined(MIKI_YUANZHENG_SUPPORT)
-static ssize_t upmu_test(struct device_driver *ddri, char *buf, size_t count)
-{
-	int temp;
-	if(!strncmp(buf, "uart1", 5))  
-	{
-		mt_set_gpio_mode(101,GPIO_MODE_01);
-		mt_set_gpio_dir(101,GPIO_DIR_IN);
-		//mt_set_gpio_out(GPIO83,GPIO_OUT_ZERO);		
-		mt_set_gpio_pull_enable(101, GPIO_PULL_ENABLE);
-		mt_set_gpio_pull_select(101, GPIO_PULL_UP); 
-
-		mt_set_gpio_mode(102,GPIO_MODE_01);
-		mt_set_gpio_dir(102,GPIO_DIR_OUT);
-		mt_set_gpio_out(102,GPIO_OUT_ONE);		
-		mt_set_gpio_pull_enable(102, GPIO_PULL_ENABLE);
-		mt_set_gpio_pull_select(102, GPIO_PULL_UP); 
-
-	}
-
-	if(!strncmp(buf, "urtest", 6))  
-	{
-		temp=mt_get_gpio_mode(101);
-		printk("<0>""liuhuan--get-mode: %d\n",temp);
-		temp=mt_get_gpio_dir(101);
-		printk("<0>""liuhuan--get-dir: %d\n",temp);
-		temp=mt_get_gpio_pull_enable(101);
-		printk("<0>""liuhuan--get-pull-enable: %d\n",temp);
-		temp=mt_get_gpio_pull_select(101);
-		printk("<0>""liuhuan--get-select: %d\n",temp);
-		temp=mt_get_gpio_out(101);
-		printk("<0>""liuhuan--get-out: %d\n",temp);
-			
-		temp=mt_get_gpio_mode(102);
-		printk("<0>""liuhuan--get-mode: %d\n",temp);
-		temp=mt_get_gpio_dir(102);
-		printk("<0>""liuhuan--get-dir: %d\n",temp);
-		temp=mt_get_gpio_pull_enable(102);
-		printk("<0>""liuhuan--get-pull-enable: %d\n",temp);
-		temp=mt_get_gpio_pull_select(102);
-		printk("<0>""liuhuan--get-select: %d\n",temp);
-		temp=mt_get_gpio_out(102);
-		printk("<0>""liuhuan--get-out: %d\n",temp);
-	}
-	
-	
-	
-	if(!strncmp(buf, "poff", 4))  
-	{
-            upmu_set_isink_ch0_en(0x0); // Turn on ISINK Channel 0
-            upmu_set_isink_ch1_en(0x0); // Turn on ISINK Channel 0
-            upmu_set_isink_ch2_en(0x0); // Turn on ISINK Channel 0
-            upmu_set_isink_ch3_en(0x0); // Turn on ISINK Channel 0
-			}
-	if(!strncmp(buf, "test0", 5))  
-	{
-            upmu_set_rg_isink0_ck_pdn(0x0); // Disable power down    
-            upmu_set_rg_isink0_ck_sel(0x0); // Freq = 32KHz for Indicator     
-            upmu_set_isink_dim0_duty(15); // 16/32
-			upmu_set_isink_ch0_mode(1);
-            upmu_set_isink_dim0_fsel(0); // 1K = 32000 / (0 + 1) / 32
-            upmu_set_isink_ch0_step(0x0); // 4mA
-            upmu_set_isink_sfstr0_tc(0x0); // 0.5us
-            upmu_set_isink_sfstr0_en(0x0); // Disable soft start
-			upmu_set_isink_breath0_trf_sel(0x04); // 0.926s
-			upmu_set_isink_breath0_ton_sel(0x02); // 0.523s
-			upmu_set_isink_breath0_toff_sel(0x03); // 1.417s
-			upmu_set_rg_isink0_double_en(0x0); // Disable double current
-			upmu_set_isink_phase0_dly_en(0x0); // Disable phase delay
-            upmu_set_isink_chop0_en(0x0); // Disable CHOP clk
-            upmu_set_isink_ch0_en(0x1); // Turn on ISINK Channel 0
-			
-			}
-	if(!strncmp(buf, "test1", 5))  
-	{
-            upmu_set_rg_isink1_ck_pdn(0x0); // Disable power down    
-            upmu_set_rg_isink1_ck_sel(0x0); // Freq = 32KHz for Indicator            
-            upmu_set_isink_dim1_duty(15); // 16/32
-			upmu_set_isink_ch1_mode(1);
-            upmu_set_isink_dim1_fsel(0); // 1K = 32000 / (0 + 1) / 32
-            upmu_set_isink_ch1_step(0x0); // 4mA
-            upmu_set_isink_sfstr1_tc(0x0); // 0.5us
-            upmu_set_isink_sfstr1_en(0x0); // Disable soft start
-			upmu_set_isink_breath1_trf_sel(0x04); // 0.926s
-			upmu_set_isink_breath1_ton_sel(0x02); // 0.523s
-			upmu_set_isink_breath1_toff_sel(0x03); // 1.417s
-			upmu_set_rg_isink1_double_en(0x0); // Disable double current
-			upmu_set_isink_phase1_dly_en(0x0); // Disable phase delay
-            upmu_set_isink_chop1_en(0x0); // Disable CHOP clk
-            upmu_set_isink_ch1_en(0x1); // Turn on ISINK Channel 1        
-			
-			}
-	if(!strncmp(buf, "test2", 5))  
-	{
-            upmu_set_rg_isink2_ck_pdn(0x0); // Disable power down    
-            upmu_set_rg_isink2_ck_sel(0x0); // Freq = 32KHz for Indicator            
-            upmu_set_isink_dim2_duty(15); // 16/32
-			upmu_set_isink_ch2_mode(1);
-            upmu_set_isink_dim2_fsel(0); // 1K = 32000 / (0 + 1) / 32
-            upmu_set_isink_ch2_step(0x0); // 4mA
-            upmu_set_isink_sfstr2_tc(0x0); // 0.5us
-            upmu_set_isink_sfstr2_en(0x0); // Disable soft start
-			upmu_set_isink_breath2_trf_sel(0x04); // 0.926s
-			upmu_set_isink_breath2_ton_sel(0x02); // 0.523s
-			upmu_set_isink_breath2_toff_sel(0x03); // 1.417s
-			upmu_set_rg_isink2_double_en(0x0); // Disable double current
-			upmu_set_isink_phase2_dly_en(0x0); // Disable phase delay
-            upmu_set_isink_chop2_en(0x0); // Disable CHOP clk
-            upmu_set_isink_ch2_en(0x1); // Turn on ISINK Channel 2
-
-	}
-	if(!strncmp(buf, "test3", 5))  
-	{
-            upmu_set_rg_isink3_ck_pdn(0x0); // Disable power down    
-            upmu_set_rg_isink3_ck_sel(0x0); // Freq = 32KHz for Indicator            
-            upmu_set_isink_dim3_duty(15); // 16/32
-			upmu_set_isink_ch3_mode(1);
-            upmu_set_isink_dim3_fsel(0); // 1K = 32000 / (0 + 1) / 32
-            upmu_set_isink_ch3_step(0x0); // 4mA
-            upmu_set_isink_sfstr3_tc(0x0); // 0.5us
-            upmu_set_isink_sfstr3_en(0x0); // Disable soft start
-			upmu_set_isink_breath3_trf_sel(0x04); // 0.926s
-			upmu_set_isink_breath3_ton_sel(0x02); // 0.523s
-			upmu_set_isink_breath3_toff_sel(0x03); // 1.417s
-			upmu_set_rg_isink3_double_en(0x0); // Disable double current
-			upmu_set_isink_phase3_dly_en(0x0); // Disable phase delay
-            upmu_set_isink_chop3_en(0x0); // Disable CHOP clk
-            upmu_set_isink_ch3_en(0x1); // Turn on ISINK Channel 3
-			
-			}
-	if(!strncmp(buf, "pwm2", 4))  
-	{
-            upmu_set_rg_isink2_ck_pdn(0x0); // Disable power down    
-            upmu_set_rg_isink2_ck_sel(0x0); // Freq = 32KHz for Indicator            
-            upmu_set_isink_dim2_duty(15); // 16/32
-			upmu_set_isink_ch2_mode(0);
-            upmu_set_isink_dim2_fsel(0); // 1K = 32000 / (0 + 1) / 32
-            upmu_set_isink_ch2_step(0x0); // 4mA
-            upmu_set_isink_sfstr2_tc(0x0); // 0.5us
-            upmu_set_isink_sfstr2_en(0x0); // Disable soft start
-			upmu_set_isink_breath2_trf_sel(0x04); // 0.926s
-			upmu_set_isink_breath2_ton_sel(0x02); // 0.523s
-			upmu_set_isink_breath2_toff_sel(0x03); // 1.417s
-			upmu_set_rg_isink2_double_en(0x0); // Disable double current
-			upmu_set_isink_phase2_dly_en(0x0); // Disable phase delay
-            upmu_set_isink_chop2_en(0x0); // Disable CHOP clk
-            upmu_set_isink_ch2_en(0x1); // Turn on ISINK Channel 2
-
-	}
-	if(!strncmp(buf, "reg3", 4))  
-	{
-            upmu_set_rg_isink3_ck_pdn(0x0); // Disable power down    
-            upmu_set_rg_isink3_ck_sel(0x0); // Freq = 32KHz for Indicator            
-            upmu_set_isink_dim3_duty(15); // 16/32
-			upmu_set_isink_ch3_mode(2);
-            upmu_set_isink_dim3_fsel(0); // 1K = 32000 / (0 + 1) / 32
-            upmu_set_isink_ch3_step(0x0); // 4mA
-            upmu_set_isink_sfstr3_tc(0x0); // 0.5us
-            upmu_set_isink_sfstr3_en(0x0); // Disable soft start
-			upmu_set_isink_breath3_trf_sel(0x04); // 0.926s
-			upmu_set_isink_breath3_ton_sel(0x02); // 0.523s
-			upmu_set_isink_breath3_toff_sel(0x03); // 1.417s
-			upmu_set_rg_isink3_double_en(0x0); // Disable double current
-			upmu_set_isink_phase3_dly_en(0x0); // Disable phase delay
-            upmu_set_isink_chop3_en(0x0); // Disable CHOP clk
-            upmu_set_isink_ch3_en(0x1); // Turn on ISINK Channel 3
-			
-	}
-}
-#endif
-
 /*----------------------------------------------------------------------------*/
 static DRIVER_ATTR(chipinfo,   S_IWUSR | S_IRUGO, show_chipinfo_value,      NULL);
 static DRIVER_ATTR(sensordata, S_IWUSR | S_IRUGO, show_sensordata_value,    NULL);
@@ -1940,10 +1559,6 @@ static DRIVER_ATTR(powerstatus,               S_IRUGO, show_power_status_value, 
 static DRIVER_ATTR(power_mode,               S_IWUSR, NULL,        store_power_mode_value);
 static DRIVER_ATTR(softreset,  S_IWUSR | S_IRUGO, NULL,    bma250_softreset);
 static DRIVER_ATTR(softreset_init, S_IWUSR | S_IRUGO, NULL, bma250_softreset_init);
-#if defined(MIKI_YUANZHENG_SUPPORT)
-static DRIVER_ATTR(upmu_test, S_IWUSR | S_IRUGO, NULL, upmu_test);
-static DRIVER_ATTR(threshold, S_IWUSR | S_IRUGO, NULL, store_slope_threshold_value);
-#endif
 /*----------------------------------------------------------------------------*/
 static struct driver_attribute *bma2xx_attr_list[] = {
 	&driver_attr_chipinfo,     /*chip information*/
@@ -1957,10 +1572,6 @@ static struct driver_attribute *bma2xx_attr_list[] = {
 	&driver_attr_power_mode,/*ONLY for debug usage*/
     &driver_attr_softreset, /*soft reset*/
     &driver_attr_softreset_init,
-#if defined(MIKI_YUANZHENG_SUPPORT)
-    &driver_attr_upmu_test,
-    &driver_attr_threshold,
-#endif
 };
 /*----------------------------------------------------------------------------*/
 static int bma2xx_create_attr(struct device_driver *driver) 
@@ -2078,10 +1689,7 @@ int gsensor_operate(void* self, uint32_t command, void* buff_in, int size_in,
 				}
 				else
 				{
-				#if defined(MIKI_YUANZHENG_SUPPORT)
-				#else					
 					err = BMA2XX_SetPowerMode( priv->client, !power_mode);
-				#endif
 				}
 			}
 			break;
@@ -2145,10 +1753,6 @@ static long bma2xx_unlocked_ioctl(struct file *file, unsigned int cmd,
 	long err = 0;
 	int cali[3];
 
-	#if defined(MIKI_YUANZHENG_SUPPORT)
-	unsigned char slope_threshold;
-	#endif
-
 	//GSE_FUN(f);
 	if(_IOC_DIR(cmd) & _IOC_READ)
 	{
@@ -2167,64 +1771,6 @@ static long bma2xx_unlocked_ioctl(struct file *file, unsigned int cmd,
 
 	switch(cmd)
 	{
-		#if defined(MIKI_YUANZHENG_SUPPORT)
-		case GSENSOR_IOCTL_SET_SLOPE_THRESHOLD:
-			data = (void __user*)arg;
-			if(data == NULL)
-			{
-				err = -EINVAL;
-				break;	  
-			}
-			if(copy_from_user(&slope_threshold, data, sizeof(unsigned char)))
-			{
-				err = -EFAULT;
-				printk("liuhuan -------GSENSOR_IOCTL_SET_SLOPE_THRESHOLD--copy_from_user ---err\n");
-				break;	  
-			}
-		
-			err=bma2x2_set_slope_threshold(client, slope_threshold);
-		    if(err < 0)
-		    {
-        		miki_gs_err("BMA2XX disable interrupt function error---\n");
-		    	break;
-			}
-		
-			printk("liuhuan--------------GSENSOR_IOCTL_SET_SLOPE_THRESHOLD--ok\n");	
-			
-			break;
-		
-		
-		case GSENSOR_IOCTL_GET_SLOPE_THRESHOLD:
-			data = (void __user *) arg;
-			if(data == NULL)
-			{
-				err = -EINVAL;
-				break;	  
-			}
-
-			err = bma2xx_i2c_read_block(client,BMA2X2_SLOPE_THRES_REG,&slope_threshold, 0x01);
-		    if(err < 0)
-		    {
-		   		printk("bma2x2_set_slope_threshold read err\n"); 
-				break;
-			}
-			
-			printk("liuhuan--------GSENSOR_IOCTL_GET_SLOPE_THRESHOLD----threshold: %d--\n",slope_threshold);
-
-			if(copy_to_user(data, &slope_threshold, sizeof(unsigned char)))
-			{
-				err = -EFAULT;
-				printk("liuhuan-------GSENSOR_IOCTL_GET_SLOPE_THRESHOLD---err\n");
-				break;
-			}				 
-			
-			printk("liuhuan-------GSENSOR_IOCTL_GET_SLOPE_THRESHOLD---ok\n");
-
-			break;	  
-		
-		
-		
-		#endif
 		case GSENSOR_IOCTL_INIT:
 			bma2xx_init_client(client, 0);			
 			break;
@@ -2374,6 +1920,7 @@ static int bma2xx_suspend(struct i2c_client *client, pm_message_t msg)
 	struct bma2xx_i2c_data *obj = i2c_get_clientdata(client);    
 	int err = 0;
 	GSE_FUN();    
+
 	if(msg.event == PM_EVENT_SUSPEND)
 	{   
 		if(obj == NULL)
@@ -2422,15 +1969,11 @@ static int bma2xx_resume(struct i2c_client *client)
 /*----------------------------------------------------------------------------*/
 static void bma2xx_early_suspend(struct early_suspend *h) 
 {
-#if defined(MIKI_YUANZHENG_SUPPORT)
-	//printk("bma2xx_early_suspend---1\n");
-//	mt65xx_eint_unmask(CUST_EINT_GSE_2_NUM);
-#else
 	struct bma2xx_i2c_data *obj = container_of(h, struct bma2xx_i2c_data, early_drv);   
 	int err;
-//	printk("bma2xx_early_suspend---2\n");
-	GSE_FUN();   
- 
+
+	GSE_FUN();    
+
 	if(obj == NULL)
 	{
 		miki_gs_err("null pointer!!\n");
@@ -2447,27 +1990,21 @@ static void bma2xx_early_suspend(struct early_suspend *h)
 	atomic_set(&obj->sensor_power, 0);
 
 	BMA2XX_power(obj->hw, 0);
-#endif
 }
 /*----------------------------------------------------------------------------*/
 static void bma2xx_late_resume(struct early_suspend *h)
 {
-#if defined(MIKI_YUANZHENG_SUPPORT)
-//	printk("bma2xx_late_resume--------\n");
-//	mt65xx_eint_mask(CUST_EINT_GSE_2_NUM);		
-#else
 	struct bma2xx_i2c_data *obj = container_of(h, struct bma2xx_i2c_data, early_drv);         
 	int err;
-	
+
 	GSE_FUN();
-	
-	
+
 	if(obj == NULL)
 	{
 		miki_gs_err("null pointer!!\n");
 		return;
 	}
-	
+
 	BMA2XX_power(obj->hw, 1);
 	if((err = bma2xx_init_client(obj->client, 0)))
 	{
@@ -2475,7 +2012,6 @@ static void bma2xx_late_resume(struct early_suspend *h)
 		return;        
 	}
 	atomic_set(&obj->suspend, 0);    
-#endif
 }
 /*----------------------------------------------------------------------------*/
 #endif /*CONFIG_HAS_EARLYSUSPEND*/
@@ -2485,14 +2021,6 @@ static int bma2xx_i2c_detect(struct i2c_client *client, struct i2c_board_info *i
 	strcpy(info->type, BMA2XX_DEV_NAME);
 	return 0;
 }
-#if defined(MIKI_YUANZHENG_SUPPORT)
-void gsensor_interrupt_handler(void)
-{
-	printk("liuhuan -----gsensor INT triggered--------\n");
-	mt65xx_eint_mask(CUST_EINT_GSE_2_NUM);
-	
-}
-#endif
 
 /*----------------------------------------------------------------------------*/
 static int bma2xx_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)
@@ -2576,24 +2104,6 @@ static int bma2xx_i2c_probe(struct i2c_client *client, const struct i2c_device_i
 		miki_gs_err("attach fail = %d\n", err);
 		goto exit_kfree;
 	}
-
-
-
-
-#if defined(MIKI_YUANZHENG_SUPPORT)
-	mt_set_gpio_mode(GPIO_GSE_2_EINT_PIN, GPIO_GSE_2_EINT_PIN_M_EINT);
-	mt_set_gpio_dir(GPIO_GSE_2_EINT_PIN, GPIO_DIR_IN);
-	mt_set_gpio_pull_enable(GPIO_GSE_2_EINT_PIN, GPIO_PULL_ENABLE);
-	mt_set_gpio_pull_select(GPIO_GSE_2_EINT_PIN, GPIO_PULL_DOWN);
-
-	mt65xx_eint_set_sens(CUST_EINT_GSE_2_NUM, CUST_EINT_GSE_2_SENSITIVE);
-	mt65xx_eint_registration(CUST_EINT_GSE_2_NUM,CUST_EINT_GSE_2_DEBOUNCE_EN,CUST_EINT_GSE_2_POLARITY, gsensor_interrupt_handler, 0);
-	mt65xx_eint_unmask(CUST_EINT_GSE_2_NUM);
-#endif
-
-
-
-
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	obj->early_drv.level    = EARLY_SUSPEND_LEVEL_DISABLE_FB - 1,

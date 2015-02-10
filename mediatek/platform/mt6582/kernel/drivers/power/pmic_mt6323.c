@@ -183,7 +183,7 @@ void PMIC_IMM_PollingAuxadcChannel(void)
 {
 	kal_uint32 ret=0;
     
-	//xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[PMIC_IMM_PollingAuxadcChannel] before:%d ",upmu_get_rg_adc_deci_gdly());
+	 //xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[PMIC_IMM_PollingAuxadcChannel] before:%d ",upmu_get_rg_adc_deci_gdly());
 
 	if (upmu_get_rg_adc_deci_gdly()==1)
 	{
@@ -643,7 +643,7 @@ void pwrkey_int_handler(void)
     kal_uint32 ret=0;
 
     xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[pwrkey_int_handler]....\n");
-   
+    
 		if(upmu_get_pwrkey_deb()==1)    	    	
     {
         xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[pwrkey_int_handler] Release pwrkey\n");
@@ -3568,6 +3568,13 @@ static int pmic_mt6323_probe(struct platform_device *dev)
     dump_ldo_status_read_debug();
     pmic_debug_init();
     xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[PMIC] pmic_debug_init : done.\n" );
+
+    #ifdef MTK_ENABLE_MD5
+    pmic_config_interface(0x402,0x0,0x1,0); // [0:0]: VTCXO_LP_SEL; 
+    pmic_config_interface(0x402,0x1,0x1,11); // [11:11]: VTCXO_ON_CTRL;
+    xlog_printk(ANDROID_LOG_INFO, "Power/PMIC", "[PMIC] VTCXO control by SRCLKEM due to MTK_ENABLE_MD5, Reg[0x402]=0x%x\n",
+        upmu_get_reg_value(0x402));
+    #endif
 
     return 0;
 }

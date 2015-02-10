@@ -299,8 +299,16 @@ static ssize_t ltr559_show_ps(struct device_driver *ddri, char *buf)
     return snprintf(buf, PAGE_SIZE, "0x%04X\n", res);     
 }
 /*----------------------------------------------------------------------------*/
-
-
+static ssize_t ltr559_show_chipinfo(struct device_driver *ddri, char *buf)
+{
+	int  res;
+	if(!ltr559_obj)
+	{
+		APS_ERR("ltr559_obj is null!!\n");
+		return 0;
+	}
+	return snprintf(buf, PAGE_SIZE, "%s\n", "ltr559");
+}
 /*----------------------------------------------------------------------------*/
 static ssize_t ltr559_show_status(struct device_driver *ddri, char *buf)
 {
@@ -393,6 +401,7 @@ static ssize_t ltr559_store_reg(struct device_driver *ddri, char *buf, size_t co
 /*----------------------------------------------------------------------------*/
 static DRIVER_ATTR(als,     S_IWUSR | S_IRUGO, ltr559_show_als,   NULL);
 static DRIVER_ATTR(ps,      S_IWUSR | S_IRUGO, ltr559_show_ps,    NULL);
+static DRIVER_ATTR(chipinfo,S_IWUSR | S_IRUGO, ltr559_show_chipinfo,    NULL);
 //static DRIVER_ATTR(config,  S_IWUSR | S_IRUGO, ltr559_show_config,ltr559_store_config);
 //static DRIVER_ATTR(alslv,   S_IWUSR | S_IRUGO, ltr559_show_alslv, ltr559_store_alslv);
 //static DRIVER_ATTR(alsval,  S_IWUSR | S_IRUGO, ltr559_show_alsval,ltr559_store_alsval);
@@ -404,6 +413,7 @@ static DRIVER_ATTR(reg,     S_IWUSR | S_IRUGO, ltr559_show_reg,   ltr559_store_r
 static struct driver_attribute *ltr559_attr_list[] = {
     &driver_attr_als,
     &driver_attr_ps,    
+    &driver_attr_chipinfo,
    // &driver_attr_trace,        /*trace log*/
    // &driver_attr_config,
    // &driver_attr_alslv,
