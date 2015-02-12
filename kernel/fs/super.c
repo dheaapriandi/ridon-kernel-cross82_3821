@@ -1135,7 +1135,7 @@ mount_fs(struct file_system_type *type, int flags, const char *name, void *data)
 	root = type->mount(type, flags, name, data);
 	if (IS_ERR(root)) {
 		error = PTR_ERR(root);
-		xlog_printk(ANDROID_LOG_DEBUG, "MNT_TAG", "mount_fs, mount error %d\n", error); 
+		xlog_printk(ANDROID_LOG_DEBUG, "MNT_TAG", "mount_fs, as %s, name %s mount error %d\n", type->name, name, error); 
 		goto out_free_secdata;
 	}
 	sb = root->d_sb;
