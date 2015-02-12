@@ -61,7 +61,6 @@ struct file_obj {
 	     (mtd) = __mtd_next_device(mtd->index + 1))
 
 #endif /*__DUMCHAR_H__ */
-#ifndef MTK_NEW_COMBO_EMMC_SUPPORT
 #define EMMC_PART_BOOT1		(BOOT_1)
 #define EMMC_PART_BOOT2		(BOOT_2)
 #define EMMC_PART_RPMB		(RPMB)
@@ -72,4 +71,3 @@ struct file_obj {
 #define EMMC_PART_USER 		(USER)
 #define NAND_PART_USER 		(USER)
 
-#endif
