@@ -1,11 +1,11 @@
 #
-# This confidential and proprietary software may be used only as
-# authorised by a licensing agreement from ARM Limited
-# (C) COPYRIGHT 2007-2011 ARM Limited
-# ALL RIGHTS RESERVED
-# The entire notice above must be reproduced on all authorised
-# copies and copies may only be made to the extent permitted
-# by a licensing agreement from ARM Limited.
+# Copyright (C) 2010-2011 ARM Limited. All rights reserved.
+# 
+# This program is free software and is provided to you under the terms of the GNU General Public License version 2
+# as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
+# 
+# A copy of the licence is included with the program, and can also be obtained from Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #
 
 # This file is called by the Linux build system.
@@ -25,31 +25,16 @@ MALI_PP_SCHEDULER_KEEP_SUB_JOB_STARTS_ALIGNED ?= 0
 MALI_PP_SCHEDULER_FORCE_NO_JOB_OVERLAP_BETWEEN_APPS ?= 0
 MALI_UPPER_HALF_SCHEDULING ?= 1
 MALI_ENABLE_CPU_CYCLES ?= 0
-ifeq ($(FLAG_MTK_BUILD_SYS),1)
-DRIVER_DIR=$(MTK_PATH_PLATFORM)/drivers/gpu/mali/mali
-else
+#ifeq ($(FLAG_MTK_BUILD_SYS),1)
+#DRIVER_DIR=../../$(src)
+#else
 # Get path to driver source from Linux build system
 DRIVER_DIR=$(src)
-endif
+#endif
 
-# For customer releases the Linux Device Drivers will be provided as ARM proprietary and GPL releases:
-# The ARM proprietary product will only include the license/proprietary directory
-# The GPL product will only include the license/gpl directory
-ifeq ($(wildcard $(DRIVER_DIR)/linux/license/gpl/*),)
-    ccflags-y += -I$(DRIVER_DIR)/linux/license/proprietary
-    ifeq ($(CONFIG_MALI400_PROFILING),y)
-        $(error Profiling is incompatible with non-GPL license)
-    endif
-    ifeq ($(CONFIG_PM_RUNTIME),y)
-        $(error Runtime PM is incompatible with non-GPL license)
-    endif
-    ifeq ($(CONFIG_DMA_SHARED_BUFFER),y)
-        $(error DMA-BUF is incompatible with non-GPL license)
-    endif
-    $(error Linux Device integration is incompatible with non-GPL license)
-else
-    ccflags-y += -I$(DRIVER_DIR)/linux/license/gpl
-endif
+$(info $(DRIVER_DIR))
+
+ccflags-y += -I$(DRIVER_DIR)/linux/license/gpl
 
 mali-y += \
 	linux/mali_osk_atomics.o \
@@ -120,7 +105,7 @@ mali-y += \
 
 mali-y += platform/platform.o
 mali-y += platform/platform_pmm.o
-mali-$(CONFIG_MTK_MET) += platform/platform_met.o
+#mali-$(CONFIG_MTK_MET) += platform/platform_met.o
 
 ifneq ($(MALI_PLATFORM_FILES),)
 	mali-y += $(MALI_PLATFORM_FILES:.c=.o)

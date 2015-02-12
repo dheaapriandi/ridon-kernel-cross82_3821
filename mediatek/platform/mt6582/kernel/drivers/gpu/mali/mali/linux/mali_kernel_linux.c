@@ -1,11 +1,11 @@
 /**
- * This confidential and proprietary software may be used only as
- * authorised by a licensing agreement from ARM Limited
- * (C) COPYRIGHT 2008-2013 ARM Limited
- * ALL RIGHTS RESERVED
- * The entire notice above must be reproduced on all authorised
- * copies and copies may only be made to the extent permitted
- * by a licensing agreement from ARM Limited.
+ * Copyright (C) 2010-2013 ARM Limited. All rights reserved.
+ * 
+ * This program is free software and is provided to you under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
+ * 
+ * A copy of the licence is included with the program, and can also be obtained from Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 /**
@@ -113,7 +113,7 @@ static u32 mali_cpu_clock_last_value[8] = {0,};
 EXPORT_SYMBOL(mali_set_user_setting);
 EXPORT_SYMBOL(mali_get_user_setting);
 
-static char mali_dev_name[] = "mali0"; /* should be const, but the functions we call requires non-cost */
+static char mali_dev_name[] = "mali"; /* should be const, but the functions we call requires non-cost */
 
 /* This driver only supports one Mali device, and this variable stores this single platform device */
 struct platform_device *mali_platform_device = NULL;

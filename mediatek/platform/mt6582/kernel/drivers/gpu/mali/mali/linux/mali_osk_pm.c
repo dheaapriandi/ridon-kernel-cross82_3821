@@ -1,11 +1,11 @@
 /**
- * This confidential and proprietary software may be used only as
- * authorised by a licensing agreement from ARM Limited
- * (C) COPYRIGHT 2010-2013 ARM Limited
- * ALL RIGHTS RESERVED
- * The entire notice above must be reproduced on all authorised
- * copies and copies may only be made to the extent permitted
- * by a licensing agreement from ARM Limited.
+ * Copyright (C) 2010-2013 ARM Limited. All rights reserved.
+ * 
+ * This program is free software and is provided to you under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
+ * 
+ * A copy of the licence is included with the program, and can also be obtained from Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 /**
@@ -206,8 +206,7 @@ mali_bool _mali_osk_pm_dev_ref_add_no_power_on(void)
 	MALI_DEBUG_PRINT(4, ("Mali OSK PM: No-power ref taken (%u)\n", _mali_osk_atomic_read(&mali_pm_ref_count)));
 	return ref > 0 ? MALI_TRUE : MALI_FALSE;
 #else
-   _mali_osk_mutex_wait(pm_lock);     
-	return _mali_osk_atomic_read(&mali_suspend_called) == 0 ? MALI_TRUE : MALI_FALSE;
+	return MALI_TRUE;
 #endif
 }
 
@@ -222,8 +221,6 @@ void _mali_osk_pm_dev_ref_dec_no_power_on(void)
 	pm_runtime_put(&(mali_platform_device->dev));
 #endif
 	MALI_DEBUG_PRINT(4, ("Mali OSK PM: No-power ref released (%u)\n", _mali_osk_atomic_read(&mali_pm_ref_count)));
-#else
-   _mali_osk_mutex_signal(pm_lock);	
 #endif
 }
 

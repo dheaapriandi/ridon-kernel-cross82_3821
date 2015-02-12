@@ -1,17 +1,16 @@
 /*
- * This confidential and proprietary software may be used only as
- * authorised by a licensing agreement from ARM Limited
- * (C) COPYRIGHT 2007-2010, 2012-2013 ARM Limited
- * ALL RIGHTS RESERVED
- * The entire notice above must be reproduced on all authorised
- * copies and copies may only be made to the extent permitted
- * by a licensing agreement from ARM Limited.
+ * Copyright (C) 2010, 2012-2013 ARM Limited. All rights reserved.
+ * 
+ * This program is free software and is provided to you under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
+ * 
+ * A copy of the licence is included with the program, and can also be obtained from Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #ifndef __MALI_KERNEL_COMMON_H__
 #define __MALI_KERNEL_COMMON_H__
 
-#include "mtk_mali_kernel.h" /*Mediatek custom routine for Mali*/
 #include "mali_osk.h"
 
 /* Make sure debug is defined when it should be */
@@ -112,8 +111,7 @@
 	MALI_PRINTF(("Mali: ERR: %s\n" ,__FILE__)); \
 	MALI_PRINTF(("           %s()%4d\n           ", __FUNCTION__, __LINE__)) ; \
 	MALI_PRINTF(args); \
-	MALI_PRINTF(("\n"));   \
-	MTKMALI_DumpRegister();\
+	MALI_PRINTF(("\n")); \
 	} while(0)
 
 #define MALI_PRINT(args) do{ \

@@ -1,11 +1,11 @@
 /*
- * This confidential and proprietary software may be used only as
- * authorised by a licensing agreement from ARM Limited
- * (C) COPYRIGHT 2012-2013 ARM Limited
- * ALL RIGHTS RESERVED
- * The entire notice above must be reproduced on all authorised
- * copies and copies may only be made to the extent permitted
- * by a licensing agreement from ARM Limited.
+ * Copyright (C) 2012-2013 ARM Limited. All rights reserved.
+ * 
+ * This program is free software and is provided to you under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
+ * 
+ * A copy of the licence is included with the program, and can also be obtained from Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #include "mali_sync.h"
@@ -160,7 +160,6 @@ s32 mali_sync_fence_fd_alloc(struct sync_fence *sync_fence)
 	fd = get_unused_fd();
 	if (fd < 0) {
 		sync_fence_put(sync_fence);
-		MALI_DEBUG_PRINT(1, ("get_unused_fd() got fd < 0, fd=%x\n", fd));
 		return -1;
 	}
 	sync_fence_install(sync_fence, fd);

@@ -1,3 +1,18 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
+#include <linux/mali/mali_utgard.h>
 #include "mali_kernel_common.h"
 #include "mali_osk.h"
 #include "platform_pmm.h"
@@ -41,6 +56,12 @@ static u32 check_need_univpll(void) {
 }
 static int _need_univpll = 0;
 
+static unsigned long gpu_get_current_utilizationL(void)
+{
+    return (unsigned long)gpu_get_current_utilization();
+}
+
+
 void mali_pmm_init(void)
 {
     MALI_DEBUG_PRINT(1, ("%s\n", __FUNCTION__));
@@ -49,7 +70,7 @@ void mali_pmm_init(void)
 	
     MALI_DEBUG_PRINT(1, ("need univ src pll %d\n", _need_univpll));
 
-    mtk_thermal_get_gpu_loading_fp = gpu_get_current_utilization;
+    mtk_thermal_get_gpu_loading_fp = gpu_get_current_utilizationL;
     mtk_get_gpu_loading_fp = gpu_get_current_utilization;
     atomic_set((atomic_t *)&bPoweroff, 1);
     mali_platform_power_mode_change(MALI_POWER_MODE_ON);
@@ -64,18 +85,17 @@ void mali_pmm_deinit(void)
 
 
 /* this function will be called periodically with sampling period 200ms~1000ms */
-void mali_pmm_utilization_handler(unsigned int utilization)
+void mali_pmm_utilization_handler(struct mali_gpu_utilization_data *data)
 {
-    current_sample_utilization = utilization;
-    MALI_DEBUG_PRINT(4, ("%s GPU utilization=%d\n", __FUNCTION__, utilization));
+    current_sample_utilization = data->utilization_gpu;
+    MALI_DEBUG_PRINT(4, ("%s GPU utilization=%d\n", __FUNCTION__, current_sample_utilization));
 }
 
 
-unsigned long gpu_get_current_utilization(void)
+unsigned int gpu_get_current_utilization(void)
 {
     return (current_sample_utilization * 100)/256;
 }
-
 
 
 void g3d_power_domain_control(int bpower_on)

@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/sched.h>
 #include <linux/string.h>
 #include <linux/vmalloc.h>
@@ -27,7 +41,7 @@ static void MTKPP_UnLock(MTK_PROC_PRINT_DATA *data)
 
 static void MTKPP_PrintQueueBuffer(MTK_PROC_PRINT_DATA *data, const char *fmt, ...) MTK_PP_FORMAT_PRINTF(2,3);
 
-static void MTKPP_PrintQueueBuffer2(MTK_PROC_PRINT_DATA *data, const char *fmt, ...) MTK_PP_FORMAT_PRINTF(2,3);
+//static void MTKPP_PrintQueueBuffer2(MTK_PROC_PRINT_DATA *data, const char *fmt, ...) MTK_PP_FORMAT_PRINTF(2,3);
 
 static void MTKPP_PrintRingBuffer(MTK_PROC_PRINT_DATA *data, const char *fmt, ...) MTK_PP_FORMAT_PRINTF(2,3);
 
@@ -72,6 +86,7 @@ static void MTKPP_PrintQueueBuffer(MTK_PROC_PRINT_DATA *data, const char *fmt, .
 	MTKPP_UnLock(data);
 }
 
+#if 0
 static void MTKPP_PrintQueueBuffer2(MTK_PROC_PRINT_DATA *data, const char *fmt, ...)
 {
 	va_list args;
@@ -105,6 +120,7 @@ static void MTKPP_PrintQueueBuffer2(MTK_PROC_PRINT_DATA *data, const char *fmt, 
 	
 	MTKPP_UnLock(data);
 }
+#endif
 
 static void MTKPP_PrintRingBuffer(MTK_PROC_PRINT_DATA *data, const char *fmt, ...)
 {

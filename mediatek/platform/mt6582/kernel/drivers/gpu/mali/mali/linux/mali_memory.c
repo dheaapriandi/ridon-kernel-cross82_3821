@@ -1,11 +1,11 @@
 /*
- * This confidential and proprietary software may be used only as
- * authorised by a licensing agreement from ARM Limited
- * (C) COPYRIGHT 2013 ARM Limited
- * ALL RIGHTS RESERVED
- * The entire notice above must be reproduced on all authorised
- * copies and copies may only be made to the extent permitted
- * by a licensing agreement from ARM Limited.
+ * Copyright (C) 2013 ARM Limited. All rights reserved.
+ * 
+ * This program is free software and is provided to you under the terms of the GNU General Public License version 2
+ * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
+ * 
+ * A copy of the licence is included with the program, and can also be obtained from Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
 #include <linux/list.h>
@@ -136,7 +136,7 @@ struct vm_operations_struct mali_kernel_vm_ops = {
 int mali_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	struct mali_session_data *session;
-	mali_mem_allocation *descriptor = NULL;
+	mali_mem_allocation *descriptor;
 	u32 size = vma->vm_end - vma->vm_start;
 	u32 mali_addr = vma->vm_pgoff << PAGE_SHIFT;
 
@@ -169,11 +169,7 @@ int mali_mmap(struct file *filp, struct vm_area_struct *vma)
 	vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 	vma->vm_ops = &mali_kernel_vm_ops; /* Operations used on any memory system */
 
-   /// since in ALPS project, especially low-memory segment, 
-   /// it would be hard to allocate a 256KB(2^6 * 4K) physical continuous memory due to memory fragmentation      
-   /// even 32KB conti. phy. might be hard to allocate. And it might cause ANR or KE
-   /// avoid using block allocate(256KB) directly
-	/// descriptor = mali_mem_block_alloc(mali_addr, size, vma, session);
+	descriptor = mali_mem_block_alloc(mali_addr, size, vma, session);
 	if (NULL == descriptor) {
 		descriptor = mali_mem_os_alloc(mali_addr, size, vma, session);
 		if (NULL == descriptor) {
@@ -345,12 +341,8 @@ void mali_memory_session_end(struct mali_session_data *session)
 	return;
 }
 
-
-extern unsigned int (*mtk_get_gpu_memory_usage_fp)(void);
-
 _mali_osk_errcode_t mali_memory_initialize(void)
 {
-    mtk_get_gpu_memory_usage_fp = _mali_ukk_report_memory_usage;
 	return mali_mem_os_init();
 }
 

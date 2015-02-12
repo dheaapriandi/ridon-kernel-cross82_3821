@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/platform_device.h>
 #include <linux/version.h>
 #include <linux/pm.h>
@@ -13,7 +27,7 @@
 #include "platform_pmm.h"
 #include "mali_pm.h"
 #include "mali_osk.h"
-#include "mt_reg_base.h"
+#include "mach/mt_reg_base.h"
 
 static void mali_platform_device_release(struct device *device);
 static int mali_pm_suspend(struct device *device);
@@ -80,13 +94,13 @@ static struct platform_device mali_gpu_device =
 	.dev.type = &mali_gpu_device_device_type /// We should probably use the pm_domain instead of type on newer kernels
 };
 
-extern unsigned int get_max_DRAM_size (void);
+/// extern unsigned int get_max_DRAM_size (void);
 int mali_platform_device_register(void)
 {
     int err = -1;
 
     MALI_DEBUG_PRINT(1, ("%s\n", __FUNCTION__));
-    mali_gpu_data.shared_mem_size = get_max_DRAM_size();
+    /// mali_gpu_data.shared_mem_size = get_max_DRAM_size();
 
     err = platform_device_register(&mali_gpu_device);
             
