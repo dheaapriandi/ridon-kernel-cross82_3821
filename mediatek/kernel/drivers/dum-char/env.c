@@ -4,6 +4,7 @@
 #include <linux/statfs.h>
 #include <asm/uaccess.h>   /*set_fs get_fs mm_segment_t*/
 #include "partition_define.h"
+#include "dumchar.h"
 #include <mach/env.h>
 
 #define MODULE_NAME "LK_ENV"
