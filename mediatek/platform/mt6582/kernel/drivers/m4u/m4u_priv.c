@@ -1420,7 +1420,6 @@ static int m4u_probe(struct platform_device *pdev)
     MMP_Event M4U_Event;
 
     M4UMSG("MTK_M4U_Init\n");
-/*
     ret = register_chrdev_region(g_MTKM4Udevno, 1, M4U_DEVNAME);	
     if(ret)
         M4UMSG("error: can't get major number for m4u device\n");
@@ -1440,14 +1439,14 @@ static int m4u_probe(struct platform_device *pdev)
         return ret;
     }
     m4uDevice = device_create(pM4uClass, NULL, g_MTKM4Udevno, NULL, M4U_DEVNAME);
-*/
 
+    /*
     m4u_entry = create_proc_entry("M4U_device", 0, NULL);
     if(m4u_entry)
     {
         m4u_entry -> proc_fops = &g_stMTK_M4U_fops;
     }
-
+*/
 
     pmodule_current_size = (int*)kmalloc(M4U_CLIENT_MODULE_NUM*4, GFP_KERNEL|__GFP_ZERO);
     pmodule_max_size = (int*)kmalloc(M4U_CLIENT_MODULE_NUM*4, GFP_KERNEL|__GFP_ZERO);
