@@ -1007,7 +1007,7 @@ MTK_NETWORK_TYPE_ALWAYS_ON=no
 
 # Support different display for available networks. show 2G/3G indication for 3g project.
 MTK_NETWORK_TYPE_DISPLAY=no
-MTK_NEW_COMBO_EMMC_SUPPORT=no
+MTK_NEW_COMBO_EMMC_SUPPORT=yes
 
 # Update iptalbes version to 1.4.10 or use Android default iptables(version 1.3.7)
 MTK_NEW_IPTABLES_SUPPORT=yes
