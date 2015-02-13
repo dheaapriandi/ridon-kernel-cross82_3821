@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/types.h>
@@ -11,6 +25,9 @@
 #include <linux/poll.h>
 #include <linux/time.h>
 #include <linux/delay.h>
+#if WMT_CREATE_NODE_DYNAMIC
+#include <linux/device.h>
+#endif
 #include "stp_exp.h"
 #include "wmt_exp.h"
 
@@ -29,6 +46,10 @@ MODULE_LICENSE("Dual BSD/GPL");
 
 #define COMBO_IOC_MAGIC        0xb0
 #define COMBO_IOCTL_FW_ASSERT  _IOWR(COMBO_IOC_MAGIC, 0, void*)
+#if WMT_CREATE_NODE_DYNAMIC
+struct class * bt_class = NULL;
+struct device * bt_dev = NULL;
+#endif
 
 static unsigned int gDbgLevel = BT_LOG_INFO;
 
@@ -474,7 +495,16 @@ static int BT_init(void)
         goto error;
 
     BT_INFO_FUNC("%s driver(major %d) installed.\n", BT_DRIVER_NAME, BT_major);
-    retflag = 0;
+#if WMT_CREATE_NODE_DYNAMIC
+	bt_class = class_create(THIS_MODULE,"stpbt");
+	if(IS_ERR(bt_class))
+		goto error;
+	bt_dev = device_create(bt_class,NULL,dev,NULL,"stpbt");
+	if(IS_ERR(bt_dev)){
+		goto error;
+        }
+#endif
+	retflag = 0;
     mtk_wcn_stp_register_event_cb(BT_TASK_INDX, NULL);
 
     /* init wait queue */
@@ -483,6 +513,15 @@ static int BT_init(void)
     return 0;
 
 error:
+#if WMT_CREATE_NODE_DYNAMIC
+	if(!(IS_ERR(bt_dev)))
+		device_destroy(bt_class,dev);
+	if(!(IS_ERR(bt_class)))
+	{
+		class_destroy(bt_class);
+		bt_class = NULL;
+	}
+#endif
     if (cdev_err == 0)
         cdev_del(&BT_cdev);
 
@@ -497,7 +536,18 @@ static void BT_exit(void)
     dev_t dev = MKDEV(BT_major, 0);
     retflag = 0;
     mtk_wcn_stp_register_event_cb(BT_TASK_INDX, NULL);  // unregister event callback function
-
+#if WMT_CREATE_NODE_DYNAMIC
+	if(bt_dev)
+	{
+		device_destroy(bt_class,dev);
+		bt_dev = NULL;
+	}
+	if(bt_class)
+	{
+		class_destroy(bt_class);
+		bt_class = NULL;
+	}
+#endif
     cdev_del(&BT_cdev);
     unregister_chrdev_region(dev, BT_devs);
 

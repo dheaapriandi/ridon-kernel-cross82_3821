@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifdef DFT_TAG
 #undef DFT_TAG
 #endif
@@ -10,10 +24,11 @@
 int static do_combo_common_drv_init(int chip_id)
 {
 	int i_ret = 0;
-	int i_ret_tmp = 0;
-	WMT_DETECT_INFO_FUNC("start to do combo driver init, chipid:0x%08x\n", chip_id);
 	
 #ifdef MTK_WCN_COMBO_CHIP_SUPPORT
+	int i_ret_tmp = 0;
+	WMT_DETECT_INFO_FUNC("start to do combo driver init, chipid:0x%08x\n", chip_id);
+
 	/*HIF-SDIO driver init*/
 	i_ret_tmp = mtk_wcn_hif_sdio_drv_init();
 	WMT_DETECT_INFO_FUNC("HIF-SDIO driver init, i_ret:%d\n", i_ret);
@@ -45,10 +60,10 @@ int static do_combo_common_drv_init(int chip_id)
 int static do_soc_common_drv_init(int chip_id)
 {
 	int i_ret = 0;
-	int i_ret_tmp = 0;
-	WMT_DETECT_INFO_FUNC("start to do soc common driver init, chipid:0x%08x\n", chip_id);
 	
 #ifdef MTK_WCN_SOC_CHIP_SUPPORT
+	int i_ret_tmp = 0;
+	WMT_DETECT_INFO_FUNC("start to do soc common driver init, chipid:0x%08x\n", chip_id);
 	
 	/*WMT driver init*/
 	i_ret_tmp = mtk_wcn_soc_common_drv_init();

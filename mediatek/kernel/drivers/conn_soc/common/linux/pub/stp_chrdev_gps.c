@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 /** $Log: stp_chrdev_gps.c $
  *
  * 12 13 2010 Sean.Wang
@@ -16,7 +30,9 @@
 #include <asm/current.h>
 #include <asm/uaccess.h>
 #include <linux/skbuff.h>
-
+#if WMT_CREATE_NODE_DYNAMIC
+#include <linux/device.h>
+#endif
 #include "stp_exp.h"
 #include "wmt_exp.h"
 
@@ -36,6 +52,11 @@ MODULE_LICENSE("GPL");
 #define COMBO_IOC_GPS_HWVER          6
 #define COMBO_IOC_RTC_FLAG			 7
 #define COMBO_IOC_CO_CLOCK_FLAG		 8
+
+#if WMT_CREATE_NODE_DYNAMIC
+struct class * gps_class = NULL;
+struct device * gps_dev = NULL;
+#endif
 
 static unsigned int gDbgLevel = GPS_LOG_DBG;
 
@@ -430,11 +451,29 @@ static int GPS_init(void)
     if (cdev_err)
         goto error;
 
+#if WMT_CREATE_NODE_DYNAMIC
+	gps_class = class_create(THIS_MODULE,"stpgps");
+	if(IS_ERR(gps_class))
+		goto error;
+	gps_dev = device_create(gps_class,NULL,dev,NULL,"stpgps");
+	if(IS_ERR(gps_dev))
+		goto error;
+#endif
+
     printk(KERN_ALERT "%s driver(major %d) installed.\n", GPS_DRIVER_NAME, GPS_major);
     
     return 0;
 
 error:
+#if WMT_CREATE_NODE_DYNAMIC
+	if(!(IS_ERR(gps_dev)))
+		device_destroy(gps_class,dev);
+	if(!(IS_ERR(gps_class)))
+	{
+		class_destroy(gps_class);
+		gps_class = NULL;
+	}
+#endif
     if (cdev_err == 0)
         cdev_del(&GPS_cdev);
 
@@ -447,7 +486,18 @@ error:
 static void GPS_exit(void)
 {
     dev_t dev = MKDEV(GPS_major, 0);
-
+#if WMT_CREATE_NODE_DYNAMIC
+	if(gps_dev)
+	{
+		device_destroy(gps_class,dev);
+		gps_dev = NULL;
+	}
+	if(gps_class)
+	{
+		class_destroy(gps_class);
+		gps_class = NULL;
+	}
+#endif
     cdev_del(&GPS_cdev);
     unregister_chrdev_region(dev, GPS_devs);
 

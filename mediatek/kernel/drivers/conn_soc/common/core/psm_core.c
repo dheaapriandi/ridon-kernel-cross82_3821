@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "osal_typedef.h"
 #include "osal.h"
 #include "psm_core.h"
@@ -345,7 +359,7 @@ static INT32 _stp_psm_put_op (
             if (!RB_FULL(pOpQ)) 
             {
                 RB_PUT(pOpQ, pOp);
-                STP_PSM_DBG_FUNC("opId(%d) enqueue\n", pOp->op.opId);
+                STP_PSM_INFO_FUNC("opId(%d) enqueue\n", pOp->op.opId);
             }
             else 
             {
@@ -1608,6 +1622,7 @@ MTK_WCN_BOOL stp_psm_is_quick_ps_support (VOID)
     return _stp_psm_is_quick_ps_support();
 }
 
+#if PSM_USE_COUNT_PACKAGE
 int stp_psm_disable_by_tx_rx_density(MTKSTP_PSM_T *stp_psm, int dir){
 
     //easy the variable maintain beween stp tx, rx thread.
@@ -1680,6 +1695,50 @@ int stp_psm_disable_by_tx_rx_density(MTKSTP_PSM_T *stp_psm, int dir){
 
     return 0;
 }
+#else
+
+static struct timeval tv_now, tv_end;
+static INT32 sample_start = 0;
+static INT32 tx_sum_len = 0;
+static INT32 rx_sum_len = 0;
+
+INT32 stp_psm_disable_by_tx_rx_density(MTKSTP_PSM_T *stp_psm, INT32 dir,INT32 length)
+{
+	if (sample_start) {
+		if (dir) {
+			rx_sum_len += length;
+		} else {
+			tx_sum_len += length;
+		}
+		do_gettimeofday(&tv_now);
+		//STP_PSM_INFO_FUNC("tv_now:%d.%d tv_end:%d.%d\n",tv_now.tv_sec,tv_now.tv_usec,tv_end.tv_sec,tv_end.tv_usec);
+		if (((tv_now.tv_sec == tv_end.tv_sec) && (tv_now.tv_usec > tv_end.tv_usec))||
+			(tv_now.tv_sec > tv_end.tv_sec)) {
+			STP_PSM_INFO_FUNC("STP speed rx:%d tx:%d\n",rx_sum_len,tx_sum_len);
+			if((rx_sum_len + tx_sum_len) > RTX_SPEED_THRESHOLD ){
+				//STP_PSM_INFO_FUNC("High speed,Disable monitor\n");
+				osal_set_bit(STP_PSM_WMT_EVENT_DISABLE_MONITOR_TX_HIGH_DENSITY,&stp_psm->flag);
+				stp_psm_start_monitor(stp_psm);
+			}else{
+				//STP_PSM_INFO_FUNC("Low speed,Enable monitor\n");
+				osal_clear_bit(STP_PSM_WMT_EVENT_DISABLE_MONITOR_TX_HIGH_DENSITY,&stp_psm->flag);
+			}
+			sample_start = 0;
+			rx_sum_len = 0;
+			tx_sum_len = 0;
+		}
+	}else{
+		sample_start = 1;
+		do_gettimeofday(&tv_now);
+		tv_end = tv_now;
+		tv_end.tv_sec += SAMPLE_DURATION;
+	}
+
+    return 0;
+}
+
+#endif
+
 
 /*external function for WMT module to do sleep/wakeup*/
 INT32 stp_psm_set_state(MTKSTP_PSM_T *stp_psm, MTKSTP_PSM_STATE_T state)

@@ -4,15 +4,15 @@
 ifneq ($(KERNELRELEASE),)
 	
 	COMBO_CHIP_SUPPORT := false
-	ifneq ($(filter MT6620E3,$(MTK_COMBO_CHIP)),)
-		COMBO_CHIP_SUPPORT := true
-	endif
-
-	ifneq ($(filter MT6628,$(MTK_COMBO_CHIP)),)
+	ifneq ($(filter "MT6620E3",$(MTK_COMBO_CHIP)),)
 		COMBO_CHIP_SUPPORT := true
 	endif
 	
-	ifneq ($(filter MT6630,$(MTK_COMBO_CHIP)),)
+	ifneq ($(filter "MT6628",$(MTK_COMBO_CHIP)),)
+		COMBO_CHIP_SUPPORT := true
+	endif
+	
+	ifneq ($(filter "MT6630",$(MTK_COMBO_CHIP)),)
 		COMBO_CHIP_SUPPORT := true
 	endif
 	
@@ -35,13 +35,17 @@ ifneq ($(KERNELRELEASE),)
 	ifneq ($(filter CONSYS_6571,$(MTK_COMBO_CHIP)),)
 		SOC_CHIP_SUPPORT := true
 	endif
+	ifneq ($(filter CONSYS_8127,$(MTK_COMBO_CHIP)),)
+		SOC_CHIP_SUPPORT := true
+	endif
 	
 	ifeq ($(SOC_CHIP_SUPPORT), true)
 		subdir-ccflags-y += -D MTK_WCN_SOC_CHIP_SUPPORT
-		CONN_COMMON := ../combo/common
+		CONN_COMMON := ../conn_soc/common
 		ccflags-y += -I$(src)/$(CONN_COMMON)/linux/include
 	endif
 	
+	subdir-ccflags-y += -DWMT_PLAT_ALPS=1
 	
 ifeq ($(CONFIG_MTK_COMBO),y)
 	ccflags-y += -I$(src)/drv_init/inc 	

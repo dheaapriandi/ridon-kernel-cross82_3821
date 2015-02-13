@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 /*! \file
     \brief  Declaration of library functions
 
@@ -10,7 +24,7 @@
 #define _WMT_CTRL_H_
 
 #include "osal.h"
-
+#include "wmt_stp_exp.h"
 /*******************************************************************************
 *                         C O M P I L E R   F L A G S
 ********************************************************************************
@@ -80,6 +94,9 @@ typedef enum _ENUM_WMT_CTRL_T {
     WMT_CTRL_SET_STP_DBG_INFO = 25,
     WMT_CTRL_BGW_DESENSE_CTRL = 26,
     WMT_CTRL_EVT_ERR_TRG_ASSERT = 27,
+#if CFG_WMT_LTE_COEX_HANDLING
+    WMT_CTRL_GET_TDM_REQ_ANTSEL = 28,
+#endif
     WMT_CTRL_MAX
 } ENUM_WMT_CTRL_T, *P_ENUM_WMT_CTRL_T;
 

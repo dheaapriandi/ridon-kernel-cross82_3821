@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 /*! \file
     \brief  Declaration of library functions
 
@@ -134,7 +148,6 @@ typedef enum _SDIO_PS_OP{
 
 typedef INT32 (*PF_WMT_SDIO_PSOP)(SDIO_PS_OP);
 
-#endif
 
 typedef enum _ENUM_WMTCHIN_TYPE_T{
    WMTCHIN_CHIPID = 0x0,
@@ -145,6 +158,7 @@ typedef enum _ENUM_WMTCHIN_TYPE_T{
    
 }ENUM_WMT_CHIPINFO_TYPE_T, *P_ENUM_WMT_CHIPINFO_TYPE_T;
 
+#endif
 
 typedef enum _ENUM_WMTRSTMSG_TYPE_T{
     WMTRSTMSG_RESET_START = 0x0,

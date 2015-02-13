@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <asm/atomic.h>
 
 #include "osal_typedef.h"
@@ -39,7 +53,10 @@ const char *g_btm_op_name[]={
 	    "STP_OPID_BTM_FULL_DUMP",
 	    "STP_OPID_BTM_PAGED_TRACE",
 	    "STP_OPID_BTM_FORCE_FW_ASSERT",
-	    "STP_OPID_BTM_EXIT"
+#if CFG_WMT_LTE_COEX_HANDLING
+	    "STP_OPID_BTM_WMT_LTE_COEX",
+#endif
+		"STP_OPID_BTM_EXIT"
     };
 
 #if 0
@@ -709,6 +726,11 @@ full_dump_end:
 		mtk_wcn_stp_ctx_restore();
 		break;
 
+#if CFG_WMT_LTE_COEX_HANDLING
+		case STP_OPID_BTM_WMT_LTE_COEX:
+			ret = wmt_idc_msg_to_lte_handing();
+		break;
+#endif
         default:
             ret = -1;
         break;
@@ -928,7 +950,7 @@ static INT32 _stp_btm_proc (void *pvData)
         id = osal_op_get_id(pOp);
 
         STP_BTM_DBG_FUNC("======> lxop_get_opid = %d, %s, remaining count = *%d*\n",
-            id, (id >= 10)?("???"):(g_btm_op_name[id]), RB_COUNT(&stp_btm->rActiveOpQ));
+            id, (id >= osal_array_size(g_btm_op_name))?("???"):(g_btm_op_name[id]), RB_COUNT(&stp_btm->rActiveOpQ));
 
         if (id >= STP_OPID_BTM_NUM) 
         {
@@ -943,7 +965,7 @@ handler_done:
 
         if (result) 
         {
-            STP_BTM_WARN_FUNC("opid id(0x%x)(%s) error(%d)\n", id, (id >= 10)?("???"):(g_btm_op_name[id]), result);
+            STP_BTM_WARN_FUNC("opid id(0x%x)(%s) error(%d)\n", id, (id >= osal_array_size(g_btm_op_name))?("???"):(g_btm_op_name[id]), result);
         }
 
         if (osal_op_is_wait_for_signal(pOp)) 
@@ -1279,6 +1301,45 @@ INT32 stp_notify_btm_do_fw_assert_via_emi(MTKSTP_BTM_T *stp_btm)
 {
 	return _stp_btm_do_fw_assert_via_emi(stp_btm);
 }
+
+#if CFG_WMT_LTE_COEX_HANDLING
+
+static inline INT32 _stp_notify_btm_handle_wmt_lte_coex(MTKSTP_BTM_T *stp_btm)
+{
+	P_OSAL_OP     pOp;
+    INT32         bRet;
+    INT32 retval;
+
+    if(stp_btm == NULL)
+    {
+        return STP_BTM_OPERATION_FAIL;
+    }
+    else 
+    {
+        pOp = _stp_btm_get_free_op(stp_btm);
+        if (!pOp) 
+        {
+            //STP_BTM_WARN_FUNC("get_free_lxop fail \n");
+            return -1;//break;
+        }
+        pOp->op.opId = STP_OPID_BTM_WMT_LTE_COEX;
+        pOp->signal.timeoutValue= 0;
+        bRet = _stp_btm_put_act_op(stp_btm, pOp);
+        STP_BTM_DBG_FUNC("OPID(%d) type(%d) bRet(%d) \n\n",
+            pOp->op.opId,
+            pOp->op.au4OpData[0],
+            bRet);
+        retval = (0 == bRet) ? STP_BTM_OPERATION_FAIL : STP_BTM_OPERATION_SUCCESS;
+    }
+    return retval;
+}
+
+INT32 stp_notify_btm_handle_wmt_lte_coex(MTKSTP_BTM_T *stp_btm)
+{
+	return _stp_notify_btm_handle_wmt_lte_coex(stp_btm);
+}
+
+#endif
 MTKSTP_BTM_T *stp_btm_init(void)
 {
     INT32 i = 0x0;

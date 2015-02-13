@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 /*! \file
     \brief  Declaration of library functions
 
@@ -90,7 +104,11 @@ static INT32 wmt_ctrl_soc_wakeup_consys(P_WMT_CTRL_DATA);
 static INT32 wmt_ctrl_set_stp_dbg_info(P_WMT_CTRL_DATA);
 static INT32 wmt_ctrl_bgw_desense_ctrl(P_WMT_CTRL_DATA);
 static INT32 wmt_ctrl_evt_err_trg_assert(P_WMT_CTRL_DATA);
-	
+
+#if CFG_WMT_LTE_COEX_HANDLING
+static INT32 wmt_ctrl_get_tdm_req_antsel(P_WMT_CTRL_DATA);
+#endif
+
 static INT32
 wmt_ctrl_rx_flush (
     P_WMT_CTRL_DATA
@@ -159,6 +177,9 @@ const static WMT_CTRL_FUNC wmt_ctrl_func[] =
     [WMT_CTRL_SET_STP_DBG_INFO] = wmt_ctrl_set_stp_dbg_info,
     [WMT_CTRL_BGW_DESENSE_CTRL] = wmt_ctrl_bgw_desense_ctrl,
     [WMT_CTRL_EVT_ERR_TRG_ASSERT] = wmt_ctrl_evt_err_trg_assert,
+#if CFG_WMT_LTE_COEX_HANDLING
+    [WMT_CTRL_GET_TDM_REQ_ANTSEL] = wmt_ctrl_get_tdm_req_antsel,
+#endif
     [WMT_CTRL_MAX] = wmt_ctrl_others,
 };
 
@@ -994,6 +1015,24 @@ static INT32 wmt_ctrl_evt_err_trg_assert(P_WMT_CTRL_DATA pWmtCtrlData)
 	}
 	return 0;
 }
+
+#if CFG_WMT_LTE_COEX_HANDLING
+static INT32 wmt_ctrl_get_tdm_req_antsel(P_WMT_CTRL_DATA pWmtCtrlData)
+{	
+	INT32 antsel_index = wmt_plat_get_tdm_antsel_index();
+
+	if(0 <= antsel_index)
+	{
+		pWmtCtrlData->au4CtrlData[0] = antsel_index;
+	}else
+	{
+		pWmtCtrlData->au4CtrlData[0] = 0xff;
+	}
+	WMT_INFO_FUNC("get tdm req antsel index is %d\n",antsel_index);
+	
+	return 0;
+}
+#endif
 
 static INT32
 wmt_ctrl_gps_sync_set (

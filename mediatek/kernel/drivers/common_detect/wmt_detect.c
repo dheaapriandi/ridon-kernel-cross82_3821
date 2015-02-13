@@ -1,3 +1,16 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include <mach/mtk_wcn_cmb_stub.h>
 
@@ -100,16 +113,30 @@ static long wmt_detect_unlocked_ioctl(struct file *filp, unsigned int cmd, unsig
 		
 		case COMBO_IOCTL_SET_CHIP_ID:
 			mtk_wcn_wmt_set_chipid(arg);
+			
+		break;
+		
+		case COMBO_IOCTL_EXT_CHIP_PWR_ON:
+			retval = wmt_detect_ext_chip_pwr_on();
 		break;
 		
 		case COMBO_IOCTL_EXT_CHIP_DETECT:
 			retval = wmt_detect_ext_chip_detect();
 		break;
 		
+		case COMBO_IOCTL_EXT_CHIP_PWR_OFF:
+			retval = wmt_detect_ext_chip_pwr_off();
+		break;
+		
+		case COMBO_IOCTL_DO_SDIO_AUDOK:
+			retval = sdio_detect_do_autok(arg);
+		break;
+			
 		case COMBO_IOCTL_GET_SOC_CHIP_ID:
 			retval = wmt_plat_get_soc_chipid();
 				/*get soc chipid by HAL interface*/
-			break;
+		break;
+			
 		case COMBO_IOCTL_MODULE_CLEANUP:
 			#if (MTK_WCN_REMOVE_KO)
 			/*deinit SDIO-DETECT module*/
@@ -117,7 +144,8 @@ static long wmt_detect_unlocked_ioctl(struct file *filp, unsigned int cmd, unsig
 			#else
 				WMT_DETECT_INFO_FUNC("no MTK_WCN_REMOVE_KO defined\n");
 			#endif
-			break;
+		break;
+			
 		case COMBO_IOCTL_DO_MODULE_INIT:
 			#if (MTK_WCN_REMOVE_KO)
 			/*deinit SDIO-DETECT module*/
@@ -143,18 +171,38 @@ struct file_operations gWmtDetectFops = {
     .unlocked_ioctl = wmt_detect_unlocked_ioctl,
 };
 
+int wmt_detect_ext_chip_pwr_on(void)
+{
+	/*pre power on external chip*/
+	//wmt_plat_pwr_ctrl(FUNC_ON);
+	WMT_DETECT_INFO_FUNC("++\n");
+	if (0 != wmt_detect_chip_pwr_ctrl(1))
+	{
+		return -1;
+	}
+	if (0 != wmt_detect_sdio_pwr_ctrl(1))
+	{
+		return -2;
+	}
+	return 0;
+}
+
+int wmt_detect_ext_chip_pwr_off(void)
+{
+	/*pre power off external chip*/
+	//wmt_plat_pwr_ctrl(FUNC_OFF);
+	WMT_DETECT_INFO_FUNC("--\n");
+	wmt_detect_sdio_pwr_ctrl(0);
+	return wmt_detect_chip_pwr_ctrl(0);
+}
+
 int wmt_detect_ext_chip_detect(void)
 {
 	int iRet = -1;
 	unsigned int chipId = -1;
-	/*if there is no external combo chip, return -1,chipid:6582*/
+	/*if there is no external combo chip, return -1*/
 	int bgfEintStatus = -1;
-	/*pre power on external chip*/
-	//wmt_plat_pwr_ctrl(FUNC_ON);
-	if (0 != wmt_detect_chip_pwr_ctrl(1))
-	{
-		return iRet;
-	}
+	WMT_DETECT_INFO_FUNC("++\n");
 	/*wait for a stable time*/
 	msleep (10);
 	
@@ -164,12 +212,12 @@ int wmt_detect_ext_chip_detect(void)
 	if (0 == bgfEintStatus)
 	{
 		/*external chip does not exist*/
-		WMT_DETECT_INFO_FUNC("external combo chip not detected");
+		WMT_DETECT_INFO_FUNC("external combo chip not detected\n");
 	}
 	else if (1 == bgfEintStatus)
 	{
 		/*combo chip exists*/
-		WMT_DETECT_INFO_FUNC("external combo chip detected");
+		WMT_DETECT_INFO_FUNC("external combo chip detected\n");
 		
 		/*detect chipid by sdio_detect module*/
 		chipId = sdio_detect_query_chipid(1);
@@ -186,12 +234,9 @@ int wmt_detect_ext_chip_detect(void)
 	else
 	{
 		/*Error exists*/
-		WMT_DETECT_ERR_FUNC("error happens when detecting combo chip");
+		WMT_DETECT_ERR_FUNC("error happens when detecting combo chip\n");
 	}
-	
-	/*pre power off external chip*/
-	//wmt_plat_pwr_ctrl(FUNC_OFF);
-	wmt_detect_chip_pwr_ctrl(0);
+	WMT_DETECT_INFO_FUNC("--\n");
 	/*return 0*/
 	return iRet;
 

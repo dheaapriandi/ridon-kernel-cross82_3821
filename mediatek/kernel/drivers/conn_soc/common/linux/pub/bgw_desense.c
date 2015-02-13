@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/version.h>
 #include <linux/netlink.h>
 #include <linux/kernel.h>
@@ -160,26 +174,4 @@ int bgw_init_socket()
 }
 
 
-#if 0
-static int mtk_BGW_probe(void)
-{
-	MSG("hello world\n");
 
-	init_socket();
-	
-	
-	return 0;	
-}
-
-static void mtk_BGW_remove(void)
-{
-	MSG("remove BGW module\n");
-	destory_netlink_kernel();
-	return;
-}
-module_init(mtk_BGW_probe);
-module_exit(mtk_BGW_remove);
-MODULE_LICENSE("Proprietary. Send bug reports to Guang.Yu@MediaTek.com");
-MODULE_DESCRIPTION("MediaTek BGW driver");
-MODULE_AUTHOR("Guang Yu <Guang.Yu@MediaTek.com>");
-#endif

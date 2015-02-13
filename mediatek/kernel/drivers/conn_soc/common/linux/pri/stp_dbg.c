@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/kernel.h> // GFP_KERNEL
 #include <linux/timer.h>  //init_timer, add_time, del_timer_sync
 #include <linux/time.h>  //gettimeofday
@@ -17,7 +31,6 @@
 #include <linux/zlib.h>
 #include <linux/uaccess.h>
 #include <linux/crc32.h>
-
 #include "stp_dbg.h"
 //#include "stp_btm.h"
 #include "btm_core.h"
@@ -1750,6 +1763,8 @@ INT32 stp_dbg_cpupcr_infor_format(UINT8 **buf,UINT32 *str_len)
 		len += osal_sprintf(*buf + len,"<client>\n\t\t\t<task>%s</task>\n\t\t\t",_stp_dbg_id_to_task(g_stp_dbg_cpupcr->fwTaskId));
 		len += osal_sprintf(*buf + len,"<irqx>IRQ_0x%x</irqx>\n\t\t\t",g_stp_dbg_cpupcr->fwRrq);
 		len += osal_sprintf(*buf + len,"<isr>0x%x</isr>\n\t\t\t",g_stp_dbg_cpupcr->fwIsr);
+		len += osal_sprintf(*buf + len,"<drv_type>NULL</drv_type>\n\t\t\t");
+		len += osal_sprintf(*buf + len,"<reason>NULL</reason>\n\t\t\t");
 	}else if((STP_FW_ASSERT_ISSUE == g_stp_dbg_cpupcr->issue_type) ||
 		(STP_HOST_TRIGGER_FW_ASSERT == g_stp_dbg_cpupcr->issue_type))
 	{
@@ -1767,6 +1782,18 @@ INT32 stp_dbg_cpupcr_infor_format(UINT8 **buf,UINT32 *str_len)
 			len += osal_sprintf(*buf + len,"<irqx>IRQ_0x%x</irqx>\n\t\t\t",g_stp_dbg_cpupcr->fwRrq);
 		}
 		len += osal_sprintf(*buf + len,"<isr>0x%x</isr>\n\t\t\t",g_stp_dbg_cpupcr->fwIsr);
+
+		if(STP_FW_ASSERT_ISSUE == g_stp_dbg_cpupcr->issue_type)
+		{
+			len += osal_sprintf(*buf + len,"<drv_type>NULL</drv_type>\n\t\t\t");
+			len += osal_sprintf(*buf + len,"<reason>NULL</reason>\n\t\t\t");
+		}
+
+		if(STP_HOST_TRIGGER_FW_ASSERT == g_stp_dbg_cpupcr->issue_type)
+		{
+			len += osal_sprintf(*buf + len,"<drv_type>%d</drv_type>\n\t\t\t",g_stp_dbg_cpupcr->host_assert_info.drv_type);
+			len += osal_sprintf(*buf + len,"<reason>%d</reason>\n\t\t\t",g_stp_dbg_cpupcr->host_assert_info.reason);
+		}
 	}else
 	{
 		len += osal_sprintf(*buf + len,"NULL\n\t\t</classification>\n\t\t<rc>\n\t\t\t");
@@ -1776,6 +1803,8 @@ INT32 stp_dbg_cpupcr_infor_format(UINT8 **buf,UINT32 *str_len)
 		len += osal_sprintf(*buf + len,"<client>\n\t\t\t<task>NULL</task>\n\t\t\t");
 		len += osal_sprintf(*buf + len,"<irqx>NULL</irqx>\n\t\t\t");
 		len += osal_sprintf(*buf + len,"<isr>NULL</isr>\n\t\t\t");
+		len += osal_sprintf(*buf + len,"<drv_type>NULL</drv_type>\n\t\t\t");
+		len += osal_sprintf(*buf + len,"<reason>NULL</reason>\n\t\t\t");
 	}
 
 	len += osal_sprintf(*buf + len,"<pctrace>");

@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/types.h>
@@ -11,7 +25,9 @@
 #include <linux/poll.h>
 #include <linux/time.h>
 #include <linux/delay.h>
+#include <linux/device.h>
 #include <linux/netdevice.h>
+#include <linux/inetdevice.h>
 #include <net/net_namespace.h>
 #include <linux/string.h>
 
@@ -21,7 +37,7 @@
 MODULE_LICENSE("Dual BSD/GPL");
 
 #define WIFI_DRIVER_NAME "mtk_wmt_WIFI_chrdev"
-#define WIFI_DEV_MAJOR 153 // never used number
+#define WIFI_DEV_MAJOR 153
 
 #define PFX                         "[MTK-WIFI] "
 #define WIFI_LOG_DBG                  3
@@ -39,8 +55,8 @@ unsigned int gDbgLevel = WIFI_LOG_DBG;
 
 #define VERSION "1.0"
 
-/* mtk80707 rollback aosp hal */
 #define WLAN_IFACE_NAME "wlan0"
+#define LEGACY_IFACE_NAME "legacy0"
 
 enum {
     WLAN_MODE_HALT,
@@ -50,6 +66,9 @@ enum {
 };
 static int wlan_mode = WLAN_MODE_HALT;
 static int powered = 0;
+static char *ifname = WLAN_IFACE_NAME;
+volatile int wlan_if_changed = 0;
+EXPORT_SYMBOL(wlan_if_changed);
 
 /*
  *  enable = 1, mode = 0  => init P2P network
@@ -62,7 +81,7 @@ typedef struct _PARAM_CUSTOM_P2P_SET_STRUC_T {
 } PARAM_CUSTOM_P2P_SET_STRUC_T, *P_PARAM_CUSTOM_P2P_SET_STRUC_T;
 typedef int (*set_p2p_mode)(struct net_device *netdev, PARAM_CUSTOM_P2P_SET_STRUC_T p2pmode);
 
-set_p2p_mode pf_set_p2p_mode;
+static set_p2p_mode pf_set_p2p_mode;
 void register_set_p2p_mode_handler(set_p2p_mode handler) {
     WIFI_INFO_FUNC("(pid %d) register set p2p mode handler %p\n", current->pid, handler);
     pf_set_p2p_mode = handler;
@@ -119,15 +138,15 @@ typedef enum _ENUM_DBG_MODULE_T {
 typedef void (*set_dbg_level)(unsigned char modules[DBG_MODULE_NUM]);
 
 unsigned char wlan_dbg_level[DBG_MODULE_NUM];
-set_dbg_level pf_set_dbg_level;
+static set_dbg_level pf_set_dbg_level;
 void register_set_dbg_level_handler(set_dbg_level handler) {
     pf_set_dbg_level = handler;
 }
 EXPORT_SYMBOL(register_set_dbg_level_handler);
-/* endof mtk80707 */
 
-static int WIFI_devs = 1;        /* device count */
-static int WIFI_major = WIFI_DEV_MAJOR;       /* dynamic allocation */
+
+static int WIFI_devs = 1; /* device count */
+static int WIFI_major = WIFI_DEV_MAJOR; /* dynamic allocation */
 module_param(WIFI_major, uint, 0);
 static struct cdev WIFI_cdev;
 volatile int retflag = 0;
@@ -136,12 +155,10 @@ static struct semaphore wr_mtx;
 
 /*******************************************************************
  *  WHOLE CHIP RESET PROCEDURE:
- *                                
- *         WMTRSTMSG_RESET_START callback
- *                       |
- *                   wlanRemove
- *                       |
- *          WMTRSTMSG_RESET_END callback
+ *
+ *  WMTRSTMSG_RESET_START callback
+ *  -> wlanRemove
+ *  -> WMTRSTMSG_RESET_END callback
  *
  *******************************************************************
 */
@@ -158,9 +175,9 @@ int wifi_reset_start(void)
     down(&wr_mtx);
 
     if (powered == 1) {
-        netdev = dev_get_by_name(&init_net, WLAN_IFACE_NAME);
+        netdev = dev_get_by_name(&init_net, ifname);
         if (netdev == NULL) {
-            WIFI_ERR_FUNC("Fail to get wlan0 net device\n");
+            WIFI_ERR_FUNC("Fail to get %s net device\n", ifname);
         }
         else {
             p2pmode.u4Enable = 0;
@@ -214,15 +231,15 @@ int wifi_reset_end(void)
             goto done;
         }
 
-        netdev = dev_get_by_name(&init_net, WLAN_IFACE_NAME);
+        netdev = dev_get_by_name(&init_net, ifname);
         while (netdev == NULL && wait_cnt < 10) {
-            WIFI_ERR_FUNC("Fail to get wlan0 net device, sleep 300ms\n");
+            WIFI_ERR_FUNC("Fail to get %s net device, sleep 300ms\n", ifname);
             msleep(300);
             wait_cnt ++;
-            netdev = dev_get_by_name(&init_net, WLAN_IFACE_NAME);
+            netdev = dev_get_by_name(&init_net, ifname);
         }
         if (wait_cnt >= 10) {
-            WIFI_ERR_FUNC("Get wlan0 net device timeout\n");
+            WIFI_ERR_FUNC("Get %s net device timeout\n", ifname);
             goto done;
         }
 
@@ -313,9 +330,9 @@ ssize_t WIFI_write(struct file *filp, const char __user *buf, size_t count, loff
                 goto done;
             }
 
-            netdev = dev_get_by_name(&init_net, WLAN_IFACE_NAME);
+            netdev = dev_get_by_name(&init_net, ifname);
             if (netdev == NULL) {
-                WIFI_ERR_FUNC("Fail to get wlan0 net device\n");
+                WIFI_ERR_FUNC("Fail to get %s net device\n", ifname);
             }
             else {
                 p2pmode.u4Enable = 0;
@@ -341,6 +358,8 @@ ssize_t WIFI_write(struct file *filp, const char __user *buf, size_t count, loff
                 powered = 0;
                 retval = count;
                 wlan_mode = WLAN_MODE_HALT;
+				ifname = WLAN_IFACE_NAME;
+                wlan_if_changed = 0;
             }
         }
         else if (local[0] == '1') {
@@ -384,19 +403,13 @@ ssize_t WIFI_write(struct file *filp, const char __user *buf, size_t count, loff
                     wlan_dbg_level[k] = DBG_CLASS_ERROR | \
                         DBG_CLASS_WARN | \
                         DBG_CLASS_STATE | \
-                        DBG_CLASS_EVENT | \
-                        DBG_CLASS_TRACE | \
-                        DBG_CLASS_INFO;
+                        DBG_CLASS_EVENT;
                 }
-                wlan_dbg_level[DBG_TX_IDX] &= ~(DBG_CLASS_EVENT | \
-                    DBG_CLASS_TRACE | \
-                    DBG_CLASS_INFO);
-                wlan_dbg_level[DBG_RX_IDX] &= ~(DBG_CLASS_EVENT | \
-                    DBG_CLASS_TRACE | \
-                    DBG_CLASS_INFO);
-                wlan_dbg_level[DBG_REQ_IDX] &= ~(DBG_CLASS_EVENT | \
-                    DBG_CLASS_TRACE | \
-                    DBG_CLASS_INFO);
+                wlan_dbg_level[DBG_INIT_IDX] &= DBG_CLASS_TRACE | DBG_CLASS_INFO;
+                wlan_dbg_level[DBG_HAL_IDX] &= DBG_CLASS_TRACE | DBG_CLASS_INFO;
+                wlan_dbg_level[DBG_REQ_IDX] &= ~(DBG_CLASS_EVENT);
+                wlan_dbg_level[DBG_TX_IDX] &= ~(DBG_CLASS_EVENT);
+                wlan_dbg_level[DBG_RX_IDX] &= ~(DBG_CLASS_EVENT);
                 wlan_dbg_level[DBG_INTR_IDX] = 0;
                 wlan_dbg_level[DBG_MEM_IDX] = 0;
                 if (pf_set_dbg_level) {
@@ -455,15 +468,15 @@ ssize_t WIFI_write(struct file *filp, const char __user *buf, size_t count, loff
                 goto done;
             }
 
-            netdev = dev_get_by_name(&init_net, WLAN_IFACE_NAME);
+            netdev = dev_get_by_name(&init_net, ifname);
             while (netdev == NULL && wait_cnt < 10) {
-                WIFI_ERR_FUNC("Fail to get wlan0 net device, sleep 300ms\n");
+                WIFI_ERR_FUNC("Fail to get %s net device, sleep 300ms\n", ifname);
                 msleep(300);
                 wait_cnt ++;
-                netdev = dev_get_by_name(&init_net, WLAN_IFACE_NAME);
+                netdev = dev_get_by_name(&init_net, ifname);
             }
             if (wait_cnt >= 10) {
-                WIFI_ERR_FUNC("Get wlan0 net device timeout\n");
+                WIFI_ERR_FUNC("Get %s net device timeout\n", ifname);
                 goto done;
             }
 
@@ -478,6 +491,22 @@ ssize_t WIFI_write(struct file *filp, const char __user *buf, size_t count, loff
             }
 
             if (local[0] == 'S' || local[0] == 'P'){
+				/*restore wlan0 ifname for STA nic*/
+				rtnl_lock();
+                if (strcmp(ifname, WLAN_IFACE_NAME) != 0){
+                    if (dev_change_name(netdev, WLAN_IFACE_NAME) != 0){
+                        WIFI_ERR_FUNC("netdev name change to %s fail\n", WLAN_IFACE_NAME);
+                        rtnl_unlock();
+                        goto done;
+                    }
+                    else{
+                        WIFI_INFO_FUNC("netdev name changed %s --> %s\n", ifname, WLAN_IFACE_NAME);
+                        ifname = WLAN_IFACE_NAME;
+                        wlan_if_changed = 0;
+                    }
+                }
+                rtnl_unlock();
+
                 p2pmode.u4Enable = 1;
                 p2pmode.u4Mode = 0;
                 if (pf_set_p2p_mode(netdev, p2pmode) != 0){
@@ -489,6 +518,22 @@ ssize_t WIFI_write(struct file *filp, const char __user *buf, size_t count, loff
                     retval = count;
                 }
             } else if (local[0] == 'A'){
+				/*change name for STA nic*/
+				rtnl_lock();
+                if (strcmp(ifname, LEGACY_IFACE_NAME) != 0){
+                    if (dev_change_name(netdev, LEGACY_IFACE_NAME) != 0){
+                        WIFI_ERR_FUNC("netdev name change to %s fail\n", LEGACY_IFACE_NAME);
+                        rtnl_unlock();
+                        goto done;
+                    }
+                    else{
+                        WIFI_INFO_FUNC("netdev name changed %s --> %s\n", ifname, LEGACY_IFACE_NAME);
+                        ifname = LEGACY_IFACE_NAME;
+                        wlan_if_changed = 1;
+                    }
+                }
+                rtnl_unlock();
+
                 p2pmode.u4Enable = 1;
                 p2pmode.u4Mode = 1;
                 if (pf_set_p2p_mode(netdev, p2pmode) != 0){
@@ -519,11 +564,18 @@ struct file_operations WIFI_fops = {
     .write = WIFI_write,
 };
 
+#if WMT_CREATE_NODE_DYNAMIC 
+struct class * wmtwifi_class = NULL;
+#endif
+
 static int WIFI_init(void)
 {
     dev_t dev = MKDEV(WIFI_major, 0);
     int alloc_ret = 0;
     int cdev_err = 0;
+#if WMT_CREATE_NODE_DYNAMIC
+    struct device * wmtwifi_dev = NULL;
+#endif
 
     /*static allocate chrdev*/
     alloc_ret = register_chrdev_region(dev, 1, WIFI_DRIVER_NAME);
@@ -541,6 +593,15 @@ static int WIFI_init(void)
     }
 
     sema_init(&wr_mtx, 1);
+	
+#if WMT_CREATE_NODE_DYNAMIC  //mknod replace
+    wmtwifi_class = class_create(THIS_MODULE,"wmtWifi");
+    if(IS_ERR(wmtwifi_class))
+        goto error;
+    wmtwifi_dev = device_create(wmtwifi_class,NULL,dev,NULL,"wmtWifi");
+    if(IS_ERR(wmtwifi_dev))
+        goto error;
+#endif
 
     WIFI_INFO_FUNC("%s driver(major %d) installed.\n", WIFI_DRIVER_NAME, WIFI_major);
     retflag = 0;
@@ -550,6 +611,14 @@ static int WIFI_init(void)
     return 0;
 
 error:
+#if WMT_CREATE_NODE_DYNAMIC
+    if(!IS_ERR(wmtwifi_dev))
+        device_destroy(wmtwifi_class,dev);
+    if(!IS_ERR(wmtwifi_class)){
+        class_destroy(wmtwifi_class);
+        wmtwifi_class = NULL;
+    }
+#endif
     if (cdev_err == 0) {
         cdev_del(&WIFI_cdev);
     }
@@ -565,6 +634,12 @@ static void WIFI_exit(void)
 {
     dev_t dev = MKDEV(WIFI_major, 0);
     retflag = 0;
+
+#if WMT_CREATE_NODE_DYNAMIC
+    device_destroy(wmtwifi_class,dev);
+    class_destroy(wmtwifi_class);
+    wmtwifi_class = NULL;
+#endif
 
     cdev_del(&WIFI_cdev);
     unregister_chrdev_region(dev, WIFI_devs);

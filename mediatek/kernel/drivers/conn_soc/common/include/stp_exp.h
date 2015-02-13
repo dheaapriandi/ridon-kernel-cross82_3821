@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 /*! \file
     \brief  Declaration of library functions
 
@@ -31,7 +45,13 @@
 #define WMT_TASK_INDX       (4)
 #define STP_TASK_INDX       (5)
 #define INFO_TASK_INDX      (6)
-#define MTKSTP_MAX_TASK_NUM (7)
+#define ANT_TASK_INDX       (7)
+#if CFG_WMT_LTE_COEX_HANDLING
+#define COEX_TASK_INDX		(8)
+#define MTKSTP_MAX_TASK_NUM (9)
+#else
+#define MTKSTP_MAX_TASK_NUM	(8)
+#endif
 
 #define MTKSTP_BUFFER_SIZE  (16384) //Size of RX Queue
 
