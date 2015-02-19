@@ -48,7 +48,7 @@ static void *ion_page_pool_alloc_pages(struct ion_page_pool *pool)
 static void ion_page_pool_free_pages(struct ion_page_pool *pool,
                                      struct page *page)
 {
-        int i;
+        //int i;
         __free_pages(page, pool->order);
         //we split_pages in allocate (see ion_page_pool_alloc_pages)
         //for (i = 0; i < (1 << pool->order); i++)
@@ -118,6 +118,15 @@ void *ion_page_pool_alloc(struct ion_page_pool *pool)
         return page;
 }
 
+void ion_page_pool_free(struct ion_page_pool *pool, struct page* page)
+{
+        int ret;
+
+        ret = ion_page_pool_add(pool, page);
+        if (ret)
+                ion_page_pool_free_pages(pool, page);
+}
+
 static int ion_page_pool_total(struct ion_page_pool *pool, bool high)
 {
         int total = 0;
@@ -126,21 +135,6 @@ static int ion_page_pool_total(struct ion_page_pool *pool, bool high)
                 (1 << pool->order) :
                         pool->low_count * (1 << pool->order);
         return total;
-}
-
-#define MAX_TOTAL 50 * 1024
-void ion_page_pool_free(struct ion_page_pool *pool, struct page* page)
-{
-        int ret;
-
-        int size = ion_page_pool_total(pool, true);
-        if (size > MAX_TOTAL) {
-            ion_page_pool_free_pages(pool, page);
-        } else {
-            ret = ion_page_pool_add(pool, page);
-            if (ret)
-                ion_page_pool_free_pages(pool, page);
-        }
 }
 
 int ion_page_pool_shrink(struct ion_page_pool *pool, gfp_t gfp_mask,

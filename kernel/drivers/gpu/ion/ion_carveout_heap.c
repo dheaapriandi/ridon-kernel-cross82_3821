@@ -164,7 +164,7 @@ static struct ion_heap_ops carveout_heap_ops = {
 	.unmap_kernel = ion_heap_unmap_kernel,
 };
 
-static int ion_carveout_chunk_show(struct gen_pool *pool, 
+static void ion_carveout_chunk_show(struct gen_pool *pool, 
                 struct gen_pool_chunk *chunk, 
                 void *data)
 {
@@ -180,7 +180,7 @@ static int ion_carveout_chunk_show(struct gen_pool *pool,
 
     for(i=0; i<nlongs; i++)
     {
-        seq_printf(s, "0x%x ", chunk->bits[i]);
+        seq_printf(s, "0x%x ", (unsigned int)chunk->bits[i]);
     }
         
     seq_printf(s, "\n");
@@ -198,7 +198,7 @@ static int ion_carveout_heap_debug_show(struct ion_heap *heap, struct seq_file *
     size_avail = gen_pool_avail(carveout_heap->pool);
 
     seq_printf(s, "total_size=0x%x, free=0x%x, base=0x%x\n", 
-        total_size, size_avail, carveout_heap->base);
+        total_size, size_avail, (unsigned int)carveout_heap->base);
 
     gen_pool_for_each_chunk(carveout_heap->pool, ion_carveout_chunk_show, s);
 

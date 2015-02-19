@@ -36,7 +36,6 @@ enum ion_heap_type {
 	ION_HEAP_TYPE_SYSTEM,
 	ION_HEAP_TYPE_SYSTEM_CONTIG,
 	ION_HEAP_TYPE_CARVEOUT,
-	ION_HEAP_TYPE_MULTIMEDIA,
 	ION_HEAP_TYPE_CHUNK,
 	ION_HEAP_TYPE_DMA,
 	ION_HEAP_TYPE_CUSTOM, /* must be last so device specific heaps always
@@ -48,9 +47,6 @@ enum ion_heap_type {
 #define ION_HEAP_SYSTEM_CONTIG_MASK	(1 << ION_HEAP_TYPE_SYSTEM_CONTIG)
 #define ION_HEAP_CARVEOUT_MASK		(1 << ION_HEAP_TYPE_CARVEOUT)
 #define ION_HEAP_TYPE_DMA_MASK		(1 << ION_HEAP_TYPE_DMA)
-#define ION_HEAP_MULTIMEDIA_MASK        (1 << ION_HEAP_TYPE_MULTIMEDIA)
-
-#define ION_NUM_HEAP_IDS		sizeof(unsigned int) * 8
 
 /**
  * allocation flags - the lower 16 bits are used by core ion, the upper 16

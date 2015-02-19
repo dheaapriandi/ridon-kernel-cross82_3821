@@ -1,9 +1,23 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include <asm/page.h>
 #include <linux/dma-mapping.h>
 #include <linux/err.h>
 #include <linux/highmem.h>
 #include <linux/ion.h>
+#include <linux/mtk_ion.h>
 #include <linux/mm.h>
 #include <linux/scatterlist.h>
 #include <linux/seq_file.h>
@@ -532,7 +546,7 @@ static int ion_mm_heap_debug_show(struct ion_heap *heap, struct seq_file *s,
         return 0;
 }
 
-void ion_mm_heap_total_memory() {
+void ion_mm_heap_total_memory(void) {
     struct ion_device *dev = g_ion_device;
     struct ion_heap *heap = NULL;
     size_t total_size = 0;
@@ -591,7 +605,7 @@ struct ion_heap *ion_mm_heap_create(struct ion_platform_heap *unused)
 	}
     heap->heap.shrinker.shrink = ion_system_heap_shrink;
     heap->heap.shrinker.seeks = DEFAULT_SEEKS;
-    heap->heap.shrinker.batch = 1024;
+    heap->heap.shrinker.batch = 0;
     register_shrinker(&heap->heap.shrinker);
 	heap->heap.debug_show = ion_mm_heap_debug_show;
 	return &heap->heap;

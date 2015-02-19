@@ -17,13 +17,13 @@
 #include <linux/err.h>
 #include <linux/freezer.h>
 #include <linux/ion.h>
+#include <linux/mtk_ion.h>
 #include <linux/kthread.h>
 #include <linux/mm.h>
 #include <linux/rtmutex.h>
 #include <linux/sched.h>
 #include <linux/scatterlist.h>
 #include <linux/vmalloc.h>
-#include <asm/cacheflush.h>
 #include "ion_priv.h"
 
 void *ion_heap_map_kernel(struct ion_heap *heap,
@@ -94,9 +94,6 @@ int ion_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
                 len = min(len, remainder);
                 remap_pfn_range(vma, addr, page_to_pfn(page), len,
                                 vma->vm_page_prot);
-
-                dmac_flush_range((void*)addr, (void*)(addr+len-1));
-
                 addr += len;
                 if (addr >= vma->vm_end)
                         return 0;
