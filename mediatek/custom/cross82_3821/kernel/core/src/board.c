@@ -29,6 +29,7 @@
 #include <mach/eint.h>
 #include <mach/mtk_rtc.h>
 #include <mach/mt_typedefs.h>
+#include <mach/mt_clkmgr.h>
 // Fix-me: marked for early porting
 #include <cust_gpio_usage.h>
 #include <cust_eint.h>
