@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include <linux/types.h>
@@ -26,7 +40,7 @@ unsigned int bls_dbg_log = 0;
 #define BLS_MSG(string, args...) printk("[BLS]"string,##args)  // default on, important msg, not err
 #define BLS_ERR(string, args...) printk("[BLS]error:"string,##args)  //default on, err msg
 
-#if !defined(MTK_AAL_SUPPORT)
+#if !defined(CONFIG_MTK_AAL_SUPPORT)
 #ifdef USE_DISP_BLS_MUTEX
 static int gBLSMutexID = 3;
 #endif
@@ -155,7 +169,7 @@ static unsigned int brightness_mapping(unsigned int level)
 	return mapped_level;
 }
 
-#if !defined(MTK_AAL_SUPPORT)
+#if !defined(CONFIG_MTK_AAL_SUPPORT)
 #ifdef USE_DISP_BLS_MUTEX
 static int disp_poll_for_reg(unsigned int addr, unsigned int value, unsigned int mask, unsigned int timeout)
 {
@@ -326,7 +340,7 @@ void disp_bls_init(unsigned int srcWidth, unsigned int srcHeight)
 
 int disp_bls_config(void)
 {
-#if !defined(MTK_AAL_SUPPORT)
+#if !defined(CONFIG_MTK_AAL_SUPPORT)
     struct cust_mt65xx_led *cust_led_list = get_cust_led_list();
     struct cust_mt65xx_led *cust = NULL;
     struct PWM_config *config_data = NULL;
@@ -520,7 +534,7 @@ int disp_bls_set_max_backlight_(unsigned int level)
 }
 
 
-#if !defined(MTK_AAL_SUPPORT)
+#if !defined(CONFIG_MTK_AAL_SUPPORT)
 int disp_bls_set_backlight(unsigned int level)
 {
     unsigned int regVal; 

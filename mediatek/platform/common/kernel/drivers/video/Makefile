@@ -2,35 +2,32 @@
 #
 #
 
-obj-$(CONFIG_MTK_FB) += disp_drv.o                  \
+ccflags-y += -I$(MTK_PATH_SOURCE)/drivers/video/               \
+	-I$(MTK_PATH_PLATFORM)/drivers/video/          \
+	-I$(MTK_PATH_PLATFORM)/drivers/dispsys/        \
+	-I$(MTK_PATH_PLATFORM)/core/include/mach/      \
+	-I$(MTK_PATH_SOURCE)/drivers/sync/
+
+
+obj-$(CONFIG_MTK_FB) += disp_drv.o                                 \
          mtkfb_console.o                            \
          disp_assert_layer.o                        \
          mtkfb.o                                    \
 		 mtkfb_vsync.o								\
          debug.o                                    \
+         mtkfb_proc.o                               \
          disp_sync.o
+
 
 #ifeq ($(MTK_DISP_CONFIG_SUPPORT), yes)
 obj-$(CONFIG_MTK_FB) += fbconfig_kdebug.o
 #endif
 
-ccflags-y += -I$(MTK_PATH_SOURCE)/drivers/video/  		\
-			 -I$(MTK_PATH_PLATFORM)/drivers/video/  	\
-			 -I$(MTK_PATH_PLATFORM)/drivers/dispsys/ 	\
-			 -I$(MTK_PATH_PLATFORM)/core/include/mach/ 	\
-			 -I$(MTK_PATH_SOURCE)/drivers/sync/
-
-ifeq ($(MTK_INTERNAL_HDMI_SUPPORT), yes)
-ccflags-y += -I$(MTK_PATH_PLATFORM)/drivers/hdmi/
-endif  
-ifeq ($(MTK_INTERNAL_MHL_SUPPORT), yes)
-ccflags-y += -I$(MTK_PATH_PLATFORM)/drivers/mhltx/
-endif   
-ifeq ($(MTK_DITHERING_SUPPORT), yes)
+ifeq ($(CONFIG_MTK_DITHERING_SUPPORT), y)
 ccflags-y += -DDITHERING_SUPPORT
 endif
 
-ifeq ($(MTK_GPU_SUPPORT), yes)
+ifeq ($(CONFIG_MTK_GPU_SUPPORT), y)
 ccflags-y += -DHWGPU_SUPPORT
 endif
 

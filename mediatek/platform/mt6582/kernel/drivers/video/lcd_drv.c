@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #if defined(BUILD_UBOOT)
 #define ENABLE_LCD_INTERRUPT 0 
 
@@ -88,7 +102,7 @@ static unsigned int vsync_timer = 0;
 		{\
 		MASKREG32(addr, mask, data);}
 
-#if defined(MTK_M4U_SUPPORT)
+#if defined(CONFIG_MTK_M4U_SUPPORT)
 #ifdef MTK_LCDC_ENABLE_M4U
 #undef MTK_LCDC_ENABLE_M4U
 #endif
@@ -531,8 +545,8 @@ LCD_STATUS LCD_PowerOn(void)
     DBI_FUNC();
     if (!s_isLcdPowerOn)
     {
-		int ret = 0;
 #if 0
+		int ret = 0;
 
 		DBI_LOG("lcd will be power on\n");
       	ret = enable_clock(MT_CG_DISP1_DBI_ENGINE, "LCD");
@@ -557,7 +571,7 @@ LCD_STATUS LCD_PowerOff(void)
     DBI_FUNC();
     if (s_isLcdPowerOn)
     {
-        int ret = 1;
+        //int ret = 1;
         _WaitForEngineNotBusy();
         _BackupLCDRegisters();
 	DBI_LOG("lcd will be power off\n");
@@ -586,6 +600,7 @@ LCD_STATUS LCD_WaitForNotBusy(void)
 }
 EXPORT_SYMBOL(LCD_WaitForNotBusy);
 
+#if ENABLE_LCD_INTERRUPT
 static void _DBI_RDMA0_IRQ_Handler(unsigned int param)
 {
     if(_lcdContext.pIntCallback)
@@ -605,7 +620,7 @@ static void _DBI_RDMA0_IRQ_Handler(unsigned int param)
         }
     }
 }
-
+/**unused now, comment it to fix build warning
 static void _DBI_MUTEX_IRQ_Handler(unsigned int param)
 {
     if(_lcdContext.pIntCallback)
@@ -615,7 +630,8 @@ static void _DBI_MUTEX_IRQ_Handler(unsigned int param)
             _lcdContext.pIntCallback(DISP_LCD_REG_COMPLETE_INT);
         }
     }
-}
+}*/
+#endif
 
 LCD_STATUS LCD_EnableInterrupt(DISP_INTERRUPT_EVENTS eventID)
 {
@@ -1529,7 +1545,7 @@ void LCD_DumpLayer()
 }
 
 
-#if !defined(MTK_M4U_SUPPORT)
+#if !defined(CONFIG_MTK_M4U_SUPPORT)
 #ifdef BUILD_UBOOT
 static unsigned long v2p(unsigned long va)
 {
@@ -1617,7 +1633,7 @@ LCD_STATUS LCD_Capture_Layerbuffer(unsigned int layer_id, unsigned int pvbuf, un
 	offset_y = LCD_REG->LAYER[layer_id].OFFSET.Y;
 	w = LCD_REG->LAYER[layer_id].SIZE.WIDTH;
 	h = LCD_REG->LAYER[layer_id].SIZE.HEIGHT;
-#if defined(MTK_M4U_SUPPORT)
+#if defined(CONFIG_MTK_M4U_SUPPORT)
 	
 	m4u_alloc_mva(M4U_CLNTMOD_LCDC, pvbuf, w*h*bpp/8, &ppbuf);
 #else
@@ -1647,7 +1663,7 @@ LCD_STATUS LCD_Capture_Layerbuffer(unsigned int layer_id, unsigned int pvbuf, un
 //	LCD_CHECK_RET(LCD_SetRoiWindow(offset_x, offset_y, h, w));
 
 	LCD_MASKREG32(0xf20a10a0, 0x1, 0); //disable DC to DSI when write to memory partially
-#if defined(MTK_M4U_SUPPORT)
+#if defined(CONFIG_MTK_M4U_SUPPORT)
 	m4u_dma_cache_maint(M4U_CLNTMOD_LCDC, (void *)pvbuf, w*h*bpp/8, DMA_BIDIRECTIONAL);
 #endif
 
@@ -1656,7 +1672,7 @@ LCD_STATUS LCD_Capture_Layerbuffer(unsigned int layer_id, unsigned int pvbuf, un
 	LCD_SetOutputMode(mode);
     // capture end
     _RestoreLCDRegisters();
-#if defined(MTK_M4U_SUPPORT)
+#if defined(CONFIG_MTK_M4U_SUPPORT)
     m4u_dealloc_mva(M4U_CLNTMOD_LCDC, pvbuf, w*h*bpp/8, ppbuf);
 #endif
 #endif
@@ -1694,7 +1710,7 @@ LCD_STATUS LCD_Capture_Videobuffer(unsigned int pvbuf, unsigned int bpp, unsigne
 	offset_y = LCD_REG->LAYER[LCD_LAYER_2].OFFSET.Y;
 	w = LCD_REG->LAYER[LCD_LAYER_2].SIZE.WIDTH;
 	h = LCD_REG->LAYER[LCD_LAYER_2].SIZE.HEIGHT;
-#if defined(MTK_M4U_SUPPORT)
+#if defined(CONFIG_MTK_M4U_SUPPORT)
 	
 	m4u_alloc_mva(M4U_CLNTMOD_LCDC, pvbuf, w*h*bpp/8, &ppbuf);
 #else
@@ -1741,7 +1757,7 @@ LCD_STATUS LCD_Capture_Videobuffer(unsigned int pvbuf, unsigned int bpp, unsigne
 //	LCD_CHECK_RET(LCD_SetRoiWindow(offset_x, offset_y, h, w));
 
 	LCD_MASKREG32(0xf20a10a0, 0x1, 0); //disable DC to DSI when write to memory partially
-#if defined(MTK_M4U_SUPPORT)
+#if defined(CONFIG_MTK_M4U_SUPPORT)
 	m4u_dma_cache_maint(M4U_CLNTMOD_LCDC, (void *)pvbuf, w*h*bpp/8, DMA_BIDIRECTIONAL);
 #endif
 
@@ -1753,7 +1769,7 @@ LCD_STATUS LCD_Capture_Videobuffer(unsigned int pvbuf, unsigned int bpp, unsigne
 	LCD_SetOutputMode(mode);
     // capture end
     _RestoreLCDRegisters();
-#if defined(MTK_M4U_SUPPORT)
+#if defined(CONFIG_MTK_M4U_SUPPORT)
     m4u_dealloc_mva(M4U_CLNTMOD_LCDC, pvbuf, w*h*bpp/8, ppbuf);
 #endif
 #endif
@@ -1928,7 +1944,7 @@ LCD_STATUS LCD_Change_WriteCycle(LCD_IF_ID id, unsigned int write_cycle)
     return LCD_STATUS_OK;  
 }
 
-#if defined(MTK_M4U_SUPPORT)
+#if defined(CONFIG_MTK_M4U_SUPPORT)
 LCD_STATUS LCD_InitM4U()
 {
 #ifdef MTK_LCDC_ENABLE_M4U
@@ -1993,8 +2009,8 @@ LCD_STATUS LCD_DeallocMva(unsigned int va, unsigned int mva, unsigned int size)
 	}
     _m4u_lcdc_func.m4u_invalid_tlb_range(M4U_CLNTMOD_LCDC, mva, mva + size - 1);
     _m4u_lcdc_func.m4u_dealloc_mva(M4U_CLNTMOD_LCDC, va, size, mva);
-	return LCD_STATUS_OK;
 #endif
+    return LCD_STATUS_OK;
 }
 
 LCD_STATUS LCD_M4UPowerOn(void)
@@ -2017,6 +2033,7 @@ int m4u_alloc_mva_stub(M4U_MODULE_ID_ENUM eModuleID, const unsigned int BufAddr,
 	}
 	return _m4u_lcdc_func.m4u_alloc_mva(eModuleID, BufAddr, BufSize, 0, 0, pRetMVABuf);
 #endif
+    return 0;
 }
 EXPORT_SYMBOL(m4u_alloc_mva_stub);
   

@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/string.h>
 #include <linux/time.h>
 #include <linux/uaccess.h>
@@ -15,6 +29,27 @@
 #include "ddp_ovl.h"
 #include "ddp_path.h"
 #include "disp_drv.h"
+
+#if defined(DISP_DRV_DBG)
+    size_t disp_drv_dbg_log = true;
+    size_t disp_drv_dbg_info_log = false;    // info log, default off
+    size_t disp_drv_dbg_func_log = false;    // function entry log, default off
+    size_t disp_drv_dbg_upd_log = false;    // upd log, default off
+    size_t mtkfb_dbg_log = true;
+    size_t mtkfb_dbg_fence_log = false;    // fence log, default off
+    size_t mtkfb_dbg_func_log = false;    // function entry log, default off
+    size_t mtkfb_dbg_ioctl_log = false;    // ioctl log, default off
+#else
+    size_t disp_drv_dbg_log = false;
+    size_t disp_drv_dbg_info_log = false;    // info log, default off
+    size_t disp_drv_dbg_func_log = false;    // function entry log, default off
+    size_t disp_drv_dbg_upd_log = false;    // upd log, default off
+    size_t mtkfb_dbg_log = false;
+    size_t mtkfb_dbg_fence_log = false;    // fence log, default off
+    size_t mtkfb_dbg_func_log = false;    // function entry log, default off
+    size_t mtkfb_dbg_ioctl_log = false;    // ioctl log, default off
+#endif
+
 
 struct MTKFB_MMP_Events_t MTKFB_MMP_Events;
 
@@ -747,15 +782,17 @@ static void process_dbg_opt(const char *opt)
     {
         if (0 == strncmp(opt + 9, "on", 2))
         {
-        	struct fb_overlay_mode mode;
-        	mode.mode = DISP_DECOUPLE_MODE;
-        	DISP_SwitchDisplayMode(&mode);
+            struct fb_overlay_mode mode;
+
+            mode.mode = DISP_DECOUPLE_MODE;
+            DISP_SwitchDisplayMode(&mode);
         }
         else if (0 == strncmp(opt + 9, "off", 3))
         {
-        	struct fb_overlay_mode mode;
-        	mode.mode = DISP_DIRECT_LINK_MODE;
-        	DISP_SwitchDisplayMode(&mode);
+            struct fb_overlay_mode mode;
+
+            mode.mode = DISP_DIRECT_LINK_MODE;
+            DISP_SwitchDisplayMode(&mode);
         }
     }
     else

@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/string.h>
 #include <linux/time.h>
 #include <linux/uaccess.h>
@@ -27,7 +41,7 @@ BOOL fbconfig_start_LCM_config;
 #define FBCONFIG_MDELAY(n)	(fbconfig_lcm_utils.mdelay((n)))
 #define SET_RESET_PIN(v)	(fbconfig_lcm_utils.set_reset_pin((v)))
 #define dsi_set_cmdq(pdata, queue_size, force_update)		fbconfig_lcm_utils.dsi_set_cmdq(pdata, queue_size, force_update)
-//#define read_reg_v2(cmd, buffer, buffer_size)   			fbconfig_lcm_utils.dsi_dcs_read_lcm_reg_v2
+#define read_reg_v2(cmd, buffer, buffer_size)   			fbconfig_lcm_utils.dsi_dcs_read_lcm_reg_v2(cmd, buffer, buffer_size) 
 #define FBCONFIG_KEEP_NEW_SETTING 1
 #define FBCONFIG_DEBUG 0
 /* IOCTL commands. */
@@ -79,11 +93,9 @@ CONFIG_RECORD  * record_tmp =NULL;
 #if FBCONFIG_KEEP_NEW_SETTING
 CONFIG_RECORD  * backup_head =NULL;
 #endif
-LCM_REG_READ reg_read;
-//int esd_check_addr;
-//int esd_check_para_num;
-//int esd_check_type;
-//char * esd_check_buffer =NULL;
+int esd_check_addr;
+int esd_check_para_num;
+char * esd_check_buffer =NULL;
 extern struct semaphore sem_early_suspend;
 extern void fbconfig_disp_set_mipi_timing(MIPI_TIMING timing);
 extern unsigned int fbconfig_get_layer_info(FBCONFIG_LAYER_INFO *layers);
@@ -96,23 +108,19 @@ extern int m4u_mva_unmap_kernel(unsigned int mva, unsigned int size, unsigned in
 
 int fbconfig_get_esd_check_exec(void)
 {
-    int array[4];	
-	reg_read.check_buffer= (char *)kzalloc(sizeof(char)*(6+reg_read.check_para_num), GFP_KERNEL);
-    if(reg_read.check_buffer == NULL)
+    int array[4];
+    esd_check_buffer = (char *)kmalloc(sizeof(char)*(6+esd_check_para_num), GFP_KERNEL);
+    if(esd_check_buffer == NULL)
     {
-        printk("sxk=>esd_check :reg_read.check_buffer kmalloc fail!!\n");
+        printk("sxk=>esd_check :esd_check_buffer kmalloc fail!!\n");
         return -2 ;
     }
     array[0] = 0x00013700;
-	array[0] = 0x3700+(reg_read.check_para_num<<16);
-	reg_read.check_para_num = reg_read.check_para_num+6 ;
-	printk("sxk=>esd_check : arrar[0]=0x%x\n",array[0]);
-	dsi_set_cmdq(array, 1, 1);		
-//dishal_fbconfig_dsi_dcs_read_lcm_reg_v2(esd_check_addr, esd_check_type,esd_check_buffer,6+esd_check_para_num);
-	
-	if(fbconfig_if_drv->set_get_misc)
-	fbconfig_if_drv->set_get_misc("reg_read",&reg_read);//11 for dsi_CLK;
-	return 0 ;
+    array[0] = 0x3700+(esd_check_para_num<<16);
+    printk("sxk=>esd_check : arrar[0]=0x%x\n",array[0]);
+    dsi_set_cmdq(array, 1, 1);	
+    read_reg_v2(esd_check_addr, esd_check_buffer, 6+esd_check_para_num);
+    return 0 ;
 }
 
 
@@ -132,7 +140,7 @@ static void free_backup_list_memory(void)
     backup_head = NULL ;
     return ;
 }
-
+#if 0
 static void print_record (CONFIG_RECORD * record_head)
 {
     int z =0 ;
@@ -140,7 +148,7 @@ static void print_record (CONFIG_RECORD * record_head)
     for(z=0;z<record_head->ins_num;z++)
         printk("sxk=>[PRINT_RECORD]data is 0x%x\n",record_head->ins_array[z]);
 }
-
+#endif
 static void record_list_init(void)
 {
     printk("sxk=>call record_list_init!!\n");
@@ -390,15 +398,16 @@ static long fbconfig_ioctl(struct file * file, unsigned int cmd, unsigned long a
 {
     int ret =0 ;
     void __user *argp = (void __user *)arg;
-//printk("sxk=>run in fbconfig_ioctl** \n");
+    printk("sxk=>run in fbconfig_ioctl** \n");
 
     switch (cmd) 
     {
         case LCM_GET_ID:
         {
-		    LCM_DRIVER * lcm = lcm_drv;
+		  
             // get_lcm_id() need implemented in lcm driver ...
-            #if 0		
+            #if 0
+		  LCM_DRIVER * lcm = lcm_drv;		
                 unsigned int lcm_id =lcm->get_lcm_id();
             #else
                 unsigned int lcm_id = 0 ;
@@ -427,7 +436,7 @@ static long fbconfig_ioctl(struct file * file, unsigned int cmd, unsigned long a
 		return copy_to_user(argp, &ret,  sizeof(ret)) ? -EFAULT : 0;
 	}
 	case LCM_GET_DSI_CLK_V2:
-	{	int ret ;
+	{    unsigned int ret=0 ;
 		MIPI_CLK_V2 clock_v2;
 		if(fbconfig_if_drv->set_spread_frequency)
 			ret=fbconfig_if_drv->set_spread_frequency(11);//11 for dsi_CLK;
@@ -458,7 +467,7 @@ static long fbconfig_ioctl(struct file * file, unsigned int cmd, unsigned long a
 		return copy_to_user(argp, &ret,  sizeof(ret)) ? -EFAULT : 0;
 	}
 	case LCM_GET_DSI_TIMING:
-	{	int ret ;
+	{	int ret =0;
 		MIPI_TIMING timing;	
 		if(copy_from_user(&timing,(void __user*)argp,sizeof(timing)))
         {
@@ -547,8 +556,8 @@ static long fbconfig_ioctl(struct file * file, unsigned int cmd, unsigned long a
 		fbconfig_disp_set_mipi_ssc(ssc);		
         }	 
             return 0 ;
-    }	
-    case MIPI_SET_LANE:
+        }
+        case MIPI_SET_LANE:
         {
             unsigned int lane_num;		
             if(copy_from_user(&lane_num,(void __user*)argp,sizeof(lane_num)))
@@ -562,7 +571,7 @@ static long fbconfig_ioctl(struct file * file, unsigned int cmd, unsigned long a
             }
             return 0 ;
         }
-     case MIPI_SET_TIMING:
+        case MIPI_SET_TIMING:
         {
             if (!is_early_suspended)
             {
@@ -581,7 +590,7 @@ static long fbconfig_ioctl(struct file * file, unsigned int cmd, unsigned long a
             else
                 return -EFAULT;
         }
-      case TE_SET_ENABLE:
+        case TE_SET_ENABLE:
         {
             char enable;
             if(copy_from_user(&enable,(void __user*)argp,sizeof(enable)))
@@ -605,6 +614,7 @@ static long fbconfig_ioctl(struct file * file, unsigned int cmd, unsigned long a
         case FB_LAYER_GET_SIZE:
         {
 		    LAYER_H_SIZE tmp;
+		int layer_size ,enable,height,fmt;
 		    if(copy_from_user(&tmp,(void __user*)argp,sizeof(LAYER_H_SIZE)))
             {
                     printk("[TE_SET_ENABLE]: copy_from_user failed! line:%d \n", __LINE__);
@@ -612,7 +622,7 @@ static long fbconfig_ioctl(struct file * file, unsigned int cmd, unsigned long a
             }
 		    global_layer_id = tmp.height ;
             printk("sxk==>global_layer_id is %d\n",global_layer_id);	
-		    int layer_size ,enable,height,fmt;		
+
 		    fbconfig_get_layer_height(global_layer_id,&layer_size,&enable,&height,&fmt);
 		    if((layer_size == 0)||(enable ==0)||(height ==0))
                     return -2 ;
@@ -666,26 +676,25 @@ static long fbconfig_ioctl(struct file * file, unsigned int cmd, unsigned long a
                 printk("[LCM_GET_ESD]: copy_from_user failed! line:%d \n", __LINE__);
                 return -EFAULT;
             }
-            reg_read.check_addr = esd_para.addr;
-            reg_read.check_para_num= esd_para.para_num;
-		reg_read.check_type= esd_para.type;
+            esd_check_addr = esd_para.addr;
+            esd_check_para_num = esd_para.para_num;
             ret = fbconfig_get_esd_check();
-            if((ret !=0)&&(reg_read.check_buffer != NULL)){
-                kfree(reg_read.check_buffer);
+            if((ret !=0)&&(esd_check_buffer != NULL)){
+                kfree(esd_check_buffer);
                 return -2 ;
             }
             else{
-                for(i=0;i<reg_read.check_para_num;i++)
-                    printk("sxk=>%s, reg_read.check_buffer[%d]=0x%x\n", __func__, i,reg_read.check_buffer[i]);
+                for(i=0;i<esd_check_para_num+6;i++)
+                    printk("sxk=>%s, esd_check_buffer[%d]=0x%x\n", __func__, i,esd_check_buffer[i]);
                 return 0;
             }
         }
         case LCM_GET_ESD_RET:
         {
-            ret= (copy_to_user(argp, (void*)reg_read.check_buffer,  sizeof(char)*(reg_read.check_para_num)) ? -EFAULT : 0);
-            if(reg_read.check_buffer !=NULL){
-                kfree(reg_read.check_buffer);
-                reg_read.check_buffer =NULL;
+            ret= (copy_to_user(argp, (void*)esd_check_buffer,  sizeof(char)*(esd_check_para_num+6)) ? -EFAULT : 0);
+            if(esd_check_buffer !=NULL){
+                kfree(esd_check_buffer);
+                esd_check_buffer =NULL;
             }
             return ret ;
         }
@@ -768,7 +777,7 @@ void ConfigPara_Deinit(void)
 
 FBCONFIG_DISP_IF *disphal_fbconfig_get_def_if(void)
 {
-    static const FBCONFIG_DISP_IF FBCONFIG_DISP_DRV_DEF=
+    static  FBCONFIG_DISP_IF FBCONFIG_DISP_DRV_DEF=
     {
         .set_cmd_mode           = NULL,
         .set_mipi_clk           = NULL,
@@ -778,7 +787,6 @@ FBCONFIG_DISP_IF *disphal_fbconfig_get_def_if(void)
         .set_te_enable          = NULL,
         .set_continuous_clock   = NULL,   
         .set_spread_frequency   = NULL,
-        .set_get_misc           = NULL,
     };
     return &FBCONFIG_DISP_DRV_DEF;
 }

@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifdef BUILD_UBOOT
 #define ENABLE_DPI1_INTERRUPT        0
 #define ENABLE_DPI1_REFRESH_RATE_LOG 0
@@ -12,8 +26,8 @@
 #error "ENABLE_DPI1_REFRESH_RATE_LOG should be also ENABLE_DPI1_INTERRUPT"
 #endif
 
-#if defined(MTK_HDMI_SUPPORT) && !ENABLE_DPI1_INTERRUPT
-//#error "enable MTK_HDMI_SUPPORT should be also ENABLE_DPI1_INTERRUPT"
+#if defined(CONFIG_MTK_HDMI_SUPPORT) && !ENABLE_DPI1_INTERRUPT
+//#error "enable CONFIG_MTK_HDMI_SUPPORT should be also ENABLE_DPI1_INTERRUPT"
 #endif
 
 #include <linux/kernel.h>
@@ -434,7 +448,7 @@ DPI_STATUS DPI1_Init_PLL(HDMI_VIDEO_RESOLUTION resolution)
 	switch(resolution)
 	{
 		case HDMI_VIDEO_720x480p_60Hz:
-#ifdef MTK_MT8193_HDMI_SUPPORT
+#ifdef CONFIG_MTK_MT8193_HDMI_SUPPORT
 		case HDMI_VIDEO_720x576p_50Hz:
 #endif
 		{
@@ -443,7 +457,7 @@ DPI_STATUS DPI1_Init_PLL(HDMI_VIDEO_RESOLUTION resolution)
 			break;
 		}
 		case HDMI_VIDEO_1920x1080p_30Hz:
-#ifdef MTK_MT8193_HDMI_SUPPORT
+#ifdef CONFIG_MTK_MT8193_HDMI_SUPPORT
 		case HDMI_VIDEO_1280x720p_50Hz:
 		case HDMI_VIDEO_1920x1080i_50Hz:
 		case HDMI_VIDEO_1920x1080p_25Hz:
@@ -457,7 +471,7 @@ DPI_STATUS DPI1_Init_PLL(HDMI_VIDEO_RESOLUTION resolution)
 		}
 
 		case HDMI_VIDEO_1280x720p_60Hz:
-    #ifdef MTK_MT8193_HDMI_SUPPORT
+    #ifdef CONFIG_MTK_MT8193_HDMI_SUPPORT
 		case HDMI_VIDEO_1920x1080i_60Hz:
 		case HDMI_VIDEO_1920x1080p_23Hz:
 		case HDMI_VIDEO_1920x1080p_29Hz:

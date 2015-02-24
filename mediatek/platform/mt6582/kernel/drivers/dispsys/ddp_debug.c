@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/string.h>
 #include <linux/uaccess.h>
 
@@ -25,19 +39,6 @@
 //#include "ddp_dpfd.h"
 #include <mach/m4u.h>
 #include "disp_drv.h"
-
-#if defined(CONFIG_TRUSTONIC_TEE_SUPPORT) && defined(CONFIG_MTK_SEC_VIDEO_PATH_SUPPORT)
-#include "mobicore_driver_api.h"
-extern unsigned int tplay_handle_virt_addr;
-extern unsigned int init_tplay_handle(void);
-extern unsigned int get_tplay_handle();
-extern int set_tplay_handle_addr_request(void);
-
-extern enum mc_result late_init_session_tl(void);
-extern enum mc_result late_init_session_drv(void);
-extern enum mc_result late_open_mobicore_device(void);
-#endif
-
 // ---------------------------------------------------------------------------
 //  External variable declarations
 // ---------------------------------------------------------------------------
@@ -470,33 +471,6 @@ static void process_dbg_opt(const char *opt)
         DISP_MSG("Set color_win: %u, %u, %u, %u\n", sat_upper, sat_lower, hue_upper, hue_lower);
         disp_color_set_window(sat_upper, sat_lower, hue_upper, hue_lower);
     }
-#if defined(CONFIG_TRUSTONIC_TEE_SUPPORT) && defined(CONFIG_MTK_SEC_VIDEO_PATH_SUPPORT)
-    else if (0 == strncmp(opt, "handle_init", 11))
-    {
-        unsigned int va = init_tplay_handle();
-        DISP_MSG("debug handle_init, tplay_handle_virt_addr=0x%x \n", va);
-    }
-    else if (0 == strncmp(opt, "handle_check", 12))
-    {
-        unsigned int va = get_tplay_handle();
-        DISP_MSG("debug handle_check, tplay_handle_virt_addr=0x%x \n", va);
-        unsigned int *x = (unsigned int *)va;
-        *x = 0xff;
-        DISP_MSG("debug handle_check, write and read 0x%x \n", *x);
-    }
-    else if (0 == strncmp(opt, "handle_set", 10))
-    {
-        int ret = set_tplay_handle_addr_request();
-        DISP_MSG("debug handle_set, ret=%d \n", ret);
-    }
-    else if (0 == strncmp(opt, "svp_init", 8))
-    {
-        DISP_MSG("initialize svp-ddp sessions \n");
-        late_open_mobicore_device();
-        late_init_session_drv();
-        late_init_session_tl();
-    }
-#endif
     else
     {
 	    goto Error;
@@ -1058,7 +1032,6 @@ static char* ddp_get_mutex_module_name(unsigned int bit)
            case 7: return "color";
            case 9: return "bls";
            case 10: return "rdma0";
-           case 12: return "rdma1";
            default: 
              printk("error_bit=%d, ", bit);
              return "mutex-unknown";
@@ -1072,15 +1045,14 @@ static char* ddp_clock_0(int bit)
         case  0: return "smi common";
         case  1: return "smi larb0";
         case  2: return "mm cmdq";
-        case  3: return "mutex";
+        case  3: return "mm cmdq smi";
         case  4: return "disp_color"; 
         case  5: return "disp_bls";
         case  6: return "disp_wdma0";
         case  7: return "disp_rdma";
         case  8: return "disp_ovl";
-        case 17: return "fake_eng";
-        case 18: return "mutex_32k";
-        case 19: return "disp_rdma1";
+        case 20: return "fake_eng";
+        case 21: return "mutex_32k";
         default : return "";
     }
 }
@@ -1091,8 +1063,11 @@ static char* ddp_clock_1(int bit)
     {
         case 0: return "dsi_engine"; 
         case 1: return "dsi_digital"; 
-        case 2: return "dpi_digital_lane";
-        case 3: return "dpi_engine"; 
+        case 2: return "dpi_engine";
+        case 3: return "dpi_if"; 
+        case 4: return "dbi_engine"; 
+        case 5: return "dbi_smi"; 
+        case 6: return "dbi_if"; 
         default : return "";
     }
 }
@@ -1135,7 +1110,7 @@ char* ddp_ovl_get_status(unsigned int status)
         case 0x200:printk("h_w_rst\n"); break;
         default:   printk("unknown\n");
     }
-
+    return 0;
 }
 
 
@@ -1222,6 +1197,7 @@ char* ddp_dsi_get_err(unsigned int reg)
     {  
         printk("none. \n");
     }
+    return 0;
 }
 
 char* ddp_get_rdma_mode(unsigned int con)
@@ -1234,8 +1210,8 @@ char* ddp_get_rdma_mode(unsigned int con)
 
 int ddp_dump_info(DISP_MODULE_ENUM module)
 {
-    unsigned int size;
-    unsigned int reg_base;
+    //unsigned int size;
+    //unsigned int reg_base;
     unsigned int index=0;
     unsigned int i=0;
     unsigned int j=0;
@@ -1280,8 +1256,9 @@ int ddp_dump_info(DISP_MODULE_ENUM module)
               DISP_REG_GET(DISP_REG_RDMA_SIZE_CON_1+DISP_INDEX_OFFSET*index)&0xfffff,
               DISP_REG_GET(DISP_REG_RDMA_MEM_SRC_PITCH+DISP_INDEX_OFFSET*index), 
               DISP_REG_GET(DISP_REG_RDMA_MEM_START_ADDR+DISP_INDEX_OFFSET*index),
-              ((DISP_REG_GET(DISP_REG_RDMA_GLOBAL_CON+DISP_INDEX_OFFSET*index)&0x2)==0) ? "rgb888" : ddp_get_fmt_name(DISP_MODULE_RDMA, (DISP_REG_GET(DISP_REG_RDMA_MEM_CON+DISP_INDEX_OFFSET*index)>>4)&0x3f),
+              ((DISP_REG_GET(DISP_REG_RDMA_GLOBAL_CON+DISP_INDEX_OFFSET*index)&0x2)==0) ? "rgb888" : ddp_get_fmt_name(DISP_MODULE_RDMA, (DISP_REG_GET(DISP_REG_RDMA_MEM_CON+DISP_INDEX_OFFSET*index)>>4)&0x1f),
               DISP_REG_GET(DISP_REG_RDMA_FIFO_LOG+DISP_INDEX_OFFSET*index));
+#if 0
             DISP_MSG("rdma%d: ack=%d, req=%d, status=%s, output_x=%d, output_y=%d \n", 
               index, 
               (DISP_REG_GET(DISPSYS_RDMA1_BASE+0x400)>>10)&0x1,
@@ -1289,6 +1266,7 @@ int ddp_dump_info(DISP_MODULE_ENUM module)
               ddp_rdma_get_status((DISP_REG_GET(DISPSYS_RDMA1_BASE+0x408)>>8)&0x7ff),
               DISP_REG_GET(DISPSYS_RDMA1_BASE+0x4D0)&0x1fff,
               (DISP_REG_GET(DISPSYS_RDMA1_BASE+0x400)>>16)&0x1fff);
+#endif
             break;
 
         /* Dump OVL Reg */
@@ -1389,20 +1367,21 @@ int ddp_dump_info(DISP_MODULE_ENUM module)
                     if((reg&(1<<i))==0)
                        printk("%s, ", ddp_clock_0(i));
                 }
-                for(i=17;i<20;i++)
+                for(i=20;i<22;i++)
                 {
                     if((reg&(1<<i))==0)
                        printk("%s, ", ddp_clock_0(i));
                 }
                 printk("\n");
                 reg = DISP_REG_GET(DISP_REG_CONFIG_MMSYS_CG_CON1);
-                for(i=0;i<4;i++)
+                for(i=0;i<7;i++)
                 {
                     if((reg&(1<<i))==0)
                        printk("%s, ", ddp_clock_1(i));
                 }
                 printk("\n");                
             }
+#if 0
             {
                 unsigned int clock = (DISP_REG_GET(DISP_REG_CONFIG_CLOCK_DUMMY)>>7)&0x7;
                 if(clock==3)
@@ -1414,14 +1393,14 @@ int ddp_dump_info(DISP_MODULE_ENUM module)
                 else if(clock==2)
                     DISP_MSG("clock 4886\n");
             }
-            
+#endif            
          break;
 
     case DISP_MODULE_MUTEX:
             DISP_MSG("mutex: \n");
             for(i=0;i<3;i++)
             {
-                DISP_DBG("i=%d, mod=0x%x, en=%d \n", 
+                DISP_MSG("i=%d, mod=0x%x, en=%d \n", 
                   i, 
                   DISP_REG_GET(DISP_REG_CONFIG_MUTEX_MOD(i)), 
                   DISP_REG_GET(DISP_REG_CONFIG_MUTEX_EN(i)));

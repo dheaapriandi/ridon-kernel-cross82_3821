@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 /**
  * Sync Object support in Display Driver
  */
@@ -107,7 +121,7 @@ void disp_sync_ion_cache_flush(struct ion_client *client, struct ion_handle *han
 	sys_data.cache_sync_param.handle = handle;
 	sys_data.cache_sync_param.sync_type = ION_CACHE_FLUSH_BY_RANGE;
 
-	if (ion_kernel_ioctl(client, ION_CMD_SYSTEM, &sys_data)) {
+	if (ion_kernel_ioctl(client, ION_CMD_SYSTEM, (int)&sys_data)) {
 		XLOG_ERR("ion cache flush failed!\n");
 	}
 }
@@ -370,7 +384,7 @@ static void disp_sync_ion_config_buffer (struct ion_client *client, struct ion_h
 	mm_data.config_buffer_param.security = 0;
 	mm_data.config_buffer_param.coherent = 0;
 
-	if(ion_kernel_ioctl(client, ION_CMD_MULTIMEDIA, &mm_data)) {
+	if(ion_kernel_ioctl(client, ION_CMD_MULTIMEDIA, (int)&mm_data)) {
 		XLOG_ERR("configure ion buffer failed hnd=0x%p!\n", handle);
 	}
 }

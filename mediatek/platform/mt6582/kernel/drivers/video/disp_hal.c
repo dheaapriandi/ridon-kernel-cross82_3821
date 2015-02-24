@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/delay.h>
 #include <mach/mt_typedefs.h>
 #include <linux/types.h>
@@ -247,9 +261,9 @@ static const LCM_UTIL_FUNCS lcm_utils =
     /** FIXME: GPIO mode should not be configured in lcm driver
     REMOVE ME after GPIO customization is done    
     */
-    .set_gpio_out       = mt_set_gpio_out,
-    .set_gpio_mode        = mt_set_gpio_mode,
-    .set_gpio_dir         = mt_set_gpio_dir,
+    .set_gpio_out       = (int (*)(unsigned int, unsigned int))mt_set_gpio_out,
+    .set_gpio_mode        = (int (*)(unsigned int, unsigned int))mt_set_gpio_mode,
+    .set_gpio_dir         = (int (*)(unsigned int, unsigned int))mt_set_gpio_dir,
     .set_gpio_pull_enable = (int (*)(unsigned int, unsigned char))mt_set_gpio_pull_enable
 };
 
@@ -272,9 +286,9 @@ LCM_UTIL_FUNCS fbconfig_lcm_utils =
     /** FIXME: GPIO mode should not be configured in lcm driver
     REMOVE ME after GPIO customization is done    
     */
-    .set_gpio_out       = mt_set_gpio_out,
-    .set_gpio_mode        = mt_set_gpio_mode,
-    .set_gpio_dir         = mt_set_gpio_dir,
+    .set_gpio_out       = (int (*)(unsigned int, unsigned int))mt_set_gpio_out,
+    .set_gpio_mode        = (int (*)(unsigned int, unsigned int))mt_set_gpio_mode,
+    .set_gpio_dir         = (int (*)(unsigned int, unsigned int))mt_set_gpio_dir,
     .set_gpio_pull_enable = (int (*)(unsigned int, unsigned char))mt_set_gpio_pull_enable
 };
 
@@ -901,11 +915,13 @@ unsigned int disphal_check_lcm(UINT32 color)
     }
     else if(LCM_TYPE_DPI == lcm_params->type){//DPI
     }
-    else if(LCM_TYPE_DSI == lcm_params->type){ //dsi buffer
-		if(lcm_params->dsi.mode == CMD_MODE)
-        	ret = DSI_Check_LCM(color);
-		else//video mode
-			ret = 0;
+    else if(LCM_TYPE_DSI == lcm_params->type){ //dsi 
+		ret = DSI_Check_LCM(color);
+		if(lcm_params->dsi.mode != CMD_MODE){
+			DSI_SetMode(lcm_params->dsi.mode);
+			DSI_clk_HS_mode(1);
+       		DSI_CHECK_RET(DSI_StartTransfer(FALSE));
+		}
     }
     else
     {

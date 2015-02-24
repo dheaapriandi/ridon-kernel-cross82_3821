@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
@@ -217,12 +231,6 @@ extern void cmdqForceFreeAll(int cmdqThread);
 extern void cmdqForceFree_SW(int taskID);
 bool checkMdpEngineStatus(unsigned int engineFlag);
 
-#if defined(CONFIG_TRUSTONIC_TEE_SUPPORT) && (CONFIG_MTK_SEC_VIDEO_PATH_SUPPORT)
-extern unsigned int init_tplay_handle(void);
-extern int write_tplay_handle(unsigned int handle_value);
-extern int set_tplay_handle_addr_request(void);
-#endif
-
 #if 0
 struct disp_path_config_struct
 {
@@ -255,7 +263,6 @@ unsigned int* pRegBackup = NULL;
 // functions
 
 void disp_check_clock_tree(void) {
-	unsigned int reg = 0;
 	unsigned int mutexID = 0;
 	unsigned int mutex_mod = 0;
 	unsigned int mutex_sof = 0;
@@ -264,6 +271,9 @@ void disp_check_clock_tree(void) {
 			*(volatile unsigned int*)(0xf0000000),
 			*(volatile unsigned int*)(0xf0000050),
 			*(volatile unsigned int*)(0xf0000040));
+	DISP_MSG("0xf4000100=0x%x, 0xf4000110=0x%x\n",
+			*(volatile unsigned int*)(0xf4000100),
+			*(volatile unsigned int*)(0xf4000110));
 	// All need
 	if ((DISP_REG_GET(0xf0000040)&0xff) != 0x01) {
 		DISP_ERR("CLK_CFG_0 abnormal: hf_faxi_ck is off! 0xf0000040=0x%x \n", DISP_REG_GET(0xf0000040));
@@ -271,63 +281,67 @@ void disp_check_clock_tree(void) {
 	if ((DISP_REG_GET(0xf0000040)&0xff000000) != 0x1000000) {
 		DISP_ERR("CLK_CFG_0 abnormal: hf_fmm_ck is off! 0xf0000040=0x%x \n", DISP_REG_GET(0xf0000040));
 	}
-	if (DISP_REG_GET(0xf4000100)&(1<<0) != 0) {
+	if ((DISP_REG_GET(0xf4000100)&(1<<0)) != 0) {
 		DISP_ERR("MMSYS_CG_CON0 abnormal: SMI_COMMON is off!\n");
 	}
-	if (DISP_REG_GET(0xf4000100)&(1<<1) != 0) {
+	if ((DISP_REG_GET(0xf4000100)&(1<<1)) != 0) {
 		DISP_ERR("MMSYS_CG_CON0 abnormal: SMI_LARB0 is off!\n");
 	}
-	if (DISP_REG_GET(0xf4000100)&(1<<3) != 0) {
+#if 0
+	if ((DISP_REG_GET(0xf4000100)&(1<<3)) != 0) {
 		DISP_ERR("MMSYS_CG_CON0 abnormal: MUTEX is off!\n");
 	}
+#endif
 	for (mutexID = 0; mutexID < 4; mutexID++) {
 		mutex_mod = DISP_REG_GET(DISP_REG_CONFIG_MUTEX_MOD(mutexID));
 		mutex_sof = DISP_REG_GET(DISP_REG_CONFIG_MUTEX_SOF(mutexID));
 		if (mutex_mod&(1<<3)) {
-			if (DISP_REG_GET(0xf4000100)&(1<<8) != 0) {
+			if ((DISP_REG_GET(0xf4000100)&(1<<8)) != 0) {
 				DISP_ERR("MMSYS_CG_CON0 abnormal: DISP_OVL is off!\n");
 			}
 		}
 		if (mutex_mod&(1<<6)) {
-			if (DISP_REG_GET(0xf4000100)&(1<<6) != 0) {
+			if ((DISP_REG_GET(0xf4000100)&(1<<6)) != 0) {
 				DISP_MSG("MMSYS_CG_CON0 abnormal: DISP_wdma is off!\n");
 			}
 		}
 		if (mutex_mod&(1<<7)) {
-			if (DISP_REG_GET(0xf4000100)&(1<<4) != 0) {
+			if ((DISP_REG_GET(0xf4000100)&(1<<4)) != 0) {
 				DISP_ERR("MMSYS_CG_CON0 abnormal: DISP_COLOR is off!\n");
 			}
 		}
 		if (mutex_mod&(1<<9)) {
 			// MMSYS_CG_CON0
-			if (DISP_REG_GET(0xf4000100)&(1<<5) != 0) {
+			if ((DISP_REG_GET(0xf4000100)&(1<<5)) != 0) {
 				DISP_ERR("MMSYS_CG_CON0 abnormal: DISP_BLS is off!\n");
 			}
+#if 0
 			//CLK_CFG_1
-			if (DISP_REG_GET(0xf0000050)&0x0ff == 0) {
+			if ((DISP_REG_GET(0xf0000050)&0x0ff) == 0) {
 				DISP_ERR("CLK_CFG_1 abnormal: fpwm_ck is off!\n");
 			}
+#endif
 		}
 		if (mutex_mod&(1<<10)) {
-			if (DISP_REG_GET(0xf4000100)&(1<<7) != 0) {
+			if ((DISP_REG_GET(0xf4000100)&(1<<7)) != 0) {
 				DISP_ERR("MMSYS_CG_CON0 abnormal: DISP_RDMA is off!\n");
 			}
 		}
 		// DSI CMD/VDO
 		if (mutex_sof&0x3) {
 			// MMSYS_CG_CON1
-			if (DISP_REG_GET(0xf4000110)&0x07 != 0) {
+			if ((DISP_REG_GET(0xf4000110)&0x03) != 0) {
 				DISP_ERR("MMSYS_CG_CON1 abnormal: DSI is off!\n");
 			}
 			// CLK_CFG_1
-			if (DISP_REG_GET(0xf0000100)&(1<<37) == 0) {
-				DISP_ERR("CLK_CFG_1 abnormal: ad_dsi0_intc_dsiclk is off!\n");
-			}
+			//if ((DISP_REG_GET(0xf0000100)&(1<<37)) == 0) {
+			//	DISP_ERR("CLK_CFG_1 abnormal: ad_dsi0_intc_dsiclk is off!\n");
+			//}
 		}
 		// DPI
 		if (mutex_sof&(1<<2)) {
 			// CLK_CFG_1
-			if (DISP_REG_GET(0xf0000104)&(1<<28) == 0) {
+			if ((DISP_REG_GET(0xf0000104)&(1<<28)) == 0) {
 				DISP_ERR("CLK_CFG_1 abnormal: hf_dpi0_ck is off!\n");
 			}
 		}
@@ -567,7 +581,7 @@ void disp_invoke_irq_callbacks(DISP_MODULE_ENUM module, unsigned int param)
         }
     }
 }
-#if defined(MTK_HDMI_SUPPORT)
+#if defined(CONFIG_MTK_HDMI_SUPPORT)
 extern void hdmi_setorientation(int orientation);
 void hdmi_power_on(void);
 void hdmi_power_off(void);
@@ -585,7 +599,7 @@ static /*__tcmfunc*/ irqreturn_t disp_irq_handler(int irq, void *dev_id)
     unsigned long value;
     int i;
     //struct timeval tv;
-    int taskid;
+    //int taskid;
     unsigned int index;
     /*1. Process ISR*/
     switch(irq)
@@ -614,8 +628,6 @@ static /*__tcmfunc*/ irqreturn_t disp_irq_handler(int irq, void *dev_id)
                         
                         ddp_dump_info(DISP_MODULE_OVL);
                         ddp_dump_info(DISP_MODULE_RDMA);
-                        ddp_dump_info(DISP_MODULE_COLOR);
-                        ddp_dump_info(DISP_MODULE_BLS);
                         ddp_dump_info(DISP_MODULE_CONFIG);
                         ddp_dump_info(DISP_MODULE_MUTEX); 
                         ddp_dump_info(DISP_MODULE_DSI_CMD);
@@ -756,17 +768,22 @@ static /*__tcmfunc*/ irqreturn_t disp_irq_handler(int irq, void *dev_id)
                         disp_irq_log_module |= (1<<DISP_MODULE_MUTEX);
                         disp_irq_log_module |= (1<<DISP_MODULE_OVL);
                         disp_irq_log_module |= (1<<DISP_MODULE_RDMA);
+                        disp_irq_log_module |= (1<<DISP_MODULE_COLOR);
+                        disp_irq_log_module |= (1<<DISP_MODULE_BLS);
                         
                         ddp_dump_info(DISP_MODULE_CONFIG);
                         ddp_dump_info(DISP_MODULE_MUTEX); 
                         ddp_dump_info(DISP_MODULE_OVL); 
                         ddp_dump_info(DISP_MODULE_RDMA);
+                        ddp_dump_info(DISP_MODULE_COLOR);
                         ddp_dump_info(DISP_MODULE_DSI_CMD); 
                         
                         disp_dump_reg(DISP_MODULE_CONFIG);
                         disp_dump_reg(DISP_MODULE_MUTEX);
                         disp_dump_reg(DISP_MODULE_OVL);
                         disp_dump_reg(DISP_MODULE_RDMA);
+                        disp_dump_reg(DISP_MODULE_COLOR);
+                        disp_dump_reg(DISP_MODULE_BLS);
                        
                 	    disp_irq_err |= DDP_IRQ_RDMA_ABNORMAL;
                     }
@@ -784,18 +801,23 @@ static /*__tcmfunc*/ irqreturn_t disp_irq_handler(int irq, void *dev_id)
                         disp_irq_log_module |= (1<<DISP_MODULE_CONFIG);
                         disp_irq_log_module |= (1<<DISP_MODULE_MUTEX);
                         disp_irq_log_module |= (1<<DISP_MODULE_OVL);
+                        disp_irq_log_module |= (1<<DISP_MODULE_COLOR);
+                        disp_irq_log_module |= (1<<DISP_MODULE_BLS);
                         
-                        ddp_dump_info(DISP_MODULE_RDMA);
                         ddp_dump_info(DISP_MODULE_CONFIG);
                         ddp_dump_info(DISP_MODULE_MUTEX);
                         ddp_dump_info(DISP_MODULE_OVL); 
+                        ddp_dump_info(DISP_MODULE_RDMA);
+                        ddp_dump_info(DISP_MODULE_COLOR);
                         ddp_dump_info(DISP_MODULE_DSI_CMD);
-                        
+
                         disp_dump_reg(DISP_MODULE_CONFIG);
                         disp_dump_reg(DISP_MODULE_MUTEX); 
                         disp_dump_reg(DISP_MODULE_OVL); 
                         disp_dump_reg(DISP_MODULE_RDMA);                                               
-                        
+                        disp_dump_reg(DISP_MODULE_COLOR);
+                        disp_dump_reg(DISP_MODULE_BLS);
+
                         disp_irq_err |= DDP_IRQ_RDMA_UNDERFLOW;
                 	}
                 	else
@@ -1154,8 +1176,12 @@ int ConfColorFunc(int i4NotUsed)
             DISP_MSG("ConfColorFunc: Disable BLS\n");
             DISP_REG_SET(DISP_REG_BLS_EN, 0x00010000);
         }
+    } else {
+        // enable BLS
+        DISP_REG_SET(DISP_REG_BLS_EN, 0x00010001);
     }
-    else
+
+    if ((1 << DISP_MODULE_COLOR) & u4UpdateFlag)
     {
         if(ncs_tuning_mode == 0) //normal mode
         {
@@ -1166,10 +1192,8 @@ int ConfColorFunc(int i4NotUsed)
         {
             ncs_tuning_mode = 0;
         }
-        // enable BLS
-        DISP_REG_SET(DISP_REG_BLS_EN, 0x00010001);
-        disp_set_needupdate(DISP_MODULE_COLOR , 0);
     }
+    disp_set_needupdate(DISP_MODULE_COLOR , 0);
     DISP_MSG("ConfColorFunc done: BLS_EN=0x%x, bls_gamma_dirty=%d\n", DISP_REG_GET(DISP_REG_BLS_EN), bls_gamma_dirty);
     return 0;
 }
@@ -1218,10 +1242,10 @@ static long disp_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned lo
     disp_wait_irq_struct wait_irq_struct;
     unsigned long lcmindex = 0;
 //    unsigned int status;
-    unsigned long flags;
+//    unsigned long flags;
     int count;
 
-#if defined(MTK_AAL_SUPPORT)
+#if defined(CONFIG_MTK_AAL_SUPPORT)
     DISP_AAL_PARAM * aal_param;
 #endif
 
@@ -1303,7 +1327,7 @@ static long disp_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned lo
                 return -EFAULT;
             }
 
-            #if defined(MTK_HDMI_SUPPORT)
+            #if defined(CONFIG_MTK_HDMI_SUPPORT)
             if (down_interruptible(&hdmi_update_mutex)) {
                 DISP_ERR("can't get semaphore hdmi_update_mutex\n");
                 return -EFAULT;
@@ -1324,7 +1348,7 @@ static long disp_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned lo
                 rTableParams.val[count] = (*(volatile unsigned int*)rTableParams.reg[count]) & rTableParams.mask[count];
             }
 
-            #if defined(MTK_HDMI_SUPPORT)
+            #if defined(CONFIG_MTK_HDMI_SUPPORT)
                 up(&hdmi_update_mutex);
             #endif
 
@@ -1538,7 +1562,7 @@ static long disp_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned lo
             break;
 
         case DISP_IOCTL_AAL_EVENTCTL:
-#if !defined(MTK_AAL_SUPPORT)
+#if !defined(CONFIG_MTK_AAL_SUPPORT)
             printk("Invalid operation DISP_IOCTL_AAL_EVENTCTL since AAL is not turned on, in %s\n" , __FUNCTION__);
             return -EFAULT;
 #else
@@ -1554,7 +1578,7 @@ static long disp_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned lo
             break;
 
         case DISP_IOCTL_GET_AALSTATISTICS:
-#if !defined(MTK_AAL_SUPPORT)
+#if !defined(CONFIG_MTK_AAL_SUPPORT)
             printk("Invalid operation DISP_IOCTL_GET_AALSTATISTICS since AAL is not turned on, in %s\n" , __FUNCTION__);
             return -EFAULT;
 #else
@@ -1578,7 +1602,7 @@ static long disp_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned lo
             break;
 
         case DISP_IOCTL_SET_AALPARAM:
-#if !defined(MTK_AAL_SUPPORT)
+#if !defined(CONFIG_MTK_AAL_SUPPORT)
             printk("Invalid operation : DISP_IOCTL_SET_AALPARAM since AAL is not turned on, in %s\n" , __FUNCTION__);
             return -EFAULT;
 #else
@@ -1666,8 +1690,6 @@ static long disp_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned lo
             bls_gamma_dirty = 1;
             aal_debug_flag = 1;
             ReleaseUpdateMutex();
-
-            disp_set_needupdate(DISP_MODULE_COLOR, 1);
 
             count = 0;
             while(DISP_REG_GET(DISP_REG_BLS_EN) & 0x1) {
@@ -2239,7 +2261,7 @@ static int disp_get_mutex_status()
     return disp_mutex_status;
 }
 
-unsigned int g_reg_cfg[50];
+unsigned int g_reg_cfg[80];
 unsigned int g_reg_mtx[50];
 unsigned int g_reg_ovl[100];
 unsigned int g_reg_clr[20];
@@ -2574,7 +2596,7 @@ void disp_print_reg(DISP_MODULE_ENUM module)
 		DISP_MSG("(010)O_TRIG               =0x%x \n", g_reg_ovl[i++]);
 		DISP_MSG("(014)O_RST                =0x%x \n", g_reg_ovl[i++]);
 		DISP_MSG("(020)O_ROI_SIZE           =0x%x \n", g_reg_ovl[i++]);
-		DISP_MSG("(020)O_DATAPATH_CON       =0x%x \n", g_reg_ovl[i++]);
+		DISP_MSG("(024)O_DATAPATH_CON       =0x%x \n", g_reg_ovl[i++]);
 		DISP_MSG("(028)O_ROI_BGCLR          =0x%x \n", g_reg_ovl[i++]);
 		DISP_MSG("(02C)O_SRC_CON            =0x%x \n", g_reg_ovl[i++]);
 		DISP_MSG("(030)O_L0_CON             =0x%x \n", g_reg_ovl[i++]);
@@ -2621,11 +2643,11 @@ void disp_print_reg(DISP_MODULE_ENUM module)
 		DISP_MSG("(128)O_R3_MEM_GMC_SET     =0x%x \n", g_reg_ovl[i++]);
 		DISP_MSG("(12C)O_R3_MEM_SLOW_CON    =0x%x \n", g_reg_ovl[i++]);
 		DISP_MSG("(130)O_R3_FIFO_CTRL       =0x%x \n", g_reg_ovl[i++]);
-		DISP_MSG("(1C4)O_DEBUG_MON_SEL      =0x%x \n", g_reg_ovl[i++]);
-		DISP_MSG("(1C4)O_R0_MEM_GMC_SET2    =0x%x \n", g_reg_ovl[i++]);
-		DISP_MSG("(1C8)O_R1_MEM_GMC_SET2    =0x%x \n", g_reg_ovl[i++]);
-		DISP_MSG("(1CC)O_R2_MEM_GMC_SET2    =0x%x \n", g_reg_ovl[i++]);
-		DISP_MSG("(1D0)O_R3_MEM_GMC_SET2    =0x%x \n", g_reg_ovl[i++]);
+		DISP_MSG("(1D4)O_DEBUG_MON_SEL      =0x%x \n", g_reg_ovl[i++]);
+		DISP_MSG("(1E0)O_R0_MEM_GMC_SET2    =0x%x \n", g_reg_ovl[i++]);
+		DISP_MSG("(1E4)O_R1_MEM_GMC_SET2    =0x%x \n", g_reg_ovl[i++]);
+		DISP_MSG("(1E8)O_R2_MEM_GMC_SET2    =0x%x \n", g_reg_ovl[i++]);
+		DISP_MSG("(1EC)O_R3_MEM_GMC_SET2    =0x%x \n", g_reg_ovl[i++]);
 		DISP_MSG("(240)O_FLOW_CTRL_DBG      =0x%x \n", g_reg_ovl[i++]);
 		DISP_MSG("(244)O_ADDCON_DBG         =0x%x \n", g_reg_ovl[i++]);
 		DISP_MSG("(248)O_OUTMUX_DBG         =0x%x \n", g_reg_ovl[i++]);
@@ -2752,7 +2774,7 @@ void disp_print_reg(DISP_MODULE_ENUM module)
 		DISP_MSG("(02C)R_MEM_SRC_PITCH     =0x%x \n", g_reg_rdma[i++]);
 		DISP_MSG("(030)R_MEM_GMC_SET_0 =0x%x \n", g_reg_rdma[i++]);
 		DISP_MSG("(034)R_MEM_SLOW_CON      =0x%x \n", g_reg_rdma[i++]);
-		DISP_MSG("(030)R_MEM_GMC_SET_1 =0x%x \n", g_reg_rdma[i++]);
+		DISP_MSG("(038)R_MEM_GMC_SET_1 =0x%x \n", g_reg_rdma[i++]);
 		DISP_MSG("(040)R_FIFO_CON          =0x%x \n", g_reg_rdma[i++]);
 		DISP_MSG("(078)R_CF_PRE_ADD0       =0x%x \n", g_reg_rdma[i++]);
 		DISP_MSG("(07C)R_CF_PRE_ADD1       =0x%x \n", g_reg_rdma[i++]);

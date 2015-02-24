@@ -24,6 +24,67 @@
 #ifndef __MTKFB_DEBUG_H
 #define __MTKFB_DEBUG_H
 
+
+// global debug macro for DISP
+#define DISP_DRV_DBG
+
+
+extern size_t disp_drv_dbg_log;
+extern size_t disp_drv_dbg_info_log;
+extern size_t disp_drv_dbg_func_log;
+extern size_t disp_drv_dbg_upd_log;
+extern size_t mtkfb_dbg_log;
+extern size_t mtkfb_dbg_fence_log;
+extern size_t mtkfb_dbg_func_log;
+extern size_t mtkfb_dbg_ioctl_log;
+
+
+#define DISP_DRV_WRAN(fmt, arg...) \
+    do { \
+        if (disp_drv_dbg_log) DISP_LOG_PRINT(ANDROID_LOG_WARN, "DISP", fmt, ##arg); \
+    }while (0)
+
+#define DISP_DRV_INFO(fmt, arg...) \
+    do { \
+        if (disp_drv_dbg_info_log) DISP_LOG_PRINT(ANDROID_LOG_INFO, "DISP", fmt, ##arg); \
+    }while (0)
+
+#define DISP_DRV_FUNC()	\
+    do { \
+        if(disp_drv_dbg_func_log) DISP_LOG_PRINT(ANDROID_LOG_INFO, "DISP", "[Func]%s\n", __func__); \
+    }while (0)
+
+#define DISP_DRV_UPD(fmt, arg...) \
+    do { \
+        if (disp_drv_dbg_upd_log) DISP_LOG_PRINT(ANDROID_LOG_INFO, "DISP", fmt, ##arg); \
+    }while (0)
+
+#define MTKFB_WRAN(fmt, arg...) \
+    do { \
+        if (mtkfb_dbg_log) DISP_LOG_PRINT(ANDROID_LOG_WARN, "MTKFB", fmt, ##arg); \
+    }while (0)
+
+#define MTKFB_INFO(fmt, arg...) \
+    do { \
+        if (mtkfb_dbg_log) DISP_LOG_PRINT(ANDROID_LOG_INFO, "MTKFB", fmt, ##arg); \
+    }while (0)
+
+#define MTKFB_FENCE(fmt, arg...) \
+    do { \
+        if (mtkfb_dbg_fence_log) DISP_LOG_PRINT(ANDROID_LOG_INFO, "MTKFB", fmt, ##arg); \
+    }while (0)
+
+#define MTKFB_FUNC()	\
+    do { \
+        if(mtkfb_dbg_func_log) DISP_LOG_PRINT(ANDROID_LOG_INFO, "MTKFB", "[Func]%s\n", __func__); \
+    }while (0)
+
+#define MTKFB_IOCTL(fmt, arg...) \
+    do { \
+        if (mtkfb_dbg_ioctl_log) DISP_LOG_PRINT(ANDROID_LOG_INFO, "MTKFB", fmt, ##arg); \
+    }while (0)
+
+
 void DBG_Init(void);
 void DBG_Deinit(void);
 

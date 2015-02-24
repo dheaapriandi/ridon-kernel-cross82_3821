@@ -1,8 +1,22 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "ddp_reg.h"
 #include "ddp_cmdq.h"
 #include "ddp_cmdq_debug.h"
 
-uint32_t* cmdq_core_get_pc(struct TaskStruct *pTask, uint32_t thread, uint32_t insts[4])
+uint32_t* cmdq_core_get_pc(const TaskStruct *pTask, uint32_t thread, uint32_t insts[4])
 {
     int32_t      currPC = 0;
     uint8_t      *pInst = NULL;
@@ -230,7 +244,7 @@ void cmdq_core_parse_error(struct TaskStruct *pTask, uint32_t thread,
 }
 
 
-uint32_t* cmdq_core_dump_pc(TaskStruct *pTask, int thread, const char *tag)
+uint32_t* cmdq_core_dump_pc(const TaskStruct *pTask, int thread, const char *tag)
 {
     uint32_t *hwPC = NULL;
     uint32_t  insts[4] = {0};
@@ -625,7 +639,7 @@ void cmdq_core_dump_mdp_status(uint32_t engineFlag, int32_t logLevel)
             {
                 CMDQ_ERR( "========= [CMDQ] %s dump base 0x%08x ========\n", bases[inner].name, bases[inner].base);
                 print_hex_dump(KERN_ERR, "", DUMP_PREFIX_ADDRESS, 32, 4,
-                       bases[inner].base, 1024, false);
+                       (void*)(bases[inner].base), 1024, false);
             }
         }
     }

@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef __DDP_HAL_H__
 #define __DDP_HAL_H__
 
@@ -150,7 +164,7 @@ int disp_path_get_mem_read_mutex (void);
 int disp_path_release_mem_read_mutex (void);
 int disp_path_get_mem_write_mutex (void);
 int disp_path_release_mem_write_mutex (void);
-
+int disp_path_wait_frame_done(void);
 #if defined(CONFIG_TRUSTONIC_TEE_SUPPORT) && defined(CONFIG_MTK_SEC_VIDEO_PATH_SUPPORT)
 int disp_path_update_secure_port(void);
 #endif

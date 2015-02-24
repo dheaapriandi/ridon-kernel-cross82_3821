@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifdef BUILD_UBOOT
 #define ENABLE_DPI_INTERRUPT        0
 #define ENABLE_DPI_REFRESH_RATE_LOG 0
@@ -12,8 +26,8 @@
 #error "ENABLE_DPI_REFRESH_RATE_LOG should be also ENABLE_DPI_INTERRUPT"
 #endif
 
-#if defined(MTK_HDMI_SUPPORT) && !ENABLE_DPI_INTERRUPT
-//#error "enable MTK_HDMI_SUPPORT should be also ENABLE_DPI_INTERRUPT"
+#if defined(CONFIG_MTK_HDMI_SUPPORT) && !ENABLE_DPI_INTERRUPT
+//#error "enable CONFIG_MTK_HDMI_SUPPORT should be also ENABLE_DPI_INTERRUPT"
 #endif
 
 #include <linux/kernel.h>
@@ -135,14 +149,14 @@ static void _RestoreDPIRegisters(void)
                  AS_UINT32(REG_ADDR(reg, BACKUP_DPI_REG_OFFSETS[i])));
     }
 }
-
+/**unused now, comment it to fix build warning
 static void _ResetBackupedDPIRegisterValues(void)
 {
     DPI_REGS *regs = &regBackup;
     memset((void*)regs, 0, sizeof(DPI_REGS));
 
 //    OUTREG32(&regs->CLK_CNTL, 0x00000101);
-}
+}*/
 
 
 #if ENABLE_DPI_REFRESH_RATE_LOG
@@ -587,7 +601,7 @@ extern UINT32 FB_Addr;
 #endif
 DPI_STATUS DPI_Init_PLL(unsigned int mipi_pll_clk_ref,unsigned int mipi_pll_clk_div1,unsigned int mipi_pll_clk_div2)
 {
-    unsigned int reg_value = 0;
+    //unsigned int reg_value = 0;
 
 
 DPI_MIPI_clk_setting( mipi_pll_clk_ref,  mipi_pll_clk_div1, mipi_pll_clk_div2);

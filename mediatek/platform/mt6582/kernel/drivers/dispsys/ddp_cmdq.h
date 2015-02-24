@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef __DDP_CMDQ_H__
 #define __DDP_CMDQ_H__
 
@@ -17,22 +31,15 @@
 
 #include <mach/mt_clkmgr.h>
 
-#if defined(CONFIG_TRUSTONIC_TEE_SUPPORT) && defined(CONFIG_MTK_SEC_VIDEO_PATH_SUPPORT)
-#define __CMDQ_IWC_IMPL__
-#endif
+#define CMDQ_MAX_TASK_COUNT     512
+#define CMDQ_MAX_ENGINE_COUNT   12
+#define CMDQ_MAX_THREAD_COUNT   14
+#define CMDQ_MAX_RECORD_COUNT   (1024)
+#define CMDQ_MAX_ERROR_COUNT    1
+#define CMDQ_MAX_WARNING_COUNT  (20)
+#define CMDQ_MAX_RETRY_COUNT    (1)
 
-static atomic_t gCmdqDebugLevel = ATOMIC_INIT(0);
-
-#define CMDQ_MAX_TASK_COUNT           (512)
-#define CMDQ_MAX_ENGINE_COUNT          (12)
-#define CMDQ_MAX_THREAD_COUNT          (14)
-#define CMDQ_MAX_SECURE_THREAD_COUNT    (1) // support executing secure task 
-#define CMDQ_MAX_RECORD_COUNT        (1024)
-#define CMDQ_MAX_ERROR_COUNT           (1)
-#define CMDQ_MAX_WARNING_COUNT         (20)
-#define CMDQ_MAX_RETRY_COUNT           (1)
-
-#define CMDQ_MAX_FIXED_TASK            (70)
+#define CMDQ_MAX_FIXED_TASK     (70)
 #define CMDQ_MAX_BLOCK_SIZE     (32 * 1024)
 #define CMDQ_MAX_DMA_BUF_SIZE   (CMDQ_MAX_FIXED_TASK * CMDQ_MAX_BLOCK_SIZE)
 #define CMDQ_EXTRA_MARGIN       (512)
@@ -46,45 +53,51 @@ static atomic_t gCmdqDebugLevel = ATOMIC_INIT(0);
 #define CMDQ_DEFAULT_PREDUMP_TIMEOUT_MS     (100)
 #define CMDQ_DEFAULT_PREDUMP_RETRY_COUNT      (8)
 
-
 #define CMDQ_INVALID_THREAD     (-1)
 
 #define CMDQ_MSG(string, args...)                                                                                   \
-    if(1 == atomic_read(&gCmdqDebugLevel))                                                                          \
+    if(cmdq_core_should_print_msg())                                                                                \
     {                                                                                                               \
-        printk(KERN_DEBUG "[CMDQ] "string, ##args);                                                                 \
+        printk(KERN_DEBUG "[CMDQ]"string, ##args);                                                                 \
     }
 
 #define CMDQ_ERR(string, args...)                                                                                   \
     if(1)                                                                                                           \
     {                                                                                                               \
-        printk(KERN_DEBUG "[CMDQ][ERR] "string, ##args);                                                            \
+        printk(KERN_DEBUG "[CMDQ][ERR]"string, ##args);                                                            \
     }
 
 #define CMDQ_AEE(tag, string, args...)                                                                              \
     do {                                                                                                            \
         char output[255];                                                                                           \
-        sprintf(output, "[CMDQ][AEE] "string, ##args);                                                                   \
+        sprintf(output, "[CMDQ][AEE]"string, ##args);                                                                   \
 	    aee_kernel_warning_api(__FILE__, __LINE__, DB_OPT_DEFAULT | DB_OPT_PROC_CMDQ_INFO, output, string, ##args); \
 	    xlog_printk(ANDROID_LOG_ERROR, tag, string, ##args);                                                        \
     } while(0)
 
+//
+// get time notice: 
+// .void do_gettimeofday(struct timeval *tv)
+// .struct timeval {
+//      __kernel_time_t	     tv_sec;	/* seconds */
+//	    __kernel_suseconds_t tv_usec;	/* microseconds */
+//  }
+//
 #define CMGQ_GET_CURRENT_TIME(value)                                                                                \
 {                                                                                                                   \
     do_gettimeofday(&(value));                                                                                      \
 }
 
-#define CMDQ_GET_TIME_DURATION(start,                                                                               \
-                               end,                                                                                 \
-                               diff)                                                                                \
-{                                                                                                                   \
-    int32_t time1;                                                                                                  \
-    int32_t time2;                                                                                                  \
-                                                                                                                    \
-    time1 = start.tv_sec * 1000000 + start.tv_nsec / 1000;                                                          \
-    time2 = end.tv_sec   * 1000000 + end.tv_nsec   / 1000;                                                          \
-                                                                                                                    \
-    diff = ((time2 - time1) / 1000); /* in ms */                                                                    \
+// get duration in milliosecond(ms)
+#define CMDQ_GET_TIME_DURATION(start, end, duration)       \
+{                                                          \
+    int32_t time1;                                         \
+    int32_t time2;                                         \
+                                                           \
+    time1 = start.tv_sec * 1000000 + start.tv_usec;        \
+    time2 = end.tv_sec   * 1000000 + end.tv_usec;          \
+                                                           \
+    duration = (time2 - time1) / 1000;                     \
 }
 
 #endif // __KERNEL__
@@ -158,7 +171,8 @@ enum
 };
 
 
-/**callback to notify engine timeout/reset
+/**
+ * callback to notify engine timeout/reset
  * params
  *     init32_t engineFlag
  */ 
@@ -203,17 +217,10 @@ typedef struct TaskStruct
     uint32_t            *pCMDEnd;
     int32_t             reorder;
 
-    // For seucre execution
-    bool                isSecure;         // 1: secure task
-    uint32_t            *pSecureFdIndex;  // secure: secure fd index in cmd block 
-    uint32_t            *pSecurePortList; 
-    uint32_t            *pSecureSizeList;     
-    uint32_t            totalSecureFd;    // secure: total count
-
     // For statistics
-    struct timespec     trigger;
-    struct timespec     gotIRQ;
-    struct timespec     wakedUp;
+    struct timeval     trigger;
+    struct timeval     gotIRQ;
+    struct timeval     wakedUp;
 } TaskStruct;
 
 
@@ -240,14 +247,12 @@ typedef struct RecordStruct
     int32_t             scenario;
     int32_t             priority;
     int32_t             reorder;
-    bool                isSecure; 
-    int32_t             thread; 
 
-    struct timespec     start;
-    struct timespec     trigger;
-    struct timespec     gotIRQ;
-    struct timespec     wakedUp;
-    struct timespec     done;
+    struct timeval     start;
+    struct timeval     trigger;
+    struct timeval     gotIRQ;
+    struct timeval     wakedUp;
+    struct timeval     done;
 } RecordStruct;
 
 
@@ -266,7 +271,7 @@ typedef struct WarngingStrcut
     uint32_t            taskCount;          // total task count in thread when IRQ received
     uint32_t            cookie;             // hw thread executed counter
     uint32_t            irqFlag;            // IRQ value
-    struct timespec     gotIRQ;             // time stamp get IRQ
+    struct timeval     gotIRQ;             // time stamp get IRQ
 }WarngingStrcut; 
 
 
@@ -322,18 +327,10 @@ int32_t cmdqSubmitTask(int32_t  scenario,
                        uint32_t engineFlag,
                        void     *pCMDBlock,
                        int32_t  blockSize);
-#if 1
-int32_t cmdqSubmitTaskSecure(int32_t  scenario,
-                       int32_t  priority,
-                       uint32_t engineFlag,
-                       void     *pCMDBlock,
-                       int32_t  blockSize, 
-                       uint32_t  *pSecureFdIndex,
-                       uint32_t  *pSecurePortList,
-                       uint32_t *pSecureSizeList,
-                       uint32_t  totalSecurFd);
-#endif
+
 void cmdqDeInitialize(void);
+
+bool cmdq_core_should_print_msg(void);
 
 #ifdef __cplusplus
 }

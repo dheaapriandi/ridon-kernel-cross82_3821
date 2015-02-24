@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifdef BUILD_UBOOT
 #include <asm/arch/disp_drv_platform.h>
 #else
@@ -52,7 +66,8 @@ static BOOL disp_drv_dbi_init_context(void)
 
     return TRUE;
 }
-
+//comment out to avoid build warning
+#if 0
 static void init_lcd(void)
 {
     // Config LCD Controller
@@ -70,7 +85,7 @@ static void init_lcd(void)
     LCD_CHECK_RET(LCD_FBEnable(LCD_FB_1, FALSE));
     LCD_CHECK_RET(LCD_FBEnable(LCD_FB_2, FALSE));
 }
-
+#endif
 static void init_lcd_te_control(void)
 {
     const LCM_DBI_PARAMS *dbi = &(lcm_params->dbi);
@@ -108,12 +123,13 @@ static void init_lcd_te_control(void)
     LCD_CHECK_RET(LCD_TE_SetEdgePolarity(dbi->te_edge_polarity));
     LCD_CHECK_RET(LCD_TE_Enable(TRUE));
 }
-
+//comment out to avoid build warning
+#if 0
 static void init_io_driving_current(void)
 {
 	LCD_CHECK_RET(LCD_Set_DrivingCurrent(lcm_params));
 }
-
+#endif
 // ---------------------------------------------------------------------------
 //  DBI Display Driver Public Functions
 // ---------------------------------------------------------------------------
@@ -278,7 +294,7 @@ DISP_STATUS dbi_capture_framebuffer(UINT32 pvbuf, UINT32 bpp)
 	return DISP_STATUS_OK;	
 }
 
-const DISP_IF_DRIVER *DISP_GetDriverDBI()
+const DISP_IF_DRIVER *DISP_GetDriverDBI(void)
 {
     static const DISP_IF_DRIVER DBI_DISP_DRV =
     {

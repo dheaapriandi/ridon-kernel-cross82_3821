@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/kernel.h> 
 #include <linux/mm.h>
 #include <linux/mm_types.h>
@@ -145,7 +159,7 @@ int RDMAConfig(unsigned idx,
     unsigned int input_is_yuv = 0;
     unsigned int output_is_yuv = 0;
     // Calculate fifo settings
-    unsigned int fifo_pseudo_length = 256; //HW fifo SRAM: 240(89), 256(71/72/82/92), 512(ROME)
+    unsigned int fifo_pseudo_length = 256; 
     unsigned int fifo_threashold;
     // Calculate ultra settings
     unsigned int fps = 60;
@@ -161,6 +175,8 @@ int RDMAConfig(unsigned idx,
     unsigned int ultra_high_ofs;
     unsigned int pre_ultra_low_ofs;
     unsigned int pre_ultra_high_ofs;
+    enum RDMA_INPUT_FORMAT inputFormat = rdma_fmt_convert(inFormat);
+    
     if ((DISP_IsDecoupleMode()==0) || (gEnableUltra==1)) {
     	if(gUltraLevel==0)
     	{
@@ -181,7 +197,7 @@ int RDMAConfig(unsigned idx,
     		pre_ultra_high_time = 9; // in unit of us
     	}
     }
-    enum RDMA_INPUT_FORMAT inputFormat = rdma_fmt_convert(inFormat);
+    
     ASSERT(idx <= 2);
     if((width > RDMA_MAX_WIDTH) || (height > RDMA_MAX_HEIGHT))
     {

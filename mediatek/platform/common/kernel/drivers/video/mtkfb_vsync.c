@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
@@ -54,7 +68,7 @@ DEFINE_SEMAPHORE(mtkfb_vsync_sem);
 extern void mtkfb_waitVsync(void);
 extern void mtkfb_disable_non_fb_layer(void);
 
-#if defined(MTK_HDMI_SUPPORT)
+#if defined(CONFIG_MTK_HDMI_SUPPORT)
 extern void hdmi_waitVsync();
 #endif
 
@@ -97,13 +111,12 @@ static long mtkfb_vsync_unlocked_ioctl(struct file *file, unsigned int cmd, unsi
     switch (cmd)
     {
         case MTKFB_VSYNC_IOCTL:
-        {
-            vsync_src sync_type;            
+        {         
 			MTKFB_VSYNC_LOG("[MTKFB_VSYNC]: enter MTKFB_VSYNC_IOCTL %d\n", arg);			
 
 			if(arg == MTKFB_VSYNC_SOURCE_HDMI)
 			{
-#if defined(MTK_HDMI_SUPPORT)
+#if defined(CONFIG_MTK_HDMI_SUPPORT)
                 if (down_interruptible(&mtkfb_vsync_sem)) {
          			printk("[mtkfb_vsync_ioctl] can't get semaphore,%d\n", __LINE__);
     				msleep(20);

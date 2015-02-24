@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef __DISP_SYNC_H
 #define __DISP_SYNC_H
 
@@ -9,7 +23,7 @@
 
 typedef unsigned int UINT;
 typedef unsigned char BOOL;
-#define NULL 					  0x0
+//#define NULL 					  0x0
 
 
 #ifndef ASSERT
@@ -39,6 +53,8 @@ typedef unsigned char BOOL;
 ///=============================================================================
 // forward declare external structures
 ///===========================
+struct ion_client;
+struct ion_handle;
 struct fb_overlay_buffer;
 
 

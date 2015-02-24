@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
@@ -248,7 +262,7 @@ int OVLLayerConfig(unsigned int layer,
     unsigned mode = (TABLE_NO + 1);//0xdeaddead;                     // yuv to rgb conversion required
     unsigned int rgb_swap = 0;
     unsigned int address, start, end;
-    int i, width;
+    int width;
     enum OVL_INPUT_FORMAT fmt;
     ASSERT((dst_w <= OVL_MAX_WIDTH) && (dst_h <= OVL_MAX_HEIGHT));
     fmt = ovl_fmt_convert(format);

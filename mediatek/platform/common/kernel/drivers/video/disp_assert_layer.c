@@ -1,3 +1,17 @@
+/*
+* Copyright (C) 2011-2014 MediaTek Inc.
+* 
+* This program is free software: you can redistribute it and/or modify it under the terms of the 
+* GNU General Public License version 2 as published by the Free Software Foundation.
+* 
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; 
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include <mach/mt_typedefs.h>
 #include <linux/types.h>
 #include "disp_drv.h"
@@ -90,7 +104,6 @@ static void *dal_fb_addr = NULL;
 unsigned int dal_fb_pa = 0;
 unsigned int isAEEEnabled = 0;
 extern BOOL is_early_suspended;
-extern struct semaphore sem_early_suspend;
 
 //static BOOL  dal_shown   = FALSE;
 BOOL  dal_shown   = FALSE;
@@ -167,17 +180,20 @@ DAL_STATUS DAL_SetScreenColor(DAL_COLOR color)
 {
 	UINT32 i;
 	UINT32 size;
-
+	UINT32 BG_COLOR;
+	MFC_CONTEXT *ctxt =NULL;
+	UINT32 offset;
+	UINT32 *addr;
 	color=RGB888_To_RGB565(color);
-	const UINT32 BG_COLOR = MAKE_TWO_RGB565_COLOR(color, color);
+	BG_COLOR = MAKE_TWO_RGB565_COLOR(color, color);
 	
-	MFC_CONTEXT *ctxt = (MFC_CONTEXT *)mfc_handle;
+	ctxt = (MFC_CONTEXT *)mfc_handle;
 	if(!ctxt)
 		return DAL_STATUS_FATAL_ERROR; 
 	if(ctxt->screen_color==color)
 		return DAL_STATUS_OK;
-	UINT32 offset =  MFC_Get_Cursor_Offset(mfc_handle);
-	UINT32 *addr=ctxt->fb_addr+offset;
+	offset =  MFC_Get_Cursor_Offset(mfc_handle);
+	addr=(UINT32 *)(ctxt->fb_addr+offset);
 	
 	size= DAL_GetLayerSize()-offset;
 	for(i = 0; i < size/ sizeof(UINT32); ++ i) 
@@ -189,7 +205,7 @@ DAL_STATUS DAL_SetScreenColor(DAL_COLOR color)
     return DAL_STATUS_OK;
 }
 
-int DAL_address_burst_align()
+int DAL_address_burst_align(void)
 {
     int align = 0;
     int burst_mod = DAL_WIDTH*DAL_BPP % (8*DAL_BPP);
@@ -206,9 +222,9 @@ int DAL_address_burst_align()
 
 DAL_STATUS DAL_Init(UINT32 layerVA, UINT32 layerPA)
 {
-    printk("%s", __func__);
+    //printk("%s", __func__);
 
-    int align = DAL_address_burst_align(layerVA);
+    int align = DAL_address_burst_align();
     dal_fb_addr = (void *)(layerVA+align);
     dal_fb_pa = layerPA+align;
     DAL_CHECK_MFC_RET(MFC_Open_Ex(&mfc_handle, dal_fb_addr,
@@ -253,7 +269,7 @@ DAL_STATUS DAL_Dynamic_Change_FB_Layer(unsigned int isAEEEnabled)
         // change ui layer from DISP_DEFAULT_UI_LAYER_ID to DISP_CHANGED_UI_LAYER_ID
         ui_layer_tdshp = cached_layer_config[DISP_DEFAULT_UI_LAYER_ID].isTdshp;
         cached_layer_config[DISP_DEFAULT_UI_LAYER_ID].isTdshp = 0;
- 	//disp_path_change_tdshp_status(DISP_DEFAULT_UI_LAYER_ID, 0); // change global variable value, else error-check will find layer 2, 3 enable tdshp together
+        //disp_path_change_tdshp_status(DISP_DEFAULT_UI_LAYER_ID, 0); // change global variable value, else error-check will find layer 2, 3 enable tdshp together
         FB_LAYER = DISP_CHANGED_UI_LAYER_ID;
     }
     else
@@ -267,11 +283,11 @@ DAL_STATUS DAL_Dynamic_Change_FB_Layer(unsigned int isAEEEnabled)
 
 DAL_STATUS DAL_Clean(void)
 {
-    const UINT32 BG_COLOR = MAKE_TWO_RGB565_COLOR(DAL_BG_COLOR, DAL_BG_COLOR);
+    //const UINT32 BG_COLOR = MAKE_TWO_RGB565_COLOR(DAL_BG_COLOR, DAL_BG_COLOR);
     DAL_STATUS ret = DAL_STATUS_OK;
 
     static int dal_clean_cnt = 0;
-    
+    MFC_CONTEXT *ctxt = (MFC_CONTEXT *)mfc_handle;
     printk("[MTKFB_DAL] DAL_Clean\n");
     if (NULL == mfc_handle) 
         return DAL_STATUS_NOT_READY;
@@ -283,32 +299,9 @@ DAL_STATUS DAL_Clean(void)
 
     DAL_CHECK_MFC_RET(MFC_ResetCursor(mfc_handle));
 
-    MFC_CONTEXT *ctxt = (MFC_CONTEXT *)mfc_handle;
     ctxt->screen_color=0;
     DAL_SetScreenColor(DAL_COLOR_RED);
  
-/*
-    if (LCD_STATE_POWER_OFF == LCD_GetState()) {
-	    DISP_LOG_PRINT(ANDROID_LOG_INFO, "DAL", "dal_clean in power off\n");
-        dal_disable_when_resume = TRUE;
-        ret = DAL_STATUS_LCD_IN_SUSPEND;
-        goto End;
-    }
-    */
-    if (down_interruptible(&sem_early_suspend)) {
-        DISP_LOG_PRINT(ANDROID_LOG_INFO, "DAL", "can't get semaphore in DAL_Clean()\n");
-        goto End;
-    }
-    //xuecheng, for debug
-#if 0
-    if(is_early_suspended){
-        up(&sem_early_suspend);
-        DISP_LOG_PRINT(ANDROID_LOG_INFO, "DAL", "dal_clean in power off\n");
-        goto End;
-    }
-#endif
-    up(&sem_early_suspend);
-
     mutex_lock(&OverlaySettingMutex);
 
     //TODO: if dal_shown=false, and 3D enabled, mtkfb may disable UI layer, please modify 3D driver
@@ -345,9 +338,6 @@ DAL_STATUS DAL_Clean(void)
     DAL_CHECK_DISP_RET(DISP_UpdateScreen(0, 0, 
                                          DAL_WIDTH,
                                          DAL_HEIGHT));
-                                         
-
-End:
     DAL_UNLOCK();
     return ret;
 }
@@ -378,7 +368,7 @@ DAL_STATUS DAL_Printf(const char *fmt, ...)
         
         DAL_CHECK_MFC_RET(MFC_Open_Ex(&mfc_handle, dal_fb_addr,
                                DAL_WIDTH, DAL_HEIGHT,DAL_PITCH, DAL_BPP,
-                               DAL_FG_COLOR, DAL_BG_COLOR));
+                               DAL_FG_COLOR, DAL_BG_COLOR));        
         //DAL_Clean();  
               
         cached_layer_config[ASSERT_LAYER].addr = dal_fb_pa;
@@ -407,26 +397,6 @@ DAL_STATUS DAL_Printf(const char *fmt, ...)
     DAL_CHECK_MFC_RET(MFC_Print(mfc_handle, dal_print_buffer));
 
     flush_cache_all();
-/*
-    if (LCD_STATE_POWER_OFF == LCD_GetState()) {
-        ret = DAL_STATUS_LCD_IN_SUSPEND;
-        dal_enable_when_resume = TRUE;
-        goto End;
-    }
-    */
-    if (down_interruptible(&sem_early_suspend)) {
-        DISP_LOG_PRINT(ANDROID_LOG_INFO, "DAL", "can't get semaphore in DAL_Printf()\n");
-        goto End;
-    }
-
-#if 0
-    if(is_early_suspended){
-        up(&sem_early_suspend);
-        DISP_LOG_PRINT(ANDROID_LOG_INFO, "DAL", "DAL_Printf in power off\n");
-        goto End;
-    }
-#endif
-    up(&sem_early_suspend);
 
     mutex_lock(&OverlaySettingMutex);
 
@@ -445,9 +415,7 @@ DAL_STATUS DAL_Printf(const char *fmt, ...)
     DAL_CHECK_DISP_RET(DISP_UpdateScreen(0, 0, 
                                          DAL_WIDTH,
                                          DAL_HEIGHT));
-End:
     DAL_UNLOCK();
-
     return ret;
 }
 
@@ -604,7 +572,6 @@ DAL_STATUS DAL_LowMemoryOff(void)
 UINT32 DAL_GetLayerSize(void)
 {
 	// xuecheng, avoid lcdc read buffersize+1 issue
-    //return DAL_WIDTH * DAL_HEIGHT * DAL_BPP + 4096;
     return DAL_PITCH * DAL_HEIGHT * DAL_BPP + 4096;
 }
 

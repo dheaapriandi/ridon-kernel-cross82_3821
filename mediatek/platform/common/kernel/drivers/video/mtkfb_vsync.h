@@ -12,26 +12,20 @@
 * If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __DDP_BLS_H__
-#define __DDP_BLS_H__
-
-#include "ddp_drv.h"
+#ifndef __MTKFB_VSYNC_H__
+#define __MTKFB_VSYNC_H__
 
 
-void disp_bls_init(unsigned int srcWidth, unsigned int srcHeight);
-int disp_bls_config(void);
-void disp_bls_config_full(unsigned int width, unsigned int height);
-int disp_bls_set_backlight(unsigned int level);
-int disp_bls_set_max_backlight_(unsigned int level);
+#define MTKFB_VSYNC_DEVNAME "mtkfb_vsync"
 
-DISPLAY_GAMMA_T * get_gamma_index(void);
-DISPLAY_PWM_T * get_pwm_lut(void);
+#define MTKFB_VSYNC_IOCTL_MAGIC      'V'
 
-//Called by ioctl to config sysram
-void disp_bls_update_gamma_lut(void);
-void disp_bls_update_pwm_lut(void);
+typedef enum
+{
+    MTKFB_VSYNC_SOURCE_LCM = 0,
+    MTKFB_VSYNC_SOURCE_HDMI = 1,
+} vsync_src;
 
-//Called by tasklet to config registers
-void disp_onConfig_bls(DISP_AAL_PARAM *param);
+#define MTKFB_VSYNC_IOCTL     _IOW(MTKFB_VSYNC_IOCTL_MAGIC, 1, vsync_src)
 
-#endif
+#endif //MTKFB_VSYNC_H
