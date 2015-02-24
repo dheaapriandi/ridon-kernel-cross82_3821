@@ -17,21 +17,19 @@ It could break your device.
 ## Known information
 | Subsystem | Driver name | Availability | Working |
 |-----------|-------------|--------------|---------|
-| LCM driver #1 | `nt35590_hd720_dsi_vdo_truly` | Yes | No |
-| LCM driver #2 | `otm1283a_hd720_dsi_vdo`| No| - |
-| LCM driver #3 | `nt35521_hd720_dsi_vdo` | No | - |
+| LCM driver | `otm1283a_hd720_dsi_vdo`| Yes | Yes |
 | Modem | ? | ? | ? |
 | Bluetooth | `mt_consys_mt6582` | Yes | ? |
 | WiFi | `mt_consys_mt6582` | Yes | ? |
 | Touch panel | `GT9XX` | Yes | ? |
 | USB | ? | Yes | Yes |
 | Vibrator | `vibrator` | Yes | ? |
-| GPU | `mali` | Yes | ? |
+| GPU | `mali` | Yes | Yes |
 | PMIC | `mt6323` | Yes | ? |
 | NFC | `mt6605` | Yes | - |
 | LED | `mt65xx` | Yes | ? |
 | Thermal | `mtk_thermal` | Yes | ? |
-| MMC | `emmc` | Yes | No |
+| MMC | `emmc` | Yes | Yes |
 | NAND | Not configured | - | - |
 | RTC | `mtk_rtc_common.c` | Yes | ? |
 | Audio | `AudioMTKBTCVSD` | Yes | ? |
@@ -42,6 +40,7 @@ It could break your device.
 
 ## How can you help
 You can help in many ways. Either:
+
 1. Try to get the source code from MediaTek
 2. Reverse engineer the original kernel and try to get the names of the drivers, then find the drivers
 
