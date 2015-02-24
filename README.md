@@ -10,9 +10,15 @@ It could break your device.
 ./mk cross82_3821 n k
 ```
 
+Then:
+
+1. Unpack `boot.img` you already have
+2. Repack with the new kernel after the compilation is successfully done
+3. Flash both the newly packed `boot.img` along with the scatter file and EBR1 partition produced by step above. You need also to reflash `system.img` and other partitions due to the changes made by the scatter file.
+4. Enjoy 
+
 ## What's missing
-1. Partition is wrongly populated, e.g. we can't get the /emmc@android link yet
-1. Peripherals are not yet verified. Notably the screen is not yet working.
+1. Not all peripherals are verified yet.
 
 ## Known information
 | Subsystem | Driver name | Availability | Working |
@@ -38,14 +44,3 @@ It could break your device.
 | Accelerometer | `BM222` | Yes | ? |
 | ALS/PS | `em3071` | No | ? |
 
-## How can you help
-You can help in many ways. Either:
-
-1. Try to get the source code from MediaTek
-2. Reverse engineer the original kernel and try to get the names of the drivers, then find the drivers
-
-### How to reverse engineer the kernel
-1. Unpack kernel from boot.img
-2. Unpack zImage from the kernel image
-3. Unpack piggy.gz from the zImage
-4. View the contents of the piggy.gz with a text editor and populate ProjectConfig.mk based on the information you can get
