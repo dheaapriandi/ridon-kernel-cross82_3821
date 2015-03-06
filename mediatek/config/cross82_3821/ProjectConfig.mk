@@ -159,7 +159,8 @@ CUSTOM_KERNEL_MAIN_LENS=bu6424qtaf
 CUSTOM_KERNEL_RTC=rtc
 
 # For audio kernel driver's speaker customization folder definition.
-CUSTOM_KERNEL_SOUND=amp_aw8736_spk_tpa6136a2_hp
+#CUSTOM_KERNEL_SOUND=amp_aw8736_spk_tpa6136a2_hp
+CUSTOM_KERNEL_SOUND=amp_yad
 CUSTOM_KERNEL_SSW=ssw_single
 CUSTOM_KERNEL_SUB_BACKUP_IMGSENSOR=
 
