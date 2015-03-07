@@ -174,7 +174,7 @@ CUSTOM_KERNEL_SUB_IMGSENSOR=gc2235_mipi_raw
 CUSTOM_KERNEL_SUB_LENS=dummy_lens
 
 # touch driver  need to report correct touch axes
-#CUSTOM_KERNEL_TOUCHPANEL=GT9XX
+CUSTOM_KERNEL_TOUCHPANEL=GT9XX
 
 # Configuration for USB PHY
 CUSTOM_KERNEL_USB=mt6577
